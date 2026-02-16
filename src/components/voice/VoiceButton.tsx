@@ -230,18 +230,18 @@ export function VoiceButton() {
         if (!open) handleCancel();
         else setIsOpen(true);
       }}>
-        <DrawerContent className="max-h-[85vh]">
-          <div className="mx-auto w-full max-w-md">
-            <DrawerHeader className="text-center pb-2">
-              <DrawerTitle className="font-heading">
+        <DrawerContent className="max-h-[95vh] min-h-[70vh]">
+          <div className="mx-auto w-full max-w-md flex flex-col h-full overflow-hidden">
+            <DrawerHeader className="text-center pb-1 shrink-0">
+              <DrawerTitle className="font-heading text-base">
                 Registrar por voz
               </DrawerTitle>
-              <DrawerDescription className="text-sm">
+              <DrawerDescription className="text-xs">
                 Dicta tu movimiento y lo interpretaremos
               </DrawerDescription>
             </DrawerHeader>
 
-            <div className="flex flex-col items-center px-4 pb-6 space-y-4 overflow-y-auto">
+            <div className="flex flex-col items-center px-4 pb-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               {/* Recording Button */}
               <button
                 onClick={scribe.isConnected ? handleStopRecording : handleStartRecording}
@@ -348,12 +348,12 @@ export function VoiceButton() {
                     </span>
                   </div>
 
-                  {/* Actions - always visible */}
-                  <div className="flex gap-2 pt-2 sticky bottom-0 bg-background pb-2">
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-3 pb-2 shrink-0">
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="flex-1 gap-1"
+                      size="default"
+                      className="flex-1 gap-1.5"
                       onClick={handleCancel}
                     >
                       <X className="h-4 w-4" />
@@ -361,16 +361,16 @@ export function VoiceButton() {
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="flex-1 gap-1"
+                      size="default"
+                      className="flex-1 gap-1.5"
                       onClick={handleReset}
                     >
                       <Edit2 className="h-4 w-4" />
                       Reintentar
                     </Button>
                     <Button 
-                      size="sm"
-                      className="flex-1 gap-1" 
+                      size="default"
+                      className="flex-1 gap-1.5" 
                       onClick={handleConfirm}
                       disabled={!parsedData.amount || isSaving}
                     >

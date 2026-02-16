@@ -4,10 +4,24 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Sparkles } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useBudgets } from "@/hooks/useBudgets";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function Dashboard() {
   const { profile } = useProfile();
+  const { totalBalance } = useAccounts();
+  const { totals } = useTransactions();
+  const { budgets } = useBudgets();
   const displayName = profile?.display_name || "bienvenido";
+
+  const currentMonth = format(new Date(), "MMMM yyyy", { locale: es });
+  const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
+
+  // Get active budgets for current month
+  const activeBudgets = budgets.filter((b) => b.is_active);
 
   return (
     <div className="space-y-6 stagger-children">
@@ -21,38 +35,17 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Balance Cards */}
+      {/* Balance Cards - real data */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <BalanceCard
-          title="Balance total"
-          amount={45250}
-          type="balance"
-          trend={{ value: 12, label: "vs mes anterior" }}
-        />
-        <BalanceCard
-          title="Ingresos del mes"
-          amount={32000}
-          type="income"
-          trend={{ value: 5, label: "vs mes anterior" }}
-        />
-        <BalanceCard
-          title="Gastos del mes"
-          amount={18750}
-          type="expense"
-          trend={{ value: -8, label: "vs mes anterior" }}
-        />
-        <BalanceCard
-          title="Transferencias"
-          amount={5000}
-          type="transfer"
-        />
+        <BalanceCard title="Balance total" amount={totalBalance} type="balance" />
+        <BalanceCard title="Ingresos del mes" amount={totals.income} type="income" />
+        <BalanceCard title="Gastos del mes" amount={totals.expense} type="expense" />
+        <BalanceCard title="Transferencias" amount={totals.transfer} type="transfer" />
       </div>
 
       {/* Quick Actions */}
       <div className="space-y-3">
-        <h2 className="text-lg font-heading font-semibold text-foreground">
-          Acciones rápidas
-        </h2>
+        <h2 className="text-lg font-heading font-semibold text-foreground">Acciones rápidas</h2>
         <QuickActions />
       </div>
 
@@ -61,50 +54,34 @@ export default function Dashboard() {
         {/* Budget Progress */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-heading font-semibold text-foreground">
-              Presupuesto del mes
-            </h2>
-            <span className="text-xs text-muted-foreground">Febrero 2026</span>
+            <h2 className="text-lg font-heading font-semibold text-foreground">Presupuesto del mes</h2>
+            <span className="text-xs text-muted-foreground">{capitalizedMonth}</span>
           </div>
 
           <div className="rounded-2xl bg-card border border-border p-5 space-y-5 card-elevated">
-            <BudgetProgress
-              category="Alimentación"
-              spent={4500}
-              budgeted={6000}
-            />
-            <BudgetProgress
-              category="Transporte"
-              spent={2100}
-              budgeted={2500}
-            />
-            <BudgetProgress
-              category="Entretenimiento"
-              spent={1800}
-              budgeted={2000}
-            />
-            <BudgetProgress
-              category="Vivienda"
-              spent={12000}
-              budgeted={12000}
-            />
+            {activeBudgets.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Sin presupuestos activos. Crea uno en la sección de Presupuestos.
+              </p>
+            ) : (
+              activeBudgets.slice(0, 4).map((budget) => (
+                <BudgetProgress
+                  key={budget.id}
+                  category={budget.name}
+                  spent={budget.spent ?? 0}
+                  budgeted={budget.amount}
+                />
+              ))
+            )}
           </div>
         </div>
 
         {/* Recent Transactions */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-heading font-semibold text-foreground">
-              Movimientos recientes
-            </h2>
-            <a
-              href="/transactions"
-              className="text-xs text-primary hover:underline"
-            >
-              Ver todos
-            </a>
+            <h2 className="text-lg font-heading font-semibold text-foreground">Movimientos recientes</h2>
+            <a href="/transactions" className="text-xs text-primary hover:underline">Ver todos</a>
           </div>
-
           <RecentTransactions />
         </div>
       </div>
@@ -116,13 +93,9 @@ export default function Dashboard() {
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="space-y-1">
-            <p className="font-medium text-foreground">
-              Registra tus gastos con tu voz
-            </p>
+            <p className="font-medium text-foreground">Registra tus gastos con tu voz</p>
             <p className="text-sm text-muted-foreground">
-              Toca el botón de micrófono y di algo como: "Gasté 250 pesos en
-              Uber ayer". La app entenderá automáticamente el monto, categoría y
-              fecha.
+              Toca el botón de micrófono y di algo como: "Gasté 250 pesos en Uber ayer". La app entenderá automáticamente el monto, categoría y fecha.
             </p>
           </div>
         </div>

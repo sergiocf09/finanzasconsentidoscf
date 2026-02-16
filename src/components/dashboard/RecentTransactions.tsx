@@ -7,65 +7,13 @@ import {
   Briefcase,
   Gift,
   ArrowRightLeft,
+  Receipt,
 } from "lucide-react";
-
-interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: "income" | "expense" | "transfer";
-  category: string;
-  date: string;
-  currency: string;
-}
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "1",
-    description: "Uber al trabajo",
-    amount: 85,
-    type: "expense",
-    category: "Transporte",
-    date: "Hoy",
-    currency: "MXN",
-  },
-  {
-    id: "2",
-    description: "Salario quincenal",
-    amount: 15000,
-    type: "income",
-    category: "Salario",
-    date: "Ayer",
-    currency: "MXN",
-  },
-  {
-    id: "3",
-    description: "Supermercado",
-    amount: 1250,
-    type: "expense",
-    category: "Alimentación",
-    date: "Ayer",
-    currency: "MXN",
-  },
-  {
-    id: "4",
-    description: "Renta mensual",
-    amount: 12000,
-    type: "expense",
-    category: "Vivienda",
-    date: "01 Feb",
-    currency: "MXN",
-  },
-  {
-    id: "5",
-    description: "Transferencia a ahorro",
-    amount: 3000,
-    type: "transfer",
-    category: "Ahorro",
-    date: "01 Feb",
-    currency: "MXN",
-  },
-];
+import { useTransactions } from "@/hooks/useTransactions";
+import { useCategories } from "@/hooks/useCategories";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, isToday, isYesterday } from "date-fns";
+import { es } from "date-fns/locale";
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
   Transporte: Car,
@@ -74,10 +22,17 @@ const categoryIcons: Record<string, typeof ShoppingBag> = {
   Vivienda: Home,
   Compras: ShoppingBag,
   Ahorro: Gift,
-  default: ShoppingBag,
+  default: Receipt,
 };
 
-export function RecentTransactions() {
+interface RecentTransactionsProps {
+  limit?: number;
+}
+
+export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
+  const { transactions, isLoading } = useTransactions();
+  const { categories } = useCategories();
+
   const formatAmount = (value: number, currency: string) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
@@ -87,13 +42,48 @@ export function RecentTransactions() {
     }).format(value);
   };
 
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr + "T12:00:00");
+    if (isToday(date)) return "Hoy";
+    if (isYesterday(date)) return "Ayer";
+    return format(date, "dd MMM", { locale: es });
+  };
+
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return "Sin categoría";
+    return categories.find((c) => c.id === categoryId)?.name || "Sin categoría";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-16 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const displayed = transactions.slice(0, limit);
+
+  if (displayed.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Receipt className="h-10 w-10 mx-auto mb-2 opacity-40" />
+        <p className="text-sm">Sin movimientos recientes</p>
+        <p className="text-xs mt-1">Registra tu primer movimiento con el botón de voz o manualmente.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {mockTransactions.map((transaction) => {
+      {displayed.map((transaction) => {
+        const catName = getCategoryName(transaction.category_id);
         const Icon =
           transaction.type === "transfer"
             ? ArrowRightLeft
-            : categoryIcons[transaction.category] || categoryIcons.default;
+            : categoryIcons[catName] || categoryIcons.default;
 
         return (
           <div
@@ -120,10 +110,10 @@ export function RecentTransactions() {
 
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
-                {transaction.description}
+                {transaction.description || catName}
               </p>
               <p className="text-xs text-muted-foreground">
-                {transaction.category} · {transaction.date}
+                {catName} · {formatDate(transaction.transaction_date)}
               </p>
             </div>
 

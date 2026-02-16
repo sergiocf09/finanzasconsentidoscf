@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -12,10 +13,15 @@ import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseTransaction, type ParsedTransaction } from "@/hooks/useTransactionParser";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function VoiceButton() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [parsedData, setParsedData] = useState<ParsedTransaction | null>(null);
 
@@ -77,11 +83,80 @@ export function VoiceButton() {
     }
   }, [scribe, transcript]);
 
-  const handleConfirm = () => {
-    // TODO: Save transaction to database
-    toast.success("Movimiento registrado correctamente");
-    handleReset();
-    setIsOpen(false);
+  const handleConfirm = async () => {
+    if (!parsedData?.amount || !user) return;
+    
+    setIsSaving(true);
+    try {
+      // Get the user's first account (or default)
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('id, currency')
+        .limit(1);
+      
+      let accountId = accounts?.[0]?.id;
+      
+      // If no account exists, create a default one
+      if (!accountId) {
+        const { data: newAccount, error: accountError } = await supabase
+          .from('accounts')
+          .insert({
+            user_id: user.id,
+            name: 'Cuenta Principal',
+            type: 'bank',
+            currency: parsedData.currency || 'MXN',
+            initial_balance: 0,
+            current_balance: 0,
+          })
+          .select('id')
+          .single();
+        
+        if (accountError) throw accountError;
+        accountId = newAccount.id;
+      }
+
+      // Find matching category
+      let categoryId: string | undefined;
+      if (parsedData.category) {
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('id, name')
+          .ilike('name', `%${parsedData.category}%`)
+          .limit(1);
+        
+        categoryId = categories?.[0]?.id;
+      }
+
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          account_id: accountId,
+          category_id: categoryId || null,
+          type: parsedData.type,
+          amount: parsedData.amount,
+          currency: parsedData.currency || 'MXN',
+          description: parsedData.description || transcript,
+          transaction_date: (parsedData.date || new Date()).toISOString().split('T')[0],
+          voice_transcript: transcript,
+        });
+
+      if (error) throw error;
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+
+      toast.success("Movimiento registrado correctamente");
+      handleReset();
+      setIsOpen(false);
+    } catch (error: any) {
+      console.error("Error saving transaction:", error);
+      toast.error("No se pudo guardar el movimiento: " + (error.message || "Error desconocido"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -145,6 +220,9 @@ export function VoiceButton() {
             <DialogTitle className="text-center font-heading">
               Registrar por voz
             </DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              Dicta tu movimiento y lo interpretaremos automáticamente
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col items-center py-8 space-y-6">
@@ -282,10 +360,14 @@ export function VoiceButton() {
                   <Button 
                     className="flex-1 gap-2" 
                     onClick={handleConfirm}
-                    disabled={!parsedData.amount}
+                    disabled={!parsedData.amount || isSaving}
                   >
-                    <Check className="h-4 w-4" />
-                    Confirmar
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                    {isSaving ? "Guardando..." : "Confirmar"}
                   </Button>
                 </div>
               </div>

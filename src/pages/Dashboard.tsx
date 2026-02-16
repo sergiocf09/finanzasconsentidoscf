@@ -3,14 +3,18 @@ import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Sparkles } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function Dashboard() {
+  const { profile } = useProfile();
+  const displayName = profile?.display_name || "bienvenido";
+
   return (
     <div className="space-y-6 stagger-children">
       {/* Welcome Message */}
       <div className="space-y-1">
         <h1 className="text-2xl font-heading font-bold text-foreground">
-          Hola, bienvenido 👋
+          Hola, {displayName} 👋
         </h1>
         <p className="text-muted-foreground">
           Tu dinero con calma. Tu vida con sentido.

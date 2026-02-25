@@ -106,7 +106,8 @@ export default function Accounts() {
             return (
               <div
                 key={account.id}
-                className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4 card-interactive"
+                className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4 card-interactive cursor-pointer"
+                onClick={() => window.location.href = `/accounts/${account.id}`}
               >
                 <div
                   className={cn(

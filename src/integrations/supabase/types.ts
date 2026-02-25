@@ -59,6 +59,90 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_lines: {
+        Row: {
+          budget_id: string
+          category_id: string | null
+          id: string
+          planned_amount_annual: number | null
+          planned_amount_monthly: number
+          spent_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          budget_id: string
+          category_id?: string | null
+          id?: string
+          planned_amount_annual?: number | null
+          planned_amount_monthly?: number
+          spent_amount?: number
+          updated_at?: string | null
+        }
+        Update: {
+          budget_id?: string
+          category_id?: string | null
+          id?: string
+          planned_amount_annual?: number | null
+          planned_amount_monthly?: number
+          spent_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_lines_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_rules: {
+        Row: {
+          created_at: string | null
+          currency: string
+          discretionary_ratio: number
+          essential_ratio: number
+          id: string
+          is_active: boolean | null
+          rule_type: string
+          saving_investing_ratio: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string
+          discretionary_ratio?: number
+          essential_ratio?: number
+          id?: string
+          is_active?: boolean | null
+          rule_type?: string
+          saving_investing_ratio?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          discretionary_ratio?: number
+          essential_ratio?: number
+          id?: string
+          is_active?: boolean | null
+          rule_type?: string
+          saving_investing_ratio?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           alert_sent: boolean | null
@@ -66,6 +150,7 @@ export type Database = {
           amount: number
           category_id: string | null
           created_at: string | null
+          created_from: string | null
           id: string
           is_active: boolean | null
           month: number | null
@@ -82,6 +167,7 @@ export type Database = {
           amount: number
           category_id?: string | null
           created_at?: string | null
+          created_from?: string | null
           id?: string
           is_active?: boolean | null
           month?: number | null
@@ -98,6 +184,7 @@ export type Database = {
           amount?: number
           category_id?: string | null
           created_at?: string | null
+          created_from?: string | null
           id?: string
           is_active?: boolean | null
           month?: number | null
@@ -120,6 +207,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          bucket: string | null
           color: string | null
           created_at: string | null
           icon: string | null
@@ -132,6 +220,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bucket?: string | null
           color?: string | null
           created_at?: string | null
           icon?: string | null
@@ -144,6 +233,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bucket?: string | null
           color?: string | null
           created_at?: string | null
           icon?: string | null
@@ -550,6 +640,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transfers: {
+        Row: {
+          amount_from: number
+          amount_to: number
+          created_at: string | null
+          created_from: string
+          currency_from: string
+          currency_to: string
+          description: string | null
+          from_account_id: string
+          fx_rate: number | null
+          id: string
+          to_account_id: string
+          transfer_date: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_from: number
+          amount_to: number
+          created_at?: string | null
+          created_from?: string
+          currency_from?: string
+          currency_to?: string
+          description?: string | null
+          from_account_id: string
+          fx_rate?: number | null
+          id?: string
+          to_account_id: string
+          transfer_date?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_from?: number
+          amount_to?: number
+          created_at?: string | null
+          created_from?: string
+          currency_from?: string
+          currency_to?: string
+          description?: string | null
+          from_account_id?: string
+          fx_rate?: number | null
+          id?: string
+          to_account_id?: string
+          transfer_date?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transfers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_logs: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          error: string | null
+          id: string
+          parsed_json: Json | null
+          transcript_raw: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          parsed_json?: Json | null
+          transcript_raw?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          parsed_json?: Json | null
+          transcript_raw?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       voice_rules: {
         Row: {

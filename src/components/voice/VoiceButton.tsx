@@ -2,47 +2,55 @@ import { useState, useCallback, useEffect } from "react";
 import { Mic, MicOff, Loader2, Check, Edit2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
+  Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseTransaction, type ParsedTransaction } from "@/hooks/useTransactionParser";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { format } from "date-fns";
 
 export function VoiceButton() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { accounts } = useAccounts();
+  const { categories } = useCategories();
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
   const [partialText, setPartialText] = useState("");
   const [parsedData, setParsedData] = useState<ParsedTransaction | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Edit fields
+  const [editAmount, setEditAmount] = useState("");
+  const [editType, setEditType] = useState<string>("expense");
+  const [editAccountId, setEditAccountId] = useState("");
+  const [editToAccountId, setEditToAccountId] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
     commitStrategy: CommitStrategy.VAD,
-    onPartialTranscript: (data) => {
-      setPartialText(data.text);
-    },
+    onPartialTranscript: (data) => setPartialText(data.text),
     onCommittedTranscript: (data) => {
-      // Accumulate committed text instead of replacing
-      setCommittedText((prev) => {
-        const newText = prev ? `${prev} ${data.text}` : data.text;
-        return newText.trim();
-      });
+      setCommittedText((prev) => (prev ? `${prev} ${data.text}` : data.text).trim());
       setPartialText("");
     },
   });
 
-  // Auto-start recording when drawer opens
   useEffect(() => {
     if (isOpen && !scribe.isConnected && !isConnecting && !parsedData) {
       handleStartRecording();
@@ -53,29 +61,11 @@ export function VoiceButton() {
     setIsConnecting(true);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const { data, error } = await supabase.functions.invoke(
-        "elevenlabs-scribe-token"
-      );
-
-      if (error) {
-        throw new Error(error.message || "Error getting token");
-      }
-
-      if (!data?.token) {
-        throw new Error("No se recibió token de autenticación");
-      }
-
-      await scribe.connect({
-        token: data.token,
-        microphone: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
+      if (error || !data?.token) throw new Error("No token");
+      await scribe.connect({ token: data.token, microphone: { echoCancellation: true, noiseSuppression: true } });
     } catch (error) {
-      console.error("Failed to start recording:", error);
-      toast.error("No se pudo iniciar la grabación. Verifica los permisos del micrófono.");
+      toast.error("No se pudo iniciar la grabación.");
     } finally {
       setIsConnecting(false);
     }
@@ -83,88 +73,138 @@ export function VoiceButton() {
 
   const handleStopRecording = useCallback(async () => {
     await scribe.disconnect();
-    // Parse the final committed text
     const finalText = committedText || partialText;
     if (finalText) {
-      const parsed = parseTransaction(finalText);
-      setParsedData(parsed);
-      // Ensure committed text has the final version
       if (!committedText && partialText) {
         setCommittedText(partialText);
         setPartialText("");
       }
-    }
-  }, [scribe, committedText, partialText]);
+      const parsed = parseTransactionEnhanced(finalText);
+      setParsedData(parsed);
+      // Pre-fill edit fields
+      setEditAmount(String(parsed.amount || ""));
+      setEditType(parsed.type);
+      setEditDescription(parsed.description || "");
+      setEditDate(parsed.date ? format(parsed.date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
 
-  const displayTranscript = committedText + (partialText ? ` ${partialText}` : "");
+      // Fuzzy match accounts
+      const matchedFrom = fuzzyMatchAccount(finalText, accounts);
+      if (matchedFrom) setEditAccountId(matchedFrom.id);
+      else if (accounts.length > 0) setEditAccountId(accounts[0].id);
+
+      if (parsed.type === "transfer") {
+        const matchedTo = fuzzyMatchToAccount(finalText, accounts, matchedFrom?.id);
+        if (matchedTo) setEditToAccountId(matchedTo.id);
+      }
+
+      // Fuzzy match category
+      if (parsed.category) {
+        const cat = categories.find((c) => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
+        if (cat) setEditCategoryId(cat.id);
+      }
+    }
+  }, [scribe, committedText, partialText, accounts, categories]);
+
+  const parseTransactionEnhanced = (text: string): ParsedTransaction => {
+    const lower = text.toLowerCase().trim();
+
+    // Detect action from first token
+    let type: "expense" | "income" | "transfer" = "expense";
+    if (lower.startsWith("transferencia") || lower.startsWith("transfiere") || lower.startsWith("transferí") || lower.includes("transferencia")) {
+      type = "transfer";
+    } else if (lower.startsWith("ingreso") || lower.startsWith("recibí") || lower.includes("ingreso") || lower.includes("me pagaron") || lower.includes("nómina") || lower.includes("pensión")) {
+      type = "income";
+    } else if (lower.startsWith("gasto") || lower.startsWith("gasté") || lower.startsWith("pagué") || lower.startsWith("compré")) {
+      type = "expense";
+    }
+
+    // Use existing parser for amount/category/date
+    const base = parseTransaction(text);
+    return { ...base, type };
+  };
+
+  const fuzzyMatchAccount = (text: string, accs: typeof accounts) => {
+    const lower = text.toLowerCase();
+    // Look for account name mentions
+    for (const acc of accs) {
+      const words = acc.name.toLowerCase().split(/\s+/);
+      for (const w of words) {
+        if (w.length > 2 && lower.includes(w)) return acc;
+      }
+    }
+    return null;
+  };
+
+  const fuzzyMatchToAccount = (text: string, accs: typeof accounts, excludeId?: string) => {
+    const lower = text.toLowerCase();
+    // Look for "a [account]" pattern
+    const match = lower.match(/(?:a|hacia)\s+(\w+)/);
+    if (match) {
+      const target = match[1];
+      for (const acc of accs) {
+        if (acc.id === excludeId) continue;
+        if (acc.name.toLowerCase().includes(target)) return acc;
+      }
+    }
+    return null;
+  };
 
   const handleConfirm = async () => {
-    if (!parsedData?.amount || !user) return;
-    
+    if (!user || !editAmount) return;
     setIsSaving(true);
     try {
-      const { data: accounts } = await supabase
-        .from('accounts')
-        .select('id, currency')
-        .limit(1);
-      
-      let accountId = accounts?.[0]?.id;
-      
-      if (!accountId) {
-        const { data: newAccount, error: accountError } = await supabase
-          .from('accounts')
-          .insert({
-            user_id: user.id,
-            name: 'Cuenta Principal',
-            type: 'bank',
-            currency: parsedData.currency || 'MXN',
-            initial_balance: 0,
-            current_balance: 0,
-          })
-          .select('id')
-          .single();
-        
-        if (accountError) throw accountError;
-        accountId = newAccount.id;
-      }
+      const amount = parseFloat(editAmount);
+      if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
 
-      let categoryId: string | undefined;
-      if (parsedData.category) {
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('id, name')
-          .ilike('name', `%${parsedData.category}%`)
-          .limit(1);
-        
-        categoryId = categories?.[0]?.id;
-      }
+      // Log voice
+      await supabase.from('voice_logs').insert([{
+        user_id: user.id,
+        transcript_raw: committedText,
+        parsed_json: parsedData as any,
+        confidence: parsedData?.confidence ?? 0,
+      }]);
 
-      const { error } = await supabase
-        .from('transactions')
-        .insert({
+      if (editType === "transfer") {
+        if (!editAccountId || !editToAccountId) throw new Error("Selecciona cuentas origen y destino");
+        const from = accounts.find((a) => a.id === editAccountId)!;
+        const to = accounts.find((a) => a.id === editToAccountId)!;
+        await supabase.from('transfers').insert({
           user_id: user.id,
-          account_id: accountId,
-          category_id: categoryId || null,
-          type: parsedData.type,
-          amount: parsedData.amount,
-          currency: parsedData.currency || 'MXN',
-          description: parsedData.description || committedText,
-          transaction_date: (parsedData.date || new Date()).toISOString().split('T')[0],
+          from_account_id: editAccountId,
+          to_account_id: editToAccountId,
+          amount_from: amount,
+          currency_from: from.currency,
+          amount_to: amount,
+          currency_to: to.currency,
+          transfer_date: editDate,
+          description: editDescription || committedText,
+          created_from: 'voice',
+        });
+        queryClient.invalidateQueries({ queryKey: ['transfers'] });
+      } else {
+        if (!editAccountId) throw new Error("Selecciona una cuenta");
+        const acc = accounts.find((a) => a.id === editAccountId)!;
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          account_id: editAccountId,
+          category_id: editCategoryId || null,
+          type: editType,
+          amount,
+          currency: acc.currency,
+          description: editDescription || committedText,
+          transaction_date: editDate,
           voice_transcript: committedText,
         });
-
-      if (error) throw error;
+      }
 
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
-
-      toast.success("Movimiento registrado correctamente");
+      toast.success("Registrado correctamente");
       handleReset();
       setIsOpen(false);
-    } catch (error: any) {
-      console.error("Error saving transaction:", error);
-      toast.error("No se pudo guardar el movimiento: " + (error.message || "Error desconocido"));
+    } catch (err: any) {
+      toast.error(err.message || "Error al guardar");
     } finally {
       setIsSaving(false);
     }
@@ -174,217 +214,205 @@ export function VoiceButton() {
     setCommittedText("");
     setPartialText("");
     setParsedData(null);
+    setIsEditing(false);
+    setEditAmount("");
+    setEditType("expense");
+    setEditAccountId("");
+    setEditToAccountId("");
+    setEditCategoryId("");
+    setEditDescription("");
+    setEditDate(format(new Date(), "yyyy-MM-dd"));
   };
 
   const handleCancel = async () => {
-    if (scribe.isConnected) {
-      await scribe.disconnect();
-    }
+    if (scribe.isConnected) await scribe.disconnect();
     handleReset();
     setIsOpen(false);
   };
 
-  const formatAmount = (amount: number | null, currency: string | null) => {
-    if (!amount) return "—";
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: currency || "MXN",
-    }).format(amount);
-  };
+  const activeAccounts = accounts.filter((a) => a.is_active);
+  const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia" };
+  const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground" };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "expense": return "Gasto";
-      case "income": return "Ingreso";
-      case "transfer": return "Transferencia";
-      default: return type;
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "expense": return "text-expense";
-      case "income": return "text-income";
-      case "transfer": return "text-transfer";
-      default: return "text-foreground";
-    }
-  };
+  const fmt = (amount: number, currency: string = "MXN") =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
 
   return (
     <>
-      {/* Floating Voice Button */}
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
           "fixed z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevated transition-all hover:scale-105 active:scale-95",
-          "bottom-20 right-4 lg:bottom-6 lg:right-6",
-          "voice-button-pulse"
+          "bottom-20 right-4 lg:bottom-6 lg:right-6"
         )}
         aria-label="Registrar por voz"
       >
         <Mic className="h-6 w-6" />
       </button>
 
-      {/* Voice Recording Drawer (mobile-friendly) */}
-      <Drawer open={isOpen} onOpenChange={(open) => {
-        if (!open) handleCancel();
-        else setIsOpen(true);
-      }}>
-        <DrawerContent className="max-h-[95vh] min-h-[70vh]">
+      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); else setIsOpen(true); }}>
+        <DrawerContent className="max-h-[95vh] min-h-[60vh]">
           <div className="mx-auto w-full max-w-md flex flex-col h-full overflow-hidden">
             <DrawerHeader className="text-center pb-1 shrink-0">
-              <DrawerTitle className="font-heading text-base">
-                Registrar por voz
-              </DrawerTitle>
-              <DrawerDescription className="text-xs">
-                Dicta tu movimiento y lo interpretaremos
-              </DrawerDescription>
+              <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
+              <DrawerDescription className="text-xs">Di: "Gasto...", "Ingreso..." o "Transferencia..."</DrawerDescription>
             </DrawerHeader>
 
-            <div className="flex flex-col items-center px-4 pb-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              {/* Recording Button */}
+            <div className="flex flex-col items-center px-4 space-y-3 overflow-y-auto flex-1 min-h-0">
+              {/* Mic button */}
               <button
                 onClick={scribe.isConnected ? handleStopRecording : handleStartRecording}
                 disabled={isConnecting}
                 className={cn(
-                  "flex h-20 w-20 items-center justify-center rounded-full transition-all shrink-0",
-                  scribe.isConnected
-                    ? "bg-expense text-expense-foreground animate-pulse-gentle"
-                    : "bg-primary text-primary-foreground hover:scale-105",
-                  isConnecting && "opacity-50 cursor-not-allowed"
+                  "flex h-16 w-16 items-center justify-center rounded-full transition-all shrink-0",
+                  scribe.isConnected ? "bg-expense text-expense-foreground animate-pulse" : "bg-primary text-primary-foreground hover:scale-105",
+                  isConnecting && "opacity-50"
                 )}
               >
-                {isConnecting ? (
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                ) : scribe.isConnected ? (
-                  <MicOff className="h-8 w-8" />
-                ) : (
-                  <Mic className="h-8 w-8" />
-                )}
+                {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
               </button>
 
-              <p className="text-sm text-muted-foreground text-center">
-                {isConnecting
-                  ? "Conectando..."
-                  : scribe.isConnected
-                  ? "Escuchando... Toca para detener"
-                  : parsedData
-                  ? "Revisa tu movimiento"
-                  : "Toca para hablar"}
+              <p className="text-xs text-muted-foreground">
+                {isConnecting ? "Conectando..." : scribe.isConnected ? "Escuchando... Toca para detener" : parsedData ? "Revisa tu movimiento" : "Toca para hablar"}
               </p>
 
-              {/* Live Transcript - only show committed text firmly, partial dimmed */}
-              {scribe.isConnected && displayTranscript && (
-                <div className="w-full animate-fade-in">
-                  <div className="rounded-lg bg-secondary p-3">
-                    <p className="text-center text-foreground text-sm">
-                      {committedText && (
-                        <span className="font-medium">{committedText} </span>
-                      )}
-                      {partialText && (
-                        <span className="text-muted-foreground italic">{partialText}</span>
-                      )}
-                    </p>
+              {/* Live transcript */}
+              {scribe.isConnected && (committedText || partialText) && (
+                <div className="w-full rounded-lg bg-secondary p-2">
+                  <p className="text-center text-sm text-foreground">
+                    {committedText && <span className="font-medium">{committedText} </span>}
+                    {partialText && <span className="text-muted-foreground italic">{partialText}</span>}
+                  </p>
+                </div>
+              )}
+
+              {/* Parsed result or edit mode */}
+              {!scribe.isConnected && parsedData && !isEditing && (
+                <div className="w-full space-y-2">
+                  <div className="rounded-lg bg-secondary p-2 text-center">
+                    <p className="text-xs text-muted-foreground">Detecté:</p>
+                    <p className="text-sm font-medium text-foreground line-clamp-2">{committedText}</p>
+                  </div>
+
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between py-1 border-b border-border">
+                      <span className="text-muted-foreground">Acción:</span>
+                      <span className={cn("font-medium", typeColors[editType])}>{typeLabels[editType]}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border">
+                      <span className="text-muted-foreground">Monto:</span>
+                      <span className="font-medium">{editAmount ? fmt(parseFloat(editAmount)) : "—"}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border">
+                      <span className="text-muted-foreground">Fecha:</span>
+                      <span className="font-medium">{editDate}</span>
+                    </div>
+                    {editAccountId && (
+                      <div className="flex justify-between py-1 border-b border-border">
+                        <span className="text-muted-foreground">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
+                        <span className="font-medium">{activeAccounts.find((a) => a.id === editAccountId)?.name ?? "—"}</span>
+                      </div>
+                    )}
+                    {editType === "transfer" && editToAccountId && (
+                      <div className="flex justify-between py-1 border-b border-border">
+                        <span className="text-muted-foreground">Destino:</span>
+                        <span className="font-medium">{activeAccounts.find((a) => a.id === editToAccountId)?.name ?? "—"}</span>
+                      </div>
+                    )}
+                    {editDescription && (
+                      <div className="flex justify-between py-1">
+                        <span className="text-muted-foreground">Concepto:</span>
+                        <span className="font-medium truncate max-w-[160px]">{editDescription}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Parsed Result Display */}
-              {!scribe.isConnected && parsedData && (
-                <div className="w-full animate-fade-in-up space-y-3">
-                  <div className="rounded-lg bg-secondary p-3 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Detecté:</p>
-                    <p className="font-medium text-foreground text-sm">{committedText}</p>
+              {/* Edit mode */}
+              {!scribe.isConnected && parsedData && isEditing && (
+                <div className="w-full space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Acción</label>
+                    <Select value={editType} onValueChange={setEditType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="expense">Gasto</SelectItem>
+                        <SelectItem value="income">Ingreso</SelectItem>
+                        <SelectItem value="transfer">Transferencia</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-
-                  {/* Parsed Data Preview - compact */}
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between py-1.5 border-b border-border">
-                      <span className="text-muted-foreground">Tipo:</span>
-                      <span className={cn("font-medium", getTypeColor(parsedData.type))}>
-                        {getTypeLabel(parsedData.type)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-border">
-                      <span className="text-muted-foreground">Monto:</span>
-                      <span className="font-medium">
-                        {formatAmount(parsedData.amount, parsedData.currency)}
-                      </span>
-                    </div>
-                    {parsedData.category && (
-                      <div className="flex justify-between py-1.5 border-b border-border">
-                        <span className="text-muted-foreground">Categoría:</span>
-                        <span className="font-medium">{parsedData.category}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between py-1.5 border-b border-border">
-                      <span className="text-muted-foreground">Fecha:</span>
-                      <span className="font-medium">{parsedData.dateLabel || "Hoy"}</span>
-                    </div>
-                    {parsedData.description && parsedData.description !== committedText && (
-                      <div className="flex justify-between py-1.5">
-                        <span className="text-muted-foreground">Descripción:</span>
-                        <span className="font-medium truncate max-w-[180px]">
-                          {parsedData.description}
-                        </span>
-                      </div>
-                    )}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Monto</label>
+                    <Input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
                   </div>
-
-                  {/* Confidence */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full rounded-full transition-all",
-                          parsedData.confidence >= 70 ? "bg-income" :
-                          parsedData.confidence >= 40 ? "bg-warning" : "bg-expense"
-                        )}
-                        style={{ width: `${parsedData.confidence}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {parsedData.confidence}%
-                    </span>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{editType === "transfer" ? "Cuenta origen" : "Cuenta"}</label>
+                    <Select value={editAccountId} onValueChange={setEditAccountId}>
+                      <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                      <SelectContent>
+                        {activeAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-3 pb-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="default"
-                      className="flex-1 gap-1.5"
-                      onClick={handleCancel}
-                    >
-                      <X className="h-4 w-4" />
-                      Cancelar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="default"
-                      className="flex-1 gap-1.5"
-                      onClick={handleReset}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      Reintentar
-                    </Button>
-                    <Button 
-                      size="default"
-                      className="flex-1 gap-1.5" 
-                      onClick={handleConfirm}
-                      disabled={!parsedData.amount || isSaving}
-                    >
-                      {isSaving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                      {isSaving ? "..." : "Confirmar"}
-                    </Button>
+                  {editType === "transfer" && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Cuenta destino</label>
+                      <Select value={editToAccountId} onValueChange={setEditToAccountId}>
+                        <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                        <SelectContent>
+                          {activeAccounts.filter((a) => a.id !== editAccountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {editType !== "transfer" && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Categoría</label>
+                      <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectContent>
+                          {categories.filter((c) => editType === "expense" ? c.type === "expense" : c.type === "income").map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Fecha</label>
+                    <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Concepto</label>
+                    <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Sticky bottom buttons */}
+            {!scribe.isConnected && parsedData && (
+              <div className="flex gap-2 px-4 py-3 border-t border-border shrink-0 bg-background">
+                <Button variant="outline" size="default" className="flex-1" onClick={handleCancel}>
+                  <X className="h-4 w-4 mr-1" />Cancelar
+                </Button>
+                {isEditing ? (
+                  <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(false)}>
+                    Listo
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(true)}>
+                    <Edit2 className="h-4 w-4 mr-1" />Editar
+                  </Button>
+                )}
+                <Button size="default" className="flex-1" onClick={handleConfirm} disabled={isSaving || !editAmount}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                  {isSaving ? "..." : "Confirmar"}
+                </Button>
+              </div>
+            )}
           </div>
         </DrawerContent>
       </Drawer>

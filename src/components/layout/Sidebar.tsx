@@ -12,6 +12,7 @@ import {
   BookOpen,
   Settings,
   Leaf,
+  Tag,
 } from "lucide-react";
 
 const navigation = [
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Transferencias", href: "/transfers", icon: ArrowRightLeft },
   { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
   { name: "Cuentas", href: "/accounts", icon: Wallet },
+  { name: "Categorías", href: "/categories", icon: Tag },
   { name: "Deudas", href: "/debts", icon: CreditCard },
   { name: "Fondo de emergencia", href: "/emergency-fund", icon: Target },
   { name: "Reportes", href: "/reports", icon: BarChart3 },

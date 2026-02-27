@@ -16,6 +16,7 @@ import Debts from "./pages/Debts";
 import EmergencyFund from "./pages/EmergencyFund";
 import Reports from "./pages/Reports";
 import Library from "./pages/Library";
+import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/transfers" element={<Transfers />} />
+              <Route path="/categories" element={<Categories />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/emergency-fund" element={<EmergencyFund />} />
               <Route path="/reports" element={<Reports />} />

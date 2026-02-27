@@ -255,7 +255,9 @@ export function VoiceButton() {
           <div className="mx-auto w-full max-w-md flex flex-col h-full overflow-hidden">
             <DrawerHeader className="text-center pb-1 shrink-0">
               <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
-              <DrawerDescription className="text-xs">Di: "Gasto...", "Ingreso..." o "Transferencia..."</DrawerDescription>
+              <DrawerDescription className="text-xs leading-tight">
+                Estructura: <strong>Acción</strong> → <strong>Monto</strong> → <strong>Cuenta</strong> → <strong>Concepto</strong>
+              </DrawerDescription>
             </DrawerHeader>
 
             <div className="flex flex-col items-center px-4 space-y-3 overflow-y-auto flex-1 min-h-0">
@@ -272,8 +274,14 @@ export function VoiceButton() {
                 {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
               </button>
 
-              <p className="text-xs text-muted-foreground">
-                {isConnecting ? "Conectando..." : scribe.isConnected ? "Escuchando... Toca para detener" : parsedData ? "Revisa tu movimiento" : "Toca para hablar"}
+              <p className="text-xs text-muted-foreground text-center">
+                {isConnecting ? "Conectando..." : scribe.isConnected ? "Escuchando... Toca para detener" : parsedData ? "Revisa tu movimiento" : (
+                  <>
+                    Ejemplos:<br/>
+                    <span className="italic">"Gasto 500 pesos tarjeta Viva gasolina"</span><br/>
+                    <span className="italic">"Transferencia mil pesos de BBVA a Efectivo pago"</span>
+                  </>
+                )}
               </p>
 
               {/* Live transcript */}

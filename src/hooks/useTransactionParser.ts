@@ -72,21 +72,87 @@ function detectCurrency(text: string): "MXN" | "USD" | "EUR" | null {
   return "MXN"; // Default to MXN
 }
 
+// Spanish word-to-number conversion
+const spanishUnits: Record<string, number> = {
+  cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+  seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12,
+  trece: 13, catorce: 14, quince: 15, dieciséis: 16, dieciseis: 16,
+  diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
+  veintiún: 21, veintiun: 21, veintiuno: 21, veintidós: 22, veintidos: 22,
+  veintitrés: 23, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiséis: 26, veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+  treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70,
+  ochenta: 80, noventa: 90, cien: 100, ciento: 100,
+  doscientos: 200, doscientas: 200, trescientos: 300, trescientas: 300,
+  cuatrocientos: 400, cuatrocientas: 400, quinientos: 500, quinientas: 500,
+  seiscientos: 600, seiscientas: 600, setecientos: 700, setecientas: 700,
+  ochocientos: 800, ochocientas: 800, novecientos: 900, novecientas: 900,
+};
+
+function spanishWordsToNumber(text: string): number | null {
+  const lower = text.toLowerCase()
+    .replace(/[.,;:!?]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Try to find a number phrase in the text
+  const words = lower.split(" ");
+  let total = 0;
+  let current = 0;
+  let foundNumber = false;
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    if (w === "y") continue; // "cincuenta y siete"
+
+    if (w === "mil") {
+      if (current === 0 && foundNumber) current = 0;
+      else if (current === 0) current = 1;
+      total += current * 1000;
+      current = 0;
+      foundNumber = true;
+      continue;
+    }
+    if (w === "millón" || w === "millon" || w === "millones") {
+      if (current === 0) current = 1;
+      total += current * 1000000;
+      current = 0;
+      foundNumber = true;
+      continue;
+    }
+
+    if (spanishUnits[w] !== undefined) {
+      current += spanishUnits[w];
+      foundNumber = true;
+    }
+  }
+
+  total += current;
+  return foundNumber ? total : null;
+}
+
 function parseAmount(text: string): { amount: number | null; currency: "MXN" | "USD" | "EUR" | null } {
   const lower = text.toLowerCase();
   const currency = detectCurrency(text);
   
-  // Check for "mil" pattern first (e.g., "54 mil pesos")
+  // 1) Check for digit + "mil" pattern first (e.g., "54 mil pesos", "2 mil")
   const milMatch = lower.match(/(\d+(?:\.\d+)?)\s*mil/);
   if (milMatch) {
     return { amount: parseFloat(milMatch[1]) * 1000, currency };
   }
   
-  // Standard amount patterns
+  // 2) Standard digit patterns (e.g., "1,500", "250.00")
   const amountMatch = lower.match(/(\d{1,3}(?:[,\s]?\d{3})*(?:\.\d{1,2})?)/);
   if (amountMatch) {
     const cleanAmount = amountMatch[1].replace(/[,\s]/g, "");
-    return { amount: parseFloat(cleanAmount), currency };
+    const parsed = parseFloat(cleanAmount);
+    if (parsed > 0) return { amount: parsed, currency };
+  }
+  
+  // 3) Try Spanish word numbers ("cuatrocientos", "cincuenta y siete mil")
+  const wordAmount = spanishWordsToNumber(text);
+  if (wordAmount && wordAmount > 0) {
+    return { amount: wordAmount, currency };
   }
   
   return { amount: null, currency };

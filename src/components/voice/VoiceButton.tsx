@@ -23,7 +23,7 @@ export function VoiceButton() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { accounts } = useAccounts();
-  const { categories } = useCategories();
+  const { categories, findCategoryByKeyword } = useCategories();
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +87,16 @@ export function VoiceButton() {
       setEditDescription(parsed.description || "");
       setEditDate(parsed.date ? format(parsed.date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
 
+      // Auto-categorize using DB keywords
+      const matchedCategory = findCategoryByKeyword(finalText);
+      if (matchedCategory) {
+        setEditCategoryId(matchedCategory.id);
+      } else if (parsed.category) {
+        // Fallback to parser's hardcoded category match
+        const cat = categories.find((c) => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
+        if (cat) setEditCategoryId(cat.id);
+      }
+
       // Fuzzy match accounts
       const matchedFrom = fuzzyMatchAccount(finalText, accounts);
       if (matchedFrom) setEditAccountId(matchedFrom.id);
@@ -96,19 +106,12 @@ export function VoiceButton() {
         const matchedTo = fuzzyMatchToAccount(finalText, accounts, matchedFrom?.id);
         if (matchedTo) setEditToAccountId(matchedTo.id);
       }
-
-      // Fuzzy match category
-      if (parsed.category) {
-        const cat = categories.find((c) => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
-        if (cat) setEditCategoryId(cat.id);
-      }
     }
-  }, [scribe, committedText, partialText, accounts, categories]);
+  }, [scribe, committedText, partialText, accounts, categories, findCategoryByKeyword]);
 
   const parseTransactionEnhanced = (text: string): ParsedTransaction => {
     const lower = text.toLowerCase().trim();
 
-    // Detect action from first token
     let type: "expense" | "income" | "transfer" = "expense";
     if (lower.startsWith("transferencia") || lower.startsWith("transfiere") || lower.startsWith("transferí") || lower.includes("transferencia")) {
       type = "transfer";
@@ -118,14 +121,12 @@ export function VoiceButton() {
       type = "expense";
     }
 
-    // Use existing parser for amount/category/date
     const base = parseTransaction(text);
     return { ...base, type };
   };
 
   const fuzzyMatchAccount = (text: string, accs: typeof accounts) => {
     const lower = text.toLowerCase();
-    // Look for account name mentions
     for (const acc of accs) {
       const words = acc.name.toLowerCase().split(/\s+/);
       for (const w of words) {
@@ -137,7 +138,6 @@ export function VoiceButton() {
 
   const fuzzyMatchToAccount = (text: string, accs: typeof accounts, excludeId?: string) => {
     const lower = text.toLowerCase();
-    // Look for "a [account]" pattern
     const match = lower.match(/(?:a|hacia)\s+(\w+)/);
     if (match) {
       const target = match[1];
@@ -156,7 +156,6 @@ export function VoiceButton() {
       const amount = parseFloat(editAmount);
       if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
 
-      // Log voice
       await supabase.from('voice_logs').insert([{
         user_id: user.id,
         transcript_raw: committedText,
@@ -237,6 +236,8 @@ export function VoiceButton() {
   const fmt = (amount: number, currency: string = "MXN") =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
 
+  const getCategoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "";
+
   return (
     <>
       <button
@@ -256,7 +257,7 @@ export function VoiceButton() {
             <DrawerHeader className="text-center pb-1 shrink-0">
               <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
               <DrawerDescription className="text-xs leading-tight">
-                Estructura: <strong>Acción</strong> → <strong>Monto</strong> → <strong>Cuenta</strong> → <strong>Concepto</strong>
+                <span className="font-semibold">Acción</span> → <span className="font-semibold">Monto</span> → <span className="font-semibold">Cuenta</span> → <span className="font-semibold">Concepto</span>
               </DrawerDescription>
             </DrawerHeader>
 
@@ -274,12 +275,10 @@ export function VoiceButton() {
                 {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
               </button>
 
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-xs text-muted-foreground text-center px-2">
                 {isConnecting ? "Conectando..." : scribe.isConnected ? "Escuchando... Toca para detener" : parsedData ? "Revisa tu movimiento" : (
                   <>
-                    Ejemplos:<br/>
-                    <span className="italic">"Gasto 500 pesos tarjeta Viva gasolina"</span><br/>
-                    <span className="italic">"Transferencia mil pesos de BBVA a Efectivo pago"</span>
+                    Ejemplo: <span className="italic">"Gasto 500 pesos tarjeta gasolina"</span>
                   </>
                 )}
               </p>
@@ -287,19 +286,19 @@ export function VoiceButton() {
               {/* Live transcript */}
               {scribe.isConnected && (committedText || partialText) && (
                 <div className="w-full rounded-lg bg-secondary p-2">
-                  <p className="text-center text-sm text-foreground">
+                  <p className="text-center text-sm text-foreground break-words">
                     {committedText && <span className="font-medium">{committedText} </span>}
                     {partialText && <span className="text-muted-foreground italic">{partialText}</span>}
                   </p>
                 </div>
               )}
 
-              {/* Parsed result or edit mode */}
+              {/* Parsed result - view mode */}
               {!scribe.isConnected && parsedData && !isEditing && (
                 <div className="w-full space-y-2">
                   <div className="rounded-lg bg-secondary p-2 text-center">
                     <p className="text-xs text-muted-foreground">Detecté:</p>
-                    <p className="text-sm font-medium text-foreground line-clamp-2">{committedText}</p>
+                    <p className="text-sm font-medium text-foreground break-words">{committedText}</p>
                   </div>
 
                   <div className="text-sm space-y-1">
@@ -318,19 +317,25 @@ export function VoiceButton() {
                     {editAccountId && (
                       <div className="flex justify-between py-1 border-b border-border">
                         <span className="text-muted-foreground">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
-                        <span className="font-medium">{activeAccounts.find((a) => a.id === editAccountId)?.name ?? "—"}</span>
+                        <span className="font-medium truncate ml-2 max-w-[180px]">{activeAccounts.find((a) => a.id === editAccountId)?.name ?? "—"}</span>
                       </div>
                     )}
                     {editType === "transfer" && editToAccountId && (
                       <div className="flex justify-between py-1 border-b border-border">
                         <span className="text-muted-foreground">Destino:</span>
-                        <span className="font-medium">{activeAccounts.find((a) => a.id === editToAccountId)?.name ?? "—"}</span>
+                        <span className="font-medium truncate ml-2 max-w-[180px]">{activeAccounts.find((a) => a.id === editToAccountId)?.name ?? "—"}</span>
+                      </div>
+                    )}
+                    {editCategoryId && (
+                      <div className="flex justify-between py-1 border-b border-border">
+                        <span className="text-muted-foreground">Categoría:</span>
+                        <span className="font-medium text-primary">{getCategoryName(editCategoryId)}</span>
                       </div>
                     )}
                     {editDescription && (
                       <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Concepto:</span>
-                        <span className="font-medium truncate max-w-[160px]">{editDescription}</span>
+                        <span className="text-muted-foreground">Descripción:</span>
+                        <span className="font-medium truncate ml-2 max-w-[180px]">{editDescription}</span>
                       </div>
                     )}
                   </div>
@@ -379,7 +384,7 @@ export function VoiceButton() {
                     <div>
                       <label className="text-xs font-medium text-muted-foreground">Categoría</label>
                       <Select value={editCategoryId} onValueChange={setEditCategoryId}>
-                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
                         <SelectContent>
                           {categories.filter((c) => editType === "expense" ? c.type === "expense" : c.type === "income").map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -393,8 +398,8 @@ export function VoiceButton() {
                     <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">Concepto</label>
-                    <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                    <label className="text-xs font-medium text-muted-foreground">Descripción</label>
+                    <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Ej: Gasolina Pemex Constitución" />
                   </div>
                 </div>
               )}

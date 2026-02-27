@@ -82,7 +82,7 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
               <SheetHeader className="sr-only">
                 <SheetTitle>Menú de navegación</SheetTitle>
               </SheetHeader>
-              <Sidebar className="flex relative w-full border-0" />
+              <Sidebar className="flex relative w-full border-0" onNavigate={() => onOpenChange(false)} />
             </SheetContent>
           </Sheet>
         </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Wallet, Building2, PiggyBank, CreditCard, TrendingUp, Pencil, Trash2, HandCoins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function Accounts() {
+  const navigate = useNavigate();
   const { accounts, isLoading, totalBalance, deleteAccount } = useAccounts();
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
@@ -107,7 +109,7 @@ export default function Accounts() {
               <div
                 key={account.id}
                 className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4 card-interactive cursor-pointer"
-                onClick={() => window.location.href = `/accounts/${account.id}`}
+                onClick={() => navigate(`/accounts/${account.id}`)}
               >
                 <div
                   className={cn(
@@ -145,7 +147,7 @@ export default function Accounts() {
                   variant="ghost"
                   size="icon"
                   className="shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => setDeleteTarget(account)}
+                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(account); }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

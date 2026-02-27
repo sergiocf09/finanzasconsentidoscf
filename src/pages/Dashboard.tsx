@@ -3,6 +3,7 @@ import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -80,7 +81,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-heading font-semibold text-foreground">Movimientos recientes</h2>
-            <a href="/transactions" className="text-xs text-primary hover:underline">Ver todos</a>
+            <Link to="/transactions" className="text-xs text-primary hover:underline">Ver todos</Link>
           </div>
           <RecentTransactions />
         </div>

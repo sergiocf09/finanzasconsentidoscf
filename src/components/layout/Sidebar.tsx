@@ -30,10 +30,15 @@ const navigation = [
 
 interface SidebarProps {
   className?: string;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const location = useLocation();
+
+  const handleClick = () => {
+    onNavigate?.();
+  };
 
   return (
     <aside
@@ -66,6 +71,7 @@ export function Sidebar({ className }: SidebarProps) {
               <li key={item.name}>
                 <Link
                   to={item.href}
+                  onClick={handleClick}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
@@ -86,6 +92,7 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="border-t border-sidebar-border p-3">
         <Link
           to="/settings"
+          onClick={handleClick}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors"
         >
           <Settings className="h-5 w-5" />

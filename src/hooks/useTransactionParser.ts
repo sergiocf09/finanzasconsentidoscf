@@ -159,24 +159,23 @@ function parseAmount(text: string): { amount: number | null; currency: "MXN" | "
 }
 
 function detectType(text: string): "expense" | "income" | "transfer" {
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().trim();
   
-  // Transfer indicators
-  if (lower.includes("transferí") || lower.includes("transferencia") || 
-      lower.includes("mandé") || lower.includes("envié") || 
-      lower.includes("pasé") || lower.includes("moví")) {
+  // Strict: first word defines the action
+  if (lower.startsWith("transferencia") || lower.startsWith("transfiere") || lower.startsWith("transferí")) {
     return "transfer";
   }
-  
-  // Income indicators
-  if (lower.includes("ingreso") || lower.includes("recibí") || 
-      lower.includes("cobré") || lower.includes("me pagaron") ||
-      lower.includes("pensión") || lower.includes("nómina") ||
-      lower.includes("salario") || lower.includes("sueldo")) {
+  if (lower.startsWith("ingreso") || lower.startsWith("recibí")) {
     return "income";
   }
+  if (lower.startsWith("gasto") || lower.startsWith("gasté") || lower.startsWith("pagué") || lower.startsWith("compré") || lower.startsWith("gastó")) {
+    return "expense";
+  }
   
-  // Default to expense
+  // Fallback: search anywhere
+  if (lower.includes("transferencia") || lower.includes("transferí")) return "transfer";
+  if (lower.includes("ingreso") || lower.includes("me pagaron") || lower.includes("nómina") || lower.includes("pensión") || lower.includes("recibí") || lower.includes("cobré")) return "income";
+  
   return "expense";
 }
 
@@ -225,17 +224,29 @@ function detectDate(text: string): { date: Date | null; label: string | null } {
 }
 
 function extractDescription(text: string): string {
-  // Remove amount, currency, date indicators for cleaner description
+  // Structure: ACTION AMOUNT ACCOUNT(S) CONCEPT
+  // Remove the action word, amount/currency words, and account patterns to isolate the concept
   let desc = text
+    // Remove action keywords at start
+    .replace(/^(gasto|gasté|gastó|pagué|compré|ingreso|recibí|transferencia|transfiere|transferí)\s*/i, "")
+    // Remove digit amounts + currency
     .replace(/\d{1,3}(?:[,\s]?\d{3})*(?:\.\d{1,2})?\s*(mil\s+)?(pesos?|mxn|dólares?|dolares?|usd|euros?|eur)?/gi, "")
+    // Remove Spanish word numbers + currency
+    .replace(/\b(cero|un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciséis|dieciseis|diecisiete|dieciocho|diecinueve|veinte|veintiún|veintiun|veintiuno|veintidós|veintidos|veintitrés|veintitres|veinticuatro|veinticinco|veintiséis|veintiseis|veintisiete|veintiocho|veintinueve|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento|doscientos|doscientas|trescientos|trescientas|cuatrocientos|cuatrocientas|quinientos|quinientas|seiscientos|seiscientas|setecientos|setecientas|ochocientos|ochocientas|novecientos|novecientas)\b/gi, "")
+    .replace(/\b(mil|millón|millon|millones)\b/gi, "")
+    .replace(/\b(pesos?|mxn|dólares?|dolares?|usd|euros?|eur)\b/gi, "")
+    // Remove filler words
+    .replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y)\b/gi, " ")
+    // Remove date references
     .replace(/\b(hoy|ayer|antier|anteayer)\b/gi, "")
     .replace(/\bhace \d+ días?\b/gi, "")
-    .replace(/\b(el|día) \d{1,2}\b/gi, "")
-    .replace(/\b(gasté|pagué|compré|ingreso|recibí|transferí)\b/gi, "")
+    // Clean up
     .replace(/\s+/g, " ")
     .trim();
   
-  // Capitalize first letter
+  // Remove leading/trailing punctuation
+  desc = desc.replace(/^[.,;:\-–—\s]+/, "").replace(/[.,;:\-–—\s]+$/, "");
+  
   if (desc.length > 0) {
     desc = desc.charAt(0).toUpperCase() + desc.slice(1);
   }

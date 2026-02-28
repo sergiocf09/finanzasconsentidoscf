@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Wallet, Building2, PiggyBank, CreditCard, TrendingUp, Trash2, HandCoins,
-  Home, Car, User, Landmark, ShieldCheck,
+  Home, Car, User, Landmark, ShieldCheck, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import {
   useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability,
 } from "@/hooks/useAccounts";
 import { AccountForm } from "@/components/accounts/AccountForm";
+import { AccountEditSheet } from "@/components/accounts/AccountEditSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -35,12 +36,23 @@ export default function Accounts() {
   const navigate = useNavigate();
   const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deleteAccount } = useAccounts();
   const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await deleteAccount.mutateAsync(deleteTarget.id);
+    try {
+      await deleteAccount.mutateAsync(deleteTarget.id);
+    } catch {
+      // Error handled by mutation
+    }
     setDeleteTarget(null);
+  };
+
+  // Count transactions for delete warning
+  const getTransactionCount = async (accountId: string) => {
+    // We show warning in the dialog itself
+    return 0;
   };
 
   const assets = accounts.filter(a => isAssetType(a.type)).sort((a, b) => a.name.localeCompare(b.name));
@@ -69,6 +81,10 @@ export default function Accounts() {
           </p>
           <p className="text-xs text-muted-foreground">{account.currency}</p>
         </div>
+        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-primary"
+          onClick={(e) => { e.stopPropagation(); setEditTarget(account); }}>
+          <Pencil className="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
           onClick={(e) => { e.stopPropagation(); setDeleteTarget(account); }}>
           <Trash2 className="h-4 w-4" />
@@ -165,18 +181,27 @@ export default function Accounts() {
       )}
 
       <AccountForm open={formOpen} onOpenChange={setFormOpen} />
+      <AccountEditSheet account={editTarget} open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar cuenta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará la cuenta "{deleteTarget?.name}". Si tiene movimientos asociados, esta acción podría fallar.
+            <AlertDialogTitle>¿Eliminar esta cuenta?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Estás a punto de eliminar <span className="font-medium text-foreground">"{deleteTarget?.name}"</span>.
+              </span>
+              <span className="block">
+                Si tiene movimientos asociados, la eliminación podría fallar. En ese caso, te recomendamos desactivarla desde la edición.
+              </span>
+              <span className="block font-medium text-foreground">Esta acción no se puede deshacer.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sí, eliminar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -2,10 +2,10 @@ import { BalanceCard } from "@/components/dashboard/BalanceCard";
 import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
+import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
-import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useBudgets } from "@/hooks/useBudgets";
 import { format } from "date-fns";
@@ -13,7 +13,6 @@ import { es } from "date-fns/locale";
 
 export default function Dashboard() {
   const { profile } = useProfile();
-  const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
   const { totals } = useTransactions();
   const { budgets } = useBudgets();
   const displayName = profile?.display_name || "bienvenido";
@@ -23,12 +22,6 @@ export default function Dashboard() {
 
   const activeBudgets = budgets.filter((b) => b.is_active);
 
-  const fmt = (v: number, c: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: c, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
-
-  const assetCurrencies = Object.entries(assetsByCurrency);
-  const liabCurrencies = Object.entries(liabilitiesByCurrency);
-
   return (
     <div className="space-y-6 stagger-children">
       {/* Welcome */}
@@ -37,18 +30,8 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Tu dinero con calma. Tu vida con sentido.</p>
       </div>
 
-      {/* Balance summary by currency */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {assetCurrencies.map(([currency, total]) => (
-          <BalanceCard key={`a-${currency}`} title={`Activos (${currency})`} amount={total} currency={currency} type="balance" />
-        ))}
-        {liabCurrencies.map(([currency, total]) => (
-          <BalanceCard key={`l-${currency}`} title={`Pasivos (${currency})`} amount={-total} currency={currency} type="expense" />
-        ))}
-        {assetCurrencies.length === 0 && liabCurrencies.length === 0 && (
-          <BalanceCard title="Balance total" amount={0} type="balance" />
-        )}
-      </div>
+      {/* Financial summary: expandable asset/liability cards */}
+      <FinancialSummaryCards />
 
       {/* Month activity */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">

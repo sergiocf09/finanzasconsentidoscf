@@ -32,7 +32,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
-  type: z.enum(["cash", "bank", "savings", "investment", "credit_card", "payable"]),
+  type: z.enum(["cash", "bank", "savings", "investment", "credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"]),
   currency: z.string().default("MXN"),
   initial_balance: z.coerce.number().default(0),
 });
@@ -51,6 +51,10 @@ const accountTypes = [
   { value: "investment", label: "Inversión" },
   { value: "credit_card", label: "Tarjeta de Crédito" },
   { value: "payable", label: "Cuenta por Pagar" },
+  { value: "mortgage", label: "Crédito Hipotecario" },
+  { value: "auto_loan", label: "Crédito Automotriz" },
+  { value: "personal_loan", label: "Crédito Personal" },
+  { value: "caucion_bursatil", label: "Caución Bursátil" },
 ];
 
 export function AccountForm({ open, onOpenChange }: AccountFormProps) {

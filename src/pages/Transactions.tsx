@@ -7,6 +7,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -30,6 +31,7 @@ export default function Transactions() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [selectedTx, setSelectedTx] = useState<any>(null);
 
   const { transactions, isLoading, totals, deleteTransaction } = useTransactions();
   const { categories } = useCategories();
@@ -142,7 +144,8 @@ export default function Transactions() {
       ) : (
         <div className="space-y-2">
           {displayed.map((tx) => (
-            <div key={tx.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
+            <div key={tx.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border cursor-pointer card-interactive"
+              onClick={() => setSelectedTx(tx)}>
               <div className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0",
                 tx.type === "income" && "bg-income/10",
@@ -168,7 +171,7 @@ export default function Transactions() {
               )}>
                 {tx.type === "expense" && "-"}{tx.type === "income" && "+"}{formatAmount(tx.amount, tx.currency)}
               </p>
-              <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(tx.id)}>
+              <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(tx.id); }}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
@@ -198,6 +201,12 @@ export default function Transactions() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TransactionDetailSheet
+        transaction={selectedTx}
+        open={!!selectedTx}
+        onOpenChange={(open) => { if (!open) setSelectedTx(null); }}
+      />
     </div>
   );
 }

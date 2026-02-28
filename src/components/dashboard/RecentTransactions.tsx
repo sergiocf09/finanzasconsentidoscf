@@ -1,28 +1,18 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  ShoppingBag,
-  Utensils,
-  Car,
-  Home,
-  Briefcase,
-  Gift,
-  ArrowRightLeft,
-  Receipt,
+  ShoppingBag, Utensils, Car, Home, Briefcase, Gift, ArrowRightLeft, Receipt,
 } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
+import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
-  Transporte: Car,
-  Salario: Briefcase,
-  Alimentación: Utensils,
-  Vivienda: Home,
-  Compras: ShoppingBag,
-  Ahorro: Gift,
-  default: Receipt,
+  Transporte: Car, Salario: Briefcase, Alimentación: Utensils, Vivienda: Home,
+  Compras: ShoppingBag, Ahorro: Gift, default: Receipt,
 };
 
 interface RecentTransactionsProps {
@@ -32,15 +22,10 @@ interface RecentTransactionsProps {
 export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
   const { transactions, isLoading } = useTransactions();
   const { categories } = useCategories();
+  const [selectedTx, setSelectedTx] = useState<typeof transactions[0] | null>(null);
 
-  const formatAmount = (value: number, currency: string) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatAmount = (value: number, currency: string) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + "T12:00:00");
@@ -57,9 +42,7 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 rounded-xl" />
-        ))}
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
       </div>
     );
   }
@@ -71,67 +54,59 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
       <div className="text-center py-8 text-muted-foreground">
         <Receipt className="h-10 w-10 mx-auto mb-2 opacity-40" />
         <p className="text-sm">Sin movimientos recientes</p>
-        <p className="text-xs mt-1">Registra tu primer movimiento con el botón de voz o manualmente.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {displayed.map((transaction) => {
-        const catName = getCategoryName(transaction.category_id);
-        const Icon =
-          transaction.type === "transfer"
-            ? ArrowRightLeft
-            : categoryIcons[catName] || categoryIcons.default;
+    <>
+      <div className="space-y-3">
+        {displayed.map((transaction) => {
+          const catName = getCategoryName(transaction.category_id);
+          const Icon = transaction.type === "transfer" ? ArrowRightLeft : categoryIcons[catName] || categoryIcons.default;
 
-        return (
-          <div
-            key={transaction.id}
-            className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border card-interactive"
-          >
+          return (
             <div
-              className={cn(
+              key={transaction.id}
+              className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border card-interactive cursor-pointer"
+              onClick={() => setSelectedTx(transaction)}
+            >
+              <div className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0",
                 transaction.type === "income" && "bg-income/10",
                 transaction.type === "expense" && "bg-muted",
                 transaction.type === "transfer" && "bg-transfer/10"
-              )}
-            >
-              <Icon
-                className={cn(
+              )}>
+                <Icon className={cn(
                   "h-5 w-5",
                   transaction.type === "income" && "text-income",
                   transaction.type === "expense" && "text-muted-foreground",
                   transaction.type === "transfer" && "text-transfer"
-                )}
-              />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {transaction.description || catName}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {catName} · {formatDate(transaction.transaction_date)}
-              </p>
-            </div>
-
-            <p
-              className={cn(
+                )} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{transaction.description || catName}</p>
+                <p className="text-xs text-muted-foreground">{catName} · {formatDate(transaction.transaction_date)}</p>
+              </div>
+              <p className={cn(
                 "text-sm font-semibold tabular-nums",
                 transaction.type === "income" && "text-income",
                 transaction.type === "expense" && "text-foreground",
                 transaction.type === "transfer" && "text-transfer"
-              )}
-            >
-              {transaction.type === "expense" && "-"}
-              {transaction.type === "income" && "+"}
-              {formatAmount(transaction.amount, transaction.currency)}
-            </p>
-          </div>
-        );
-      })}
-    </div>
+              )}>
+                {transaction.type === "expense" && "-"}
+                {transaction.type === "income" && "+"}
+                {formatAmount(transaction.amount, transaction.currency)}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      <TransactionDetailSheet
+        transaction={selectedTx}
+        open={!!selectedTx}
+        onOpenChange={(open) => { if (!open) setSelectedTx(null); }}
+      />
+    </>
   );
 }

@@ -155,11 +155,15 @@ function extractAmount(text: string): { amount: number | null; currency: string;
     return { amount, currency, rest: cleanSpaces(rest) };
   }
 
-  // Pattern 2: standard digits (e.g. "1,500", "57000", "1500.50")
-  const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[,\s]?\d{3})*(?:\.\d{1,2})?)/);
+  // Pattern 2: standard digits - handle Spanish thousands separator (dot) e.g. "20.000" = 20000
+  // A dot followed by exactly 3 digits is a thousands separator, not decimal
+  const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[.,\s]\d{3})*(?:\.\d{1,2}(?!\d))?)/);
   if (digitMatch) {
-    const clean = digitMatch[1].replace(/[,\s]/g, "");
-    const amount = parseFloat(clean);
+    let raw = digitMatch[1];
+    // If pattern like "20.000" (dot + exactly 3 digits at end), treat dot as thousands sep
+    raw = raw.replace(/\.(\d{3})(?!\d)/g, "$1");
+    raw = raw.replace(/[,\s]/g, "");
+    const amount = parseFloat(raw);
     if (amount > 0) {
       rest = rest.replace(digitMatch[0], " ");
       rest = stripCurrencyWords(rest);

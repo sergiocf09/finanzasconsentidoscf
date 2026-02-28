@@ -141,15 +141,15 @@ export default function Categories() {
       ) : (
         <>
           {/* Block selector — Ingresos centered on top, then 3 expense blocks */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Ingresos row */}
             <div className="flex justify-center">
               <button
                 onClick={() => setActiveBlock(activeBlock === "income" ? null : "income")}
                 className={cn(
-                  "flex items-center gap-2 px-5 py-3 rounded-xl border-2 transition-all font-medium text-sm",
+                  "flex items-center gap-2 px-4 py-1.5 rounded-lg border-2 transition-all font-semibold text-sm",
                   blocks[0].bgClass, blocks[0].colorClass,
-                  activeBlock === "income" ? "ring-2 ring-offset-2 ring-[hsl(var(--finance-income))] scale-105" : "opacity-80 hover:opacity-100"
+                  activeBlock === "income" ? "ring-2 ring-offset-1 ring-[hsl(var(--finance-income))]" : "hover:opacity-90"
                 )}
               >
                 {blocks[0].icon}
@@ -167,17 +167,21 @@ export default function Categories() {
                     key={block.key}
                     onClick={() => setActiveBlock(activeBlock === block.key ? null : block.key)}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all font-medium text-xs sm:text-sm",
-                      block.bgClass, block.colorClass,
-                      activeBlock === block.key ? "ring-2 ring-offset-2 scale-105" : "opacity-80 hover:opacity-100",
+                      "flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg border-2 transition-all font-bold text-xs sm:text-sm",
+                      block.bgClass,
+                      activeBlock === block.key ? "ring-2 ring-offset-1" : "hover:opacity-90",
                       activeBlock === block.key && block.key === "stability" && "ring-[hsl(var(--block-stability))]",
                       activeBlock === block.key && block.key === "lifestyle" && "ring-[hsl(var(--block-lifestyle))]",
                       activeBlock === block.key && block.key === "build" && "ring-[hsl(var(--block-build))]",
+                      // Darker text for readability
+                      block.key === "stability" && "text-blue-800 dark:text-blue-200",
+                      block.key === "lifestyle" && "text-amber-800 dark:text-amber-200",
+                      block.key === "build" && "text-emerald-800 dark:text-emerald-200",
                     )}
                   >
                     {block.icon}
                     <span className="leading-tight text-center">{block.label}</span>
-                    <span className="text-[10px] opacity-70">({count})</span>
+                    <span className="text-[10px] font-medium opacity-70">({count})</span>
                   </button>
                 );
               })}
@@ -191,29 +195,20 @@ export default function Categories() {
                 {blocks.find(b => b.key === activeBlock)?.label} — {cats.length} categoría{cats.length !== 1 ? "s" : ""}
               </h2>
               {cats.length === 0 ? (
-                <p className="text-center py-8 text-sm text-muted-foreground">Sin categorías en este bloque</p>
+                <p className="text-center py-6 text-sm text-muted-foreground">Sin categorías en este bloque</p>
               ) : (
                 cats.map(cat => (
-                  <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
-                    <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{cat.name}</p>
-                      {cat.type === "expense" && (
-                        <span className="text-xs text-muted-foreground">
-                          {bucketLabels[(cat as any).bucket] || "Sin bloque"}
-                        </span>
-                      )}
+                  <div key={cat.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border">
+                    <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{cat.name}</p>
+                    <div className="flex gap-0.5 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
-                    {!cat.is_system && (
-                      <div className="flex gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(cat)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 ))
               )}

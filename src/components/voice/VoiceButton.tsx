@@ -87,13 +87,23 @@ export function VoiceButton() {
       setEditType(parsed.type);
       setEditDate(parsed.date ? format(parsed.date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
 
-      // Auto-categorize using DB keywords
+      // Auto-categorize using DB keywords, filtered by detected type
+      const typeForCategory = parsed.type === "transfer" ? "transfer" : parsed.type;
       const matchedCategory = findCategoryByKeyword(finalText);
-      if (matchedCategory) {
+      if (matchedCategory && matchedCategory.type === typeForCategory) {
         setEditCategoryId(matchedCategory.id);
-      } else if (parsed.category) {
-        const cat = categories.find((c) => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
-        if (cat) setEditCategoryId(cat.id);
+      } else {
+        // Search only categories of the correct type
+        const typedCategories = categories.filter(c => c.type === typeForCategory);
+        const matchByKeyword = typedCategories.find(c =>
+          c.keywords?.some(kw => finalText.toLowerCase().includes(kw.toLowerCase()))
+        );
+        if (matchByKeyword) {
+          setEditCategoryId(matchByKeyword.id);
+        } else if (parsed.category) {
+          const cat = typedCategories.find(c => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
+          if (cat) setEditCategoryId(cat.id);
+        }
       }
 
       // Fuzzy match accounts and strip account name from description

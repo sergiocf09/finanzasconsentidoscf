@@ -72,13 +72,15 @@ export default function AccountDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/accounts">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">{account.name}</h1>
-          <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {fmt(account.current_balance, account.currency)}</p>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
+        <div className="flex items-center gap-3">
+          <Link to="/accounts">
+            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-foreground">{account.name}</h1>
+            <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {fmt(account.current_balance, account.currency)}</p>
+          </div>
         </div>
       </div>
 

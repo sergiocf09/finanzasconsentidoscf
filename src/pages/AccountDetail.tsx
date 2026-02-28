@@ -1,12 +1,12 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useCategories } from "@/hooks/useCategories";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useReconciliations } from "@/hooks/useReconciliations";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ export default function AccountDetail() {
   const { transactions } = useTransactions();
   const { transfers } = useTransfers(id);
   const { categories } = useCategories();
+  const { reconciliations, deleteReconciliation } = useReconciliations(id);
   const account = accounts.find((a) => a.id === id);
 
   if (!account) {
@@ -89,6 +90,9 @@ export default function AccountDetail() {
           <TabsTrigger value="all">Todo ({allItems.length})</TabsTrigger>
           <TabsTrigger value="movements">Movimientos ({accountTxs.length})</TabsTrigger>
           <TabsTrigger value="transfers">Transferencias ({transfers.length})</TabsTrigger>
+          {reconciliations.length > 0 && (
+            <TabsTrigger value="reconciliations">Conciliaciones ({reconciliations.length})</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="all">
@@ -130,6 +134,35 @@ export default function AccountDetail() {
               currency: t.from_account_id === id ? t.currency_from : t.currency_to,
               source: "transfer",
             }))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reconciliations">
+          <div className="rounded-2xl bg-card border border-border p-4 space-y-0">
+            {reconciliations.map((r) => (
+              <div key={r.id} className="flex items-start gap-3 py-3 border-b border-border last:border-0">
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {fmt(r.previous_balance, account.currency)} → {fmt(r.new_balance, account.currency)}
+                  </p>
+                  <p className={cn("text-xs font-medium tabular-nums", r.delta > 0 ? "text-income" : "text-expense")}>
+                    Delta: {r.delta > 0 ? "+" : ""}{fmt(r.delta, account.currency)}
+                  </p>
+                  {r.note && <p className="text-xs text-muted-foreground">{r.note}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(r.reconciled_at), "d MMM yyyy, HH:mm", { locale: es })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => deleteReconciliation.mutate(r.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
           </div>
         </TabsContent>
       </Tabs>

@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_reconciliations: {
+        Row: {
+          account_id: string
+          delta: number
+          id: string
+          new_balance: number
+          note: string | null
+          previous_balance: number
+          reconciled_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          delta: number
+          id?: string
+          new_balance: number
+          note?: string | null
+          previous_balance: number
+          reconciled_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          delta?: number
+          id?: string
+          new_balance?: number
+          note?: string | null
+          previous_balance?: number
+          reconciled_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_reconciliations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           color: string | null

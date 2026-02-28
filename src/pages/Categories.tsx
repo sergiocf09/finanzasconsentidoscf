@@ -123,14 +123,11 @@ export default function Categories() {
   return (
     <div className="space-y-6">
       {/* Sticky header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">Categorías</h1>
-            <p className="text-muted-foreground text-sm">Organiza tus movimientos por categoría</p>
-          </div>
-          <Button className="gap-2" onClick={openCreate}>
-            <Plus className="h-4 w-4" />
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-heading font-semibold text-foreground">Categorías</h1>
+          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={openCreate}>
+            <Plus className="h-3.5 w-3.5" />
             Nueva categoría
           </Button>
         </div>

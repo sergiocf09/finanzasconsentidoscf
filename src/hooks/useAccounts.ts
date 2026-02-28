@@ -102,11 +102,38 @@ export function useAccounts() {
 
   const deleteAccount = useMutation({
     mutationFn: async (id: string) => {
+      // Delete related transfers first (FK constraint)
+      const { error: errTrFrom } = await supabase
+        .from('transfers')
+        .delete()
+        .eq('from_account_id', id);
+      if (errTrFrom) throw errTrFrom;
+
+      const { error: errTrTo } = await supabase
+        .from('transfers')
+        .delete()
+        .eq('to_account_id', id);
+      if (errTrTo) throw errTrTo;
+
+      // Delete related transactions
+      const { error: errTx } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('account_id', id);
+      if (errTx) throw errTx;
+
+      // Delete transactions where this is the related_account_id
+      const { error: errTxRel } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('related_account_id', id);
+      if (errTxRel) throw errTxRel;
+
+      // Now delete the account
       const { error } = await supabase
         .from('accounts')
         .delete()
         .eq('id', id);
-      
       if (error) throw error;
     },
     onSuccess: () => {

@@ -96,7 +96,7 @@ export default function Accounts() {
   return (
     <div className="space-y-6">
       {/* Header — sticky */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-heading font-bold text-foreground">Cuentas</h1>

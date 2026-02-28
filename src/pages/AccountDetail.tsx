@@ -72,7 +72,7 @@ export default function AccountDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
         <div className="flex items-center gap-3">
           <Link to="/accounts">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>

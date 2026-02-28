@@ -83,6 +83,58 @@ function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "
   return { category: null, rest: text };
 }
 
+// ─── Spanish word-to-number map ─────────────────────────────
+const SPANISH_NUMS: Record<string, number> = {
+  cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+  seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12,
+  trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17,
+  dieciocho: 18, diecinueve: 19, veinte: 20, veintiun: 21, veintiuno: 21,
+  veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+  treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70,
+  ochenta: 80, noventa: 90, cien: 100, ciento: 100,
+  doscientos: 200, doscientas: 200, trescientos: 300, trescientas: 300,
+  cuatrocientos: 400, cuatrocientas: 400, quinientos: 500, quinientas: 500,
+  seiscientos: 600, seiscientas: 600, setecientos: 700, setecientas: 700,
+  ochocientos: 800, ochocientas: 800, novecientos: 900, novecientas: 900,
+};
+
+function spanishWordsToNumber(text: string): { value: number | null; matched: string } {
+  const norm = normalize(text);
+  const words = norm.split(/\s+/);
+  let total = 0;
+  let current = 0;
+  let found = false;
+  const matchedWords: string[] = [];
+
+  for (const w of words) {
+    if (w === "y") { matchedWords.push(w); continue; }
+    if (w === "mil") {
+      if (current === 0) current = 1;
+      total += current * 1000;
+      current = 0;
+      found = true;
+      matchedWords.push(w);
+      continue;
+    }
+    if (w === "millon" || w === "millones") {
+      if (current === 0) current = 1;
+      total += current * 1000000;
+      current = 0;
+      found = true;
+      matchedWords.push(w);
+      continue;
+    }
+    if (SPANISH_NUMS[w] !== undefined) {
+      current += SPANISH_NUMS[w];
+      found = true;
+      matchedWords.push(w);
+    }
+  }
+  total += current;
+  return { value: found ? total : null, matched: matchedWords.join(" ") };
+}
+
 // ─── STEP 3: Extract amount ─────────────────────────────────
 function extractAmount(text: string): { amount: number | null; currency: string; rest: string } {
   let rest = text;
@@ -94,7 +146,7 @@ function extractAmount(text: string): { amount: number | null; currency: string;
   if (normText.includes("dolar") || normText.includes("usd") || normText.includes("dollar")) currency = "USD";
   else if (normText.includes("euro") || normText.includes("eur")) currency = "EUR";
 
-  // Pattern: digits + "mil" (e.g. "57 mil", "2 mil")
+  // Pattern 1: digits + "mil" (e.g. "57 mil", "2 mil")
   const milMatch = rest.match(/(\d+(?:\.\d+)?)\s*mil/i);
   if (milMatch) {
     const amount = parseFloat(milMatch[1]) * 1000;
@@ -103,7 +155,7 @@ function extractAmount(text: string): { amount: number | null; currency: string;
     return { amount, currency, rest: cleanSpaces(rest) };
   }
 
-  // Pattern: standard digits (e.g. "1,500", "57000", "1500.50")
+  // Pattern 2: standard digits (e.g. "1,500", "57000", "1500.50")
   const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[,\s]?\d{3})*(?:\.\d{1,2})?)/);
   if (digitMatch) {
     const clean = digitMatch[1].replace(/[,\s]/g, "");
@@ -113,6 +165,17 @@ function extractAmount(text: string): { amount: number | null; currency: string;
       rest = stripCurrencyWords(rest);
       return { amount, currency, rest: cleanSpaces(rest) };
     }
+  }
+
+  // Pattern 3: Spanish word numbers ("veinte mil", "quinientos", "cincuenta y siete mil")
+  const { value: wordAmount, matched } = spanishWordsToNumber(rest);
+  if (wordAmount && wordAmount > 0) {
+    // Remove matched words from text
+    for (const w of matched.split(/\s+/)) {
+      if (w) rest = rest.replace(new RegExp(`\\b${w}\\b`, "i"), " ");
+    }
+    rest = stripCurrencyWords(rest);
+    return { amount: wordAmount, currency, rest: cleanSpaces(rest) };
   }
 
   return { amount: null, currency, rest };

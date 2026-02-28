@@ -116,7 +116,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Registrar movimiento</DialogTitle>
           <DialogDescription>
@@ -124,15 +124,16 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex flex-col min-h-0 flex-1">
+          <TabsList className="grid w-full grid-cols-3 shrink-0">
             <TabsTrigger value="income" className="text-income">Ingreso</TabsTrigger>
             <TabsTrigger value="expense" className="text-expense">Gasto</TabsTrigger>
             <TabsTrigger value="transfer" className="text-transfer">Transferencia</TabsTrigger>
           </TabsList>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1 mt-4">
+              <div className="space-y-4 overflow-y-auto flex-1 pr-1">
               {/* Amount & Currency */}
               <div className="flex gap-3">
                 <FormField
@@ -333,7 +334,9 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 )}
               />
 
-              <div className="flex gap-3 pt-4">
+              </div>
+
+              <div className="flex gap-3 pt-4 shrink-0 border-t border-border mt-2 bg-background sticky bottom-0">
                 <Button
                   type="button"
                   variant="outline"

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Mic, MicOff, Loader2, Check, Edit2, X } from "lucide-react";
+import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription,
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
-import { parseTransaction, type ParsedTransaction } from "@/hooks/useTransactionParser";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,18 +18,275 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { format } from "date-fns";
 
+// ─── Helpers ────────────────────────────────────────────────
+const normalize = (t: string) =>
+  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+type AccountItem = ReturnType<typeof useAccounts>["accounts"][number];
+type CategoryItem = ReturnType<typeof useCategories>["categories"][number];
+
+// ─── STEP 1: Detect type from first word ────────────────────
+const TYPE_KEYWORDS: Record<string, "expense" | "income" | "transfer"> = {
+  gasto: "expense", gaste: "expense", "gasté": "expense", "gastó": "expense",
+  "pagué": "expense", pague: "expense", "compré": "expense", compre: "expense",
+  ingreso: "income", "recibí": "income", recibi: "income",
+  transferencia: "transfer", transfiere: "transfer", "transferí": "transfer", transferi: "transfer",
+};
+
+function detectTypeStrict(text: string): { type: "expense" | "income" | "transfer" | null; rest: string } {
+  const trimmed = text.trim();
+  const normFirst = normalize(trimmed).split(/\s+/)[0];
+  const matched = TYPE_KEYWORDS[normFirst];
+  if (matched) {
+    // Remove only the first word
+    const rest = trimmed.replace(/^\S+\s*/, "");
+    return { type: matched, rest };
+  }
+  return { type: null, rest: trimmed };
+}
+
+// ─── STEP 2: Match category from remaining text ─────────────
+function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "income" | "transfer"): {
+  category: CategoryItem | null;
+  rest: string;
+} {
+  const typedCats = cats.filter(c =>
+    txType === "transfer" ? true : c.type === txType
+  );
+  const norm = normalize(text);
+
+  // Sort longest name first for greedy matching
+  const sorted = [...typedCats].sort((a, b) => b.name.length - a.name.length);
+
+  // 1) Match by DB keywords
+  for (const cat of sorted) {
+    if (cat.keywords?.some(kw => kw && norm.includes(normalize(kw)))) {
+      const rest = stripPhrase(text, cat.name);
+      // Also strip any matching keyword that appears in text
+      let cleaned = rest;
+      for (const kw of cat.keywords ?? []) {
+        if (kw && normalize(cleaned).includes(normalize(kw))) {
+          cleaned = stripPhrase(cleaned, kw);
+        }
+      }
+      return { category: cat, rest: cleaned };
+    }
+  }
+
+  // 2) Match by category name in transcript
+  for (const cat of sorted) {
+    if (norm.includes(normalize(cat.name))) {
+      return { category: cat, rest: stripPhrase(text, cat.name) };
+    }
+  }
+
+  return { category: null, rest: text };
+}
+
+// ─── STEP 3: Extract amount ─────────────────────────────────
+function extractAmount(text: string): { amount: number | null; currency: string; rest: string } {
+  let rest = text;
+  let currency = "MXN";
+
+  const normText = normalize(rest);
+
+  // Detect currency
+  if (normText.includes("dolar") || normText.includes("usd") || normText.includes("dollar")) currency = "USD";
+  else if (normText.includes("euro") || normText.includes("eur")) currency = "EUR";
+
+  // Pattern: digits + "mil" (e.g. "57 mil", "2 mil")
+  const milMatch = rest.match(/(\d+(?:\.\d+)?)\s*mil/i);
+  if (milMatch) {
+    const amount = parseFloat(milMatch[1]) * 1000;
+    rest = rest.replace(milMatch[0], " ");
+    rest = stripCurrencyWords(rest);
+    return { amount, currency, rest: cleanSpaces(rest) };
+  }
+
+  // Pattern: standard digits (e.g. "1,500", "57000", "1500.50")
+  const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[,\s]?\d{3})*(?:\.\d{1,2})?)/);
+  if (digitMatch) {
+    const clean = digitMatch[1].replace(/[,\s]/g, "");
+    const amount = parseFloat(clean);
+    if (amount > 0) {
+      rest = rest.replace(digitMatch[0], " ");
+      rest = stripCurrencyWords(rest);
+      return { amount, currency, rest: cleanSpaces(rest) };
+    }
+  }
+
+  return { amount: null, currency, rest };
+}
+
+function stripCurrencyWords(text: string): string {
+  return text.replace(/\b(pesos?|mxn|dólares?|dolares?|usd|euros?|eur|mil)\b/gi, " ");
+}
+
+// ─── STEP 4: Match account(s) ───────────────────────────────
+function matchAccountInText(text: string, accs: AccountItem[], excludeId?: string): {
+  account: AccountItem | null;
+  rest: string;
+} {
+  const norm = normalize(text);
+  const active = accs.filter(a => a.is_active && a.id !== excludeId);
+  // Sort longest name first
+  const sorted = [...active].sort((a, b) => b.name.length - a.name.length);
+
+  // 1) Full name match
+  for (const acc of sorted) {
+    if (norm.includes(normalize(acc.name))) {
+      return { account: acc, rest: stripPhrase(text, acc.name) };
+    }
+  }
+
+  // 2) Significant word match (all words > 2 chars must match)
+  for (const acc of sorted) {
+    const accWords = normalize(acc.name).split(/\s+/).filter(w => w.length > 2);
+    if (accWords.length === 0) continue;
+    const allMatch = accWords.every(w => norm.includes(w));
+    if (allMatch) {
+      let rest = text;
+      for (const w of accWords) rest = stripWord(rest, w);
+      return { account: acc, rest: cleanSpaces(rest) };
+    }
+  }
+
+  // 3) Phonetic prefix match for single-word or two-word accounts
+  for (const acc of sorted) {
+    const accWords = normalize(acc.name).split(/\s+/).filter(w => w.length > 2);
+    if (accWords.length === 0) continue;
+    const spokenWords = norm.split(/\s+/);
+    let matchCount = 0;
+    const matchedSpoken: string[] = [];
+    for (const aw of accWords) {
+      for (const sw of spokenWords) {
+        if (sw.length >= 3 && aw.length >= 3 &&
+          (aw.startsWith(sw.substring(0, 3)) || sw.startsWith(aw.substring(0, 3)))) {
+          matchCount++;
+          matchedSpoken.push(sw);
+          break;
+        }
+      }
+    }
+    if (matchCount >= Math.max(1, Math.ceil(accWords.length * 0.5))) {
+      let rest = text;
+      for (const sw of matchedSpoken) rest = stripWord(rest, sw);
+      return { account: acc, rest: cleanSpaces(rest) };
+    }
+  }
+
+  return { account: null, rest: text };
+}
+
+// ─── String cleanup helpers ─────────────────────────────────
+function stripPhrase(text: string, phrase: string): string {
+  // Case-insensitive phrase removal
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(escaped, "gi"), " ").replace(/\s+/g, " ").trim();
+}
+
+function stripWord(text: string, word: string): string {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(`\\b${escaped}\\b`, "gi"), " ").replace(/\s+/g, " ").trim();
+}
+
+function cleanSpaces(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+// ─── STEP 5: Build clean concept ────────────────────────────
+function buildConcept(remaining: string): string {
+  let desc = remaining;
+  // Strip filler/preposition words
+  desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo)\b/gi, " ");
+  // Clean up
+  desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
+  if (desc.length > 0) {
+    desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+  }
+  return desc;
+}
+
+// ─── Full deterministic pipeline ────────────────────────────
+interface ParsedVoiceCommand {
+  type: "expense" | "income" | "transfer" | null;
+  category: CategoryItem | null;
+  amount: number | null;
+  currency: string;
+  fromAccount: AccountItem | null;
+  toAccount: AccountItem | null;
+  concept: string;
+  error: string | null;
+}
+
+function parseVoiceCommand(
+  rawText: string,
+  accounts: AccountItem[],
+  categories: CategoryItem[],
+): ParsedVoiceCommand {
+  // Step 1: Type
+  const { type, rest: afterType } = detectTypeStrict(rawText);
+  if (!type) {
+    return {
+      type: null, category: null, amount: null, currency: "MXN",
+      fromAccount: null, toAccount: null, concept: rawText,
+      error: "Inicia con: INGRESO, GASTO o TRANSFERENCIA.",
+    };
+  }
+
+  // Step 2: Category
+  const { category, rest: afterCat } = matchCategory(afterType, categories, type);
+
+  // Step 3: Amount
+  const { amount, currency, rest: afterAmount } = extractAmount(afterCat);
+
+  // Step 4: Accounts
+  let fromAccount: AccountItem | null = null;
+  let toAccount: AccountItem | null = null;
+  let afterAccounts = afterAmount;
+
+  if (type === "transfer") {
+    const { account: acc1, rest: r1 } = matchAccountInText(afterAmount, accounts);
+    fromAccount = acc1;
+    const { account: acc2, rest: r2 } = matchAccountInText(r1, accounts, acc1?.id);
+    toAccount = acc2;
+    afterAccounts = r2;
+  } else {
+    const { account, rest: r } = matchAccountInText(afterAmount, accounts);
+    fromAccount = account;
+    afterAccounts = r;
+  }
+
+  // Step 5: Concept
+  const concept = buildConcept(afterAccounts);
+
+  // Validation
+  let error: string | null = null;
+  if (!amount) {
+    error = "No se detectó un monto. Intenta de nuevo.";
+  } else if (type === "transfer") {
+    if (!fromAccount || !toAccount) error = "Se necesitan dos cuentas distintas para transferencia.";
+    else if (fromAccount.id === toAccount.id) error = "Las cuentas origen y destino no pueden ser iguales.";
+  }
+
+  return { type, category, amount, currency, fromAccount, toAccount, concept, error };
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════════════════════
 export function VoiceButton() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { accounts } = useAccounts();
-  const { categories, findCategoryByKeyword } = useCategories();
+  const { categories } = useCategories();
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
   const [partialText, setPartialText] = useState("");
-  const [parsedData, setParsedData] = useState<ParsedTransaction | null>(null);
+  const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   // Edit fields
@@ -53,27 +309,22 @@ export function VoiceButton() {
     },
   });
 
-  // Remove auto-start via useEffect — only start from direct user gesture
-  // Pre-fetch token when drawer opens so connection is faster when user taps mic
+  // Pre-fetch token when drawer opens
   const [prefetchedToken, setPrefetchedToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && !parsedData) {
-      // Pre-fetch token in background so it's ready when user taps mic
+    if (isOpen && !parseResult) {
       supabase.functions.invoke("elevenlabs-scribe-token").then(({ data }) => {
         if (data?.token) setPrefetchedToken(data.token);
       });
     }
-  }, [isOpen, parsedData]);
+  }, [isOpen, parseResult]);
 
   const handleStartRecording = useCallback(async () => {
     setIsConnecting(true);
     setIsReady(false);
     try {
-      // CRITICAL: getUserMedia called directly in click handler for browser security
       await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Use pre-fetched token or fetch a new one
       let token = prefetchedToken;
       if (!token) {
         const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
@@ -81,14 +332,10 @@ export function VoiceButton() {
         token = data.token;
       }
       setPrefetchedToken(null);
-
       await scribe.connect({ token, microphone: { echoCancellation: true, noiseSuppression: true } });
-
-      // Signal to user that recording is active
       setIsReady(true);
-      // Haptic feedback on mobile
       if (navigator.vibrate) navigator.vibrate(100);
-    } catch (error) {
+    } catch {
       toast.error("No se pudo iniciar la grabación.");
     } finally {
       setIsConnecting(false);
@@ -98,243 +345,71 @@ export function VoiceButton() {
   const handleStopRecording = useCallback(async () => {
     await scribe.disconnect();
     const finalText = committedText || partialText;
-    if (finalText) {
-      if (!committedText && partialText) {
-        setCommittedText(partialText);
-        setPartialText("");
-      }
-      const parsed = parseTransactionEnhanced(finalText);
-      setParsedData(parsed);
-      // Pre-fill edit fields
-      setEditAmount(String(parsed.amount || ""));
-      setEditType(parsed.type);
-      setEditDate(parsed.date ? format(parsed.date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
+    if (!finalText) return;
 
-      // Auto-categorize: filter by detected type, then match by keywords or name
-      const typeForCategory = parsed.type === "transfer" ? "transfer" : parsed.type;
-      const typedCategories = categories.filter(c => c.type === typeForCategory);
-      const lowerFinal = finalText.toLowerCase();
-
-      // 1) Match by DB keywords
-      let matchedCat = typedCategories.find(c =>
-        c.keywords?.some(kw => kw && lowerFinal.includes(kw.toLowerCase()))
-      );
-
-      // 2) Fallback: match by category name in transcript
-      if (!matchedCat) {
-        matchedCat = typedCategories.find(c =>
-          lowerFinal.includes(c.name.toLowerCase())
-        );
-      }
-
-      // 3) Fallback: match from parser's detected category
-      if (!matchedCat && parsed.category) {
-        matchedCat = typedCategories.find(c =>
-          c.name.toLowerCase().includes(parsed.category!.toLowerCase())
-        );
-      }
-
-      if (matchedCat) {
-        setEditCategoryId(matchedCat.id);
-      }
-
-      // Fuzzy match accounts (works for all types including income)
-      const matchedFrom = fuzzyMatchAccount(finalText, accounts);
-      let matchedToAcc: typeof accounts[0] | null = null;
-
-      if (matchedFrom) {
-        setEditAccountId(matchedFrom.id);
-      } else {
-        const cashAccount = accounts.find(a => a.type === 'cash' && a.is_active);
-        setEditAccountId(cashAccount?.id || (accounts.length > 0 ? accounts[0].id : ""));
-      }
-
-      if (parsed.type === "transfer") {
-        matchedToAcc = fuzzyMatchToAccount(finalText, accounts, matchedFrom?.id) ?? null;
-        if (matchedToAcc) {
-          setEditToAccountId(matchedToAcc.id);
-        }
-      }
-
-      // Build clean description stripping action, amount, category, and account names
-      const cleanDesc = buildCleanDescription(
-        finalText,
-        parsed.type,
-        matchedCat?.name ?? null,
-        matchedFrom?.name ?? null,
-        matchedToAcc?.name ?? null,
-      );
-      setEditDescription(cleanDesc);
-    }
-  }, [scribe, committedText, partialText, accounts, categories, findCategoryByKeyword]);
-
-  const parseTransactionEnhanced = (text: string): ParsedTransaction => {
-    const lower = text.toLowerCase().trim();
-
-    let type: "expense" | "income" | "transfer" = "expense";
-    if (lower.startsWith("transferencia") || lower.startsWith("transfiere") || lower.startsWith("transferí") || lower.includes("transferencia")) {
-      type = "transfer";
-    } else if (lower.startsWith("ingreso") || lower.startsWith("recibí") || lower.includes("ingreso") || lower.includes("me pagaron") || lower.includes("nómina") || lower.includes("pensión")) {
-      type = "income";
-    } else if (lower.startsWith("gasto") || lower.startsWith("gasté") || lower.startsWith("pagué") || lower.startsWith("compré")) {
-      type = "expense";
+    if (!committedText && partialText) {
+      setCommittedText(partialText);
+      setPartialText("");
     }
 
-    const base = parseTransaction(text);
-    return { ...base, type };
+    const result = parseVoiceCommand(finalText, accounts.filter(a => a.is_active), categories);
+    setParseResult(result);
+
+    // Pre-fill edit fields from deterministic parse
+    setEditType(result.type || "expense");
+    setEditAmount(result.amount ? String(result.amount) : "");
+    setEditDate(format(new Date(), "yyyy-MM-dd"));
+    setEditCategoryId(result.category?.id || "");
+    setEditAccountId(result.fromAccount?.id || "");
+    setEditToAccountId(result.toAccount?.id || "");
+    setEditDescription(result.concept);
+
+    // If no account found, try to default to cash
+    if (!result.fromAccount && result.type !== "transfer") {
+      const cashAcc = accounts.find(a => a.type === "cash" && a.is_active);
+      if (cashAcc) setEditAccountId(cashAcc.id);
+    }
+
+    // Show error if any
+    if (result.error) {
+      toast.error(result.error);
+    }
+  }, [scribe, committedText, partialText, accounts, categories]);
+
+  const canConfirm = (): boolean => {
+    const amount = parseFloat(editAmount);
+    if (!amount || amount <= 0) return false;
+    if (!editAccountId) return false;
+    if (editType === "transfer" && (!editToAccountId || editAccountId === editToAccountId)) return false;
+    return true;
   };
 
-  // Normalize text: remove accents and convert to lowercase for fuzzy comparison
-  const normalize = (text: string): string =>
-    text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-  const stripAccountNameFromText = (text: string, accountName: string): string => {
-    const words = accountName.toLowerCase().split(/\s+/);
-    let result = text;
-    for (const w of words) {
-      if (w.length > 2) {
-        result = result.replace(new RegExp(`\\b${w}\\b`, 'gi'), '');
-      }
-    }
-    result = result.replace(new RegExp(accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
-    return result.replace(/\s+/g, ' ').trim();
-  };
-
-  const fuzzyMatchAccount = (text: string, accs: typeof accounts) => {
-    const norm = normalize(text);
-    const sorted = [...accs].sort((a, b) => b.name.length - a.name.length);
-
-    // 1) Full normalized name match
-    for (const acc of sorted) {
-      if (norm.includes(normalize(acc.name))) return acc;
-    }
-
-    // 2) Match individual words (>2 chars) with normalization
-    for (const acc of sorted) {
-      const words = normalize(acc.name).split(/\s+/);
-      const significantWords = words.filter(w => w.length > 2);
-      // If any significant word matches, count it
-      for (const w of significantWords) {
-        if (norm.includes(w)) return acc;
-      }
-    }
-
-    // 3) Phonetic similarity: check if spoken words sound like account name parts
-    // e.g., "dolar" matches "dollar", "apo" matches "app"
-    const spokenWords = norm.split(/\s+/);
-    for (const acc of sorted) {
-      const accNorm = normalize(acc.name);
-      const accWords = accNorm.split(/\s+/).filter(w => w.length > 2);
-      let matchCount = 0;
-      for (const aw of accWords) {
-        for (const sw of spokenWords) {
-          // Check if one starts with the other or Levenshtein-like similarity
-          if (sw.length >= 3 && aw.length >= 3) {
-            if (aw.startsWith(sw.substring(0, 3)) || sw.startsWith(aw.substring(0, 3))) {
-              matchCount++;
-              break;
-            }
-          }
-        }
-      }
-      if (matchCount >= Math.max(1, Math.ceil(accWords.length * 0.5))) return acc;
-    }
-
+  const getValidationMessage = (): string | null => {
+    const amount = parseFloat(editAmount);
+    if (!amount || amount <= 0) return "Falta el monto.";
+    if (!editAccountId) return "Selecciona una cuenta.";
+    if (editType === "transfer" && !editToAccountId) return "Selecciona cuenta destino.";
+    if (editType === "transfer" && editAccountId === editToAccountId) return "Las cuentas no pueden ser iguales.";
     return null;
   };
 
-  const fuzzyMatchToAccount = (text: string, accs: typeof accounts, excludeId?: string) => {
-    const norm = normalize(text);
-    // Look for "a [account]" or "hacia [account]" pattern
-    const match = norm.match(/(?:\ba\b|\bhacia\b)\s+(\w+(?:\s+\w+)?)/);
-    if (match) {
-      const target = match[1];
-      for (const acc of accs) {
-        if (acc.id === excludeId) continue;
-        if (normalize(acc.name).includes(target)) return acc;
-        // Also check first word match
-        const firstWord = normalize(acc.name).split(/\s+/)[0];
-        if (firstWord.length > 2 && target.includes(firstWord)) return acc;
-        if (target.length >= 3 && firstWord.startsWith(target.substring(0, 3))) return acc;
-      }
-    }
-    // Fallback: try fuzzy matching excluding "from" account
-    const filtered = accs.filter(a => a.id !== excludeId);
-    return fuzzyMatchAccount(text, filtered) || null;
-  };
-
-  // Build a clean description by stripping action, amount, currency, category, and account names
-  const buildCleanDescription = (
-    rawText: string,
-    type: string,
-    matchedCatName: string | null,
-    matchedAccountName: string | null,
-    matchedToAccountName: string | null,
-  ): string => {
-    let desc = rawText;
-
-    // Strip leading filler words like "y un", "un", "y"
-    desc = desc.replace(/^(y\s+un\s+|un\s+|y\s+)/i, "");
-
-    // Strip action keywords
-    desc = desc.replace(/\b(gasto|gasté|gastó|pagué|compré|ingreso|recibí|transferencia|transfiere|transferí|me pagaron)\b/gi, "");
-
-    // Strip amounts: digits, currency words, "mil", "$" symbols
-    desc = desc.replace(/\$?\s*\d{1,3}(?:[,.\s]?\d{3})*(?:\.\d{1,2})?\s*(mil\s+)?(pesos?|mxn|dólares?|dolares?|usd|euros?|eur)?/gi, "");
-    desc = desc.replace(/\b\d+\s*mil\b/gi, "");
-
-    // Strip category name if matched
-    if (matchedCatName) {
-      desc = desc.replace(new RegExp(`\\b${matchedCatName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), "");
-    }
-
-    // Strip account names if matched
-    if (matchedAccountName) {
-      const accWords = matchedAccountName.split(/\s+/);
-      for (const w of accWords) {
-        if (w.length > 2) desc = desc.replace(new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), "");
-      }
-    }
-    if (matchedToAccountName) {
-      const accWords = matchedToAccountName.split(/\s+/);
-      for (const w of accWords) {
-        if (w.length > 2) desc = desc.replace(new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), "");
-      }
-    }
-
-    // Strip filler/preposition words
-    desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una)\b/gi, " ");
-
-    // Clean up whitespace and punctuation
-    desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
-
-    // Capitalize first letter
-    if (desc.length > 0) {
-      desc = desc.charAt(0).toUpperCase() + desc.slice(1);
-    }
-
-    return desc || rawText;
-  };
-
   const handleConfirm = async () => {
-    if (!user || !editAmount) return;
+    if (!user || !canConfirm()) return;
     setIsSaving(true);
     try {
       const amount = parseFloat(editAmount);
-      if (isNaN(amount) || amount <= 0) throw new Error("Monto inválido");
 
-      await supabase.from('voice_logs').insert([{
+      await supabase.from("voice_logs").insert([{
         user_id: user.id,
         transcript_raw: committedText,
-        parsed_json: parsedData as any,
-        confidence: parsedData?.confidence ?? 0,
+        parsed_json: parseResult as any,
+        confidence: parseResult?.amount ? 80 : 30,
       }]);
 
       if (editType === "transfer") {
-        if (!editAccountId || !editToAccountId) throw new Error("Selecciona cuentas origen y destino");
-        const from = accounts.find((a) => a.id === editAccountId)!;
-        const to = accounts.find((a) => a.id === editToAccountId)!;
-        await supabase.from('transfers').insert({
+        const from = accounts.find(a => a.id === editAccountId)!;
+        const to = accounts.find(a => a.id === editToAccountId)!;
+        await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: editAccountId,
           to_account_id: editToAccountId,
@@ -344,13 +419,12 @@ export function VoiceButton() {
           currency_to: to.currency,
           transfer_date: editDate,
           description: editDescription || committedText,
-          created_from: 'voice',
+          created_from: "voice",
         });
-        queryClient.invalidateQueries({ queryKey: ['transfers'] });
+        queryClient.invalidateQueries({ queryKey: ["transfers"] });
       } else {
-        if (!editAccountId) throw new Error("Selecciona una cuenta");
-        const acc = accounts.find((a) => a.id === editAccountId)!;
-        await supabase.from('transactions').insert({
+        const acc = accounts.find(a => a.id === editAccountId)!;
+        await supabase.from("transactions").insert({
           user_id: user.id,
           account_id: editAccountId,
           category_id: editCategoryId || null,
@@ -363,9 +437,9 @@ export function VoiceButton() {
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
       toast.success("Registrado correctamente");
       handleReset();
       setIsOpen(false);
@@ -379,7 +453,7 @@ export function VoiceButton() {
   const handleReset = () => {
     setCommittedText("");
     setPartialText("");
-    setParsedData(null);
+    setParseResult(null);
     setIsEditing(false);
     setIsReady(false);
     setPrefetchedToken(null);
@@ -398,14 +472,16 @@ export function VoiceButton() {
     setIsOpen(false);
   };
 
-  const activeAccounts = accounts.filter((a) => a.is_active);
+  const activeAccounts = accounts.filter(a => a.is_active);
   const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia" };
   const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground" };
 
   const fmt = (amount: number, currency: string = "MXN") =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
 
-  const getCategoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "";
+  const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name ?? "";
+
+  const validationMsg = getValidationMessage();
 
   return (
     <>
@@ -426,41 +502,43 @@ export function VoiceButton() {
             <DrawerHeader className="text-center pb-1 shrink-0">
               <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
               <DrawerDescription className="text-xs leading-tight">
-                <span className="font-semibold">Acción</span> → <span className="font-semibold">Monto</span> → <span className="font-semibold">Cuenta</span> → <span className="font-semibold">Concepto</span>
+                <span className="font-semibold">Tipo</span> → <span className="font-semibold">Categoría</span> → <span className="font-semibold">Importe</span> → <span className="font-semibold">Cuenta</span> → <span className="font-semibold">Concepto</span>
               </DrawerDescription>
             </DrawerHeader>
 
             <div className="flex flex-col items-center px-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               {/* Mic button */}
-              <button
-                onClick={scribe.isConnected ? handleStopRecording : handleStartRecording}
-                disabled={isConnecting}
-                className={cn(
-                  "flex h-16 w-16 items-center justify-center rounded-full transition-all shrink-0",
-                  scribe.isConnected
-                    ? "bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30"
-                    : "bg-primary text-primary-foreground hover:scale-105",
-                  isConnecting && "opacity-50"
-                )}
-              >
-                {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
-              </button>
+              {!parseResult && (
+                <>
+                  <button
+                    onClick={scribe.isConnected ? handleStopRecording : handleStartRecording}
+                    disabled={isConnecting}
+                    className={cn(
+                      "flex h-16 w-16 items-center justify-center rounded-full transition-all shrink-0",
+                      scribe.isConnected
+                        ? "bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30"
+                        : "bg-primary text-primary-foreground hover:scale-105",
+                      isConnecting && "opacity-50"
+                    )}
+                  >
+                    {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+                  </button>
 
-              <p className="text-xs text-center px-2">
-                {isConnecting ? (
-                  <span className="text-muted-foreground">Preparando micrófono...</span>
-                ) : scribe.isConnected ? (
-                  <span className="text-expense font-semibold animate-pulse">🎙️ ¡Habla ahora! — Toca para detener</span>
-                ) : parsedData ? (
-                  <span className="text-muted-foreground">Revisa tu movimiento</span>
-                ) : (
-                  <span className="text-muted-foreground">
-                    Toca el micrófono para empezar.
-                    <br />
-                    <span className="italic">Ej: "Gasto 500 pesos BBVA gasolina"</span>
-                  </span>
-                )}
-              </p>
+                  <p className="text-xs text-center px-2">
+                    {isConnecting ? (
+                      <span className="text-muted-foreground">Preparando micrófono...</span>
+                    ) : scribe.isConnected ? (
+                      <span className="text-expense font-semibold animate-pulse">🎙️ ¡Habla ahora! — Toca para detener</span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Toca el micrófono para empezar.
+                        <br />
+                        <span className="italic">Ej: "Gasto restaurante 1500 pesos BBVA Sonora Grill"</span>
+                      </span>
+                    )}
+                  </p>
+                </>
+              )}
 
               {/* Live transcript */}
               {scribe.isConnected && (committedText || partialText) && (
@@ -473,47 +551,54 @@ export function VoiceButton() {
               )}
 
               {/* Parsed result - view mode */}
-              {!scribe.isConnected && parsedData && !isEditing && (
+              {!scribe.isConnected && parseResult && !isEditing && (
                 <div className="w-full space-y-2">
                   <div className="rounded-lg bg-secondary p-2 text-center">
-                    <p className="text-xs text-muted-foreground">Detecté:</p>
+                    <p className="text-xs text-muted-foreground">Transcripción:</p>
                     <p className="text-sm font-medium text-foreground break-words">{committedText}</p>
                   </div>
 
+                  {parseResult.error && (
+                    <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-sm text-destructive">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <span>{parseResult.error}</span>
+                    </div>
+                  )}
+
                   <div className="text-sm space-y-1">
                     <div className="flex justify-between py-1 border-b border-border">
-                      <span className="text-muted-foreground">Acción:</span>
-                      <span className={cn("font-medium", typeColors[editType])}>{typeLabels[editType]}</span>
+                      <span className="text-muted-foreground">Tipo:</span>
+                      <span className={cn("font-medium", typeColors[editType])}>{typeLabels[editType] ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border">
+                      <span className="text-muted-foreground">Categoría:</span>
+                      <span className="font-medium text-primary">{editCategoryId ? getCategoryName(editCategoryId) : <span className="text-muted-foreground">Sin categoría</span>}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-border">
                       <span className="text-muted-foreground">Monto:</span>
-                      <span className="font-medium">{editAmount ? fmt(parseFloat(editAmount)) : "—"}</span>
+                      <span className="font-medium">{editAmount ? fmt(parseFloat(editAmount)) : <span className="text-destructive">Sin monto</span>}</span>
                     </div>
+                    <div className="flex justify-between py-1 border-b border-border">
+                      <span className="text-muted-foreground">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
+                      <span className="font-medium truncate ml-2 max-w-[180px]">
+                        {editAccountId ? activeAccounts.find(a => a.id === editAccountId)?.name ?? "—" : <span className="text-destructive">Sin cuenta</span>}
+                      </span>
+                    </div>
+                    {editType === "transfer" && (
+                      <div className="flex justify-between py-1 border-b border-border">
+                        <span className="text-muted-foreground">Destino:</span>
+                        <span className="font-medium truncate ml-2 max-w-[180px]">
+                          {editToAccountId ? activeAccounts.find(a => a.id === editToAccountId)?.name ?? "—" : <span className="text-destructive">Sin cuenta destino</span>}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-1 border-b border-border">
                       <span className="text-muted-foreground">Fecha:</span>
                       <span className="font-medium">{editDate}</span>
                     </div>
-                    {editAccountId && (
-                      <div className="flex justify-between py-1 border-b border-border">
-                        <span className="text-muted-foreground">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
-                        <span className="font-medium truncate ml-2 max-w-[180px]">{activeAccounts.find((a) => a.id === editAccountId)?.name ?? "—"}</span>
-                      </div>
-                    )}
-                    {editType === "transfer" && editToAccountId && (
-                      <div className="flex justify-between py-1 border-b border-border">
-                        <span className="text-muted-foreground">Destino:</span>
-                        <span className="font-medium truncate ml-2 max-w-[180px]">{activeAccounts.find((a) => a.id === editToAccountId)?.name ?? "—"}</span>
-                      </div>
-                    )}
-                    {editCategoryId && (
-                      <div className="flex justify-between py-1 border-b border-border">
-                        <span className="text-muted-foreground">Categoría:</span>
-                        <span className="font-medium text-primary">{getCategoryName(editCategoryId)}</span>
-                      </div>
-                    )}
                     {editDescription && (
                       <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Descripción:</span>
+                        <span className="text-muted-foreground">Concepto:</span>
                         <span className="font-medium truncate ml-2 max-w-[180px]">{editDescription}</span>
                       </div>
                     )}
@@ -522,10 +607,10 @@ export function VoiceButton() {
               )}
 
               {/* Edit mode */}
-              {!scribe.isConnected && parsedData && isEditing && (
+              {!scribe.isConnected && parseResult && isEditing && (
                 <div className="w-full space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">Acción</label>
+                    <label className="text-xs font-medium text-muted-foreground">Tipo</label>
                     <Select value={editType} onValueChange={setEditType}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -535,16 +620,29 @@ export function VoiceButton() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {editType !== "transfer" && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Categoría</label>
+                      <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+                        <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                        <SelectContent>
+                          {categories
+                            .filter(c => c.type === editType)
+                            .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Monto</label>
-                    <Input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+                    <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{editType === "transfer" ? "Cuenta origen" : "Cuenta"}</label>
                     <Select value={editAccountId} onValueChange={setEditAccountId}>
                       <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
                       <SelectContent>
-                        {activeAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                        {activeAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -554,55 +652,54 @@ export function VoiceButton() {
                       <Select value={editToAccountId} onValueChange={setEditToAccountId}>
                         <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
                         <SelectContent>
-                          {activeAccounts.filter((a) => a.id !== editAccountId).map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  {editType !== "transfer" && (
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">Categoría</label>
-                      <Select value={editCategoryId} onValueChange={setEditCategoryId}>
-                        <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-                        <SelectContent>
-                          {categories.filter((c) => editType === "expense" ? c.type === "expense" : c.type === "income").map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
+                          {activeAccounts.filter(a => a.id !== editAccountId).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                   )}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Fecha</label>
-                    <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                    <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">Descripción</label>
-                    <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Ej: Gasolina Pemex Constitución" />
+                    <label className="text-xs font-medium text-muted-foreground">Concepto</label>
+                    <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Concepto adicional" />
                   </div>
                 </div>
               )}
             </div>
 
             {/* Sticky bottom buttons */}
-            {!scribe.isConnected && parsedData && (
-              <div className="flex gap-2 px-4 py-3 border-t border-border shrink-0 bg-background">
-                <Button variant="outline" size="default" className="flex-1" onClick={handleCancel}>
-                  <X className="h-4 w-4 mr-1" />Cancelar
-                </Button>
-                {isEditing ? (
-                  <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(false)}>
-                    Listo
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(true)}>
-                    <Edit2 className="h-4 w-4 mr-1" />Editar
-                  </Button>
+            {!scribe.isConnected && parseResult && (
+              <div className="px-4 py-3 border-t border-border shrink-0 bg-background space-y-2">
+                {validationMsg && !isEditing && (
+                  <p className="text-xs text-destructive text-center flex items-center justify-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> {validationMsg}
+                  </p>
                 )}
-                <Button size="default" className="flex-1" onClick={handleConfirm} disabled={isSaving || !editAmount}>
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-                  {isSaving ? "..." : "Confirmar"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="default" className="flex-1" onClick={handleCancel}>
+                    <X className="h-4 w-4 mr-1" />Cancelar
+                  </Button>
+                  {isEditing ? (
+                    <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(false)}>
+                      Listo
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(true)}>
+                      <Edit2 className="h-4 w-4 mr-1" />Editar
+                    </Button>
+                  )}
+                  <Button
+                    size="default"
+                    className="flex-1"
+                    onClick={handleConfirm}
+                    disabled={isSaving || !canConfirm()}
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                    {isSaving ? "..." : "Confirmar"}
+                  </Button>
+                </div>
               </div>
             )}
           </div>

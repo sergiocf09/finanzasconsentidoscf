@@ -13,7 +13,7 @@ import { es } from "date-fns/locale";
 
 export default function Dashboard() {
   const { profile } = useProfile();
-  const { totalBalance } = useAccounts();
+  const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
   const { totals } = useTransactions();
   const { budgets } = useBudgets();
   const displayName = profile?.display_name || "bienvenido";
@@ -21,24 +21,37 @@ export default function Dashboard() {
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: es });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
 
-  // Get active budgets for current month
   const activeBudgets = budgets.filter((b) => b.is_active);
+
+  const fmt = (v: number, c: string) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: c, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
+
+  const assetCurrencies = Object.entries(assetsByCurrency);
+  const liabCurrencies = Object.entries(liabilitiesByCurrency);
 
   return (
     <div className="space-y-6 stagger-children">
-      {/* Welcome Message */}
+      {/* Welcome */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">
-          Hola, {displayName} 👋
-        </h1>
-        <p className="text-muted-foreground">
-          Tu dinero con calma. Tu vida con sentido.
-        </p>
+        <h1 className="text-2xl font-heading font-bold text-foreground">Hola, {displayName} 👋</h1>
+        <p className="text-muted-foreground">Tu dinero con calma. Tu vida con sentido.</p>
       </div>
 
-      {/* Balance Cards - real data */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <BalanceCard title="Balance total" amount={totalBalance} type="balance" />
+      {/* Balance summary by currency */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {assetCurrencies.map(([currency, total]) => (
+          <BalanceCard key={`a-${currency}`} title={`Activos (${currency})`} amount={total} currency={currency} type="balance" />
+        ))}
+        {liabCurrencies.map(([currency, total]) => (
+          <BalanceCard key={`l-${currency}`} title={`Pasivos (${currency})`} amount={-total} currency={currency} type="expense" />
+        ))}
+        {assetCurrencies.length === 0 && liabCurrencies.length === 0 && (
+          <BalanceCard title="Balance total" amount={0} type="balance" />
+        )}
+      </div>
+
+      {/* Month activity */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
         <BalanceCard title="Ingresos del mes" amount={totals.income} type="income" />
         <BalanceCard title="Gastos del mes" amount={totals.expense} type="expense" />
         <BalanceCard title="Transferencias" amount={totals.transfer} type="transfer" />
@@ -50,34 +63,24 @@ export default function Dashboard() {
         <QuickActions />
       </div>
 
-      {/* Two Column Layout */}
+      {/* Two Column */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Budget Progress */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-heading font-semibold text-foreground">Presupuesto del mes</h2>
             <span className="text-xs text-muted-foreground">{capitalizedMonth}</span>
           </div>
-
           <div className="rounded-2xl bg-card border border-border p-5 space-y-5 card-elevated">
             {activeBudgets.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Sin presupuestos activos. Crea uno en la sección de Presupuestos.
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">Sin presupuestos activos.</p>
             ) : (
               activeBudgets.slice(0, 4).map((budget) => (
-                <BudgetProgress
-                  key={budget.id}
-                  category={budget.name}
-                  spent={budget.spent ?? 0}
-                  budgeted={budget.amount}
-                />
+                <BudgetProgress key={budget.id} category={budget.name} spent={budget.spent ?? 0} budgeted={budget.amount} />
               ))
             )}
           </div>
         </div>
 
-        {/* Recent Transactions */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-heading font-semibold text-foreground">Movimientos recientes</h2>
@@ -95,8 +98,8 @@ export default function Dashboard() {
           </div>
           <div className="space-y-1">
             <p className="font-medium text-foreground">Registra tus gastos con tu voz</p>
-            <p className="text-sm text-muted-foreground">
-              Toca el botón de micrófono y di algo como: "Gasté 250 pesos en Uber ayer". La app entenderá automáticamente el monto, categoría y fecha.
+            <p className="text-sm text-muted-foreground break-words">
+              Toca el micrófono y di: "Gasto 900 pesos HSBC Viva gasolina". La app detecta monto, cuenta y categoría automáticamente.
             </p>
           </div>
         </div>

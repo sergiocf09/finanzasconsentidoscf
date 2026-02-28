@@ -3,11 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+export const ASSET_TYPES = ['cash', 'bank', 'savings', 'investment'] as const;
+export const LIABILITY_SHORT_TYPES = ['credit_card'] as const;
+export const LIABILITY_LONG_TYPES = ['mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'] as const;
+export const ALL_LIABILITY_TYPES = [...LIABILITY_SHORT_TYPES, ...LIABILITY_LONG_TYPES] as const;
+
+export type AccountType = typeof ASSET_TYPES[number] | typeof ALL_LIABILITY_TYPES[number];
+
 export interface Account {
   id: string;
   user_id: string;
   name: string;
-  type: 'cash' | 'bank' | 'savings' | 'investment' | 'credit_card' | 'payable';
+  type: AccountType;
   currency: string;
   initial_balance: number;
   current_balance: number;
@@ -26,6 +33,11 @@ export interface CreateAccountData {
   color?: string;
   icon?: string;
 }
+
+export const isAssetType = (type: string) => (ASSET_TYPES as readonly string[]).includes(type);
+export const isLiabilityShort = (type: string) => (LIABILITY_SHORT_TYPES as readonly string[]).includes(type);
+export const isLiabilityLong = (type: string) => (LIABILITY_LONG_TYPES as readonly string[]).includes(type);
+export const isLiability = (type: string) => isLiabilityShort(type) || isLiabilityLong(type);
 
 export function useAccounts() {
   const { user } = useAuth();
@@ -106,19 +118,34 @@ export function useAccounts() {
     },
   });
 
-  const totalBalance = accountsQuery.data?.reduce((sum, acc) => {
-    // For credit cards and payables, the balance is negative (what you owe)
-    if (acc.type === 'credit_card' || acc.type === 'payable') {
+  const allAccounts = accountsQuery.data ?? [];
+
+  // Group balances by currency for assets
+  const assetsByCurrency: Record<string, number> = {};
+  const liabilitiesByCurrency: Record<string, number> = {};
+  
+  allAccounts.forEach(acc => {
+    if (isAssetType(acc.type)) {
+      assetsByCurrency[acc.currency] = (assetsByCurrency[acc.currency] ?? 0) + acc.current_balance;
+    } else if (isLiability(acc.type)) {
+      liabilitiesByCurrency[acc.currency] = (liabilitiesByCurrency[acc.currency] ?? 0) + acc.current_balance;
+    }
+  });
+
+  const totalBalance = allAccounts.reduce((sum, acc) => {
+    if (isLiability(acc.type)) {
       return sum - acc.current_balance;
     }
     return sum + acc.current_balance;
-  }, 0) ?? 0;
+  }, 0);
 
   return {
-    accounts: accountsQuery.data ?? [],
+    accounts: allAccounts,
     isLoading: accountsQuery.isLoading,
     error: accountsQuery.error,
     totalBalance,
+    assetsByCurrency,
+    liabilitiesByCurrency,
     createAccount,
     updateAccount,
     deleteAccount,

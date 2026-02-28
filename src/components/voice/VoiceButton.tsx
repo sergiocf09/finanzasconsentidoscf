@@ -84,7 +84,6 @@ export function VoiceButton() {
       // Pre-fill edit fields
       setEditAmount(String(parsed.amount || ""));
       setEditType(parsed.type);
-      setEditDescription(parsed.description || "");
       setEditDate(parsed.date ? format(parsed.date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
 
       // Auto-categorize using DB keywords
@@ -92,19 +91,31 @@ export function VoiceButton() {
       if (matchedCategory) {
         setEditCategoryId(matchedCategory.id);
       } else if (parsed.category) {
-        // Fallback to parser's hardcoded category match
         const cat = categories.find((c) => c.name.toLowerCase().includes(parsed.category!.toLowerCase()));
         if (cat) setEditCategoryId(cat.id);
       }
 
-      // Fuzzy match accounts
+      // Fuzzy match accounts and strip account name from description
       const matchedFrom = fuzzyMatchAccount(finalText, accounts);
-      if (matchedFrom) setEditAccountId(matchedFrom.id);
-      else if (accounts.length > 0) setEditAccountId(accounts[0].id);
+      if (matchedFrom) {
+        setEditAccountId(matchedFrom.id);
+        // Strip account name words from the description
+        const descCleaned = stripAccountNameFromText(parsed.description || finalText, matchedFrom.name);
+        setEditDescription(descCleaned);
+      } else {
+        // Default to cash account if exists, otherwise first account
+        const cashAccount = accounts.find(a => a.type === 'cash' && a.is_active);
+        setEditAccountId(cashAccount?.id || (accounts.length > 0 ? accounts[0].id : ""));
+        setEditDescription(parsed.description || "");
+      }
 
       if (parsed.type === "transfer") {
         const matchedTo = fuzzyMatchToAccount(finalText, accounts, matchedFrom?.id);
-        if (matchedTo) setEditToAccountId(matchedTo.id);
+        if (matchedTo) {
+          setEditToAccountId(matchedTo.id);
+          // Also strip to-account name from description
+          setEditDescription(prev => stripAccountNameFromText(prev, matchedTo.name));
+        }
       }
     }
   }, [scribe, committedText, partialText, accounts, categories, findCategoryByKeyword]);
@@ -125,9 +136,29 @@ export function VoiceButton() {
     return { ...base, type };
   };
 
+  const stripAccountNameFromText = (text: string, accountName: string): string => {
+    const words = accountName.toLowerCase().split(/\s+/);
+    let result = text;
+    // Strip each word of the account name from the text
+    for (const w of words) {
+      if (w.length > 2) {
+        result = result.replace(new RegExp(`\\b${w}\\b`, 'gi'), '');
+      }
+    }
+    // Also strip full account name
+    result = result.replace(new RegExp(accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
+    return result.replace(/\s+/g, ' ').trim();
+  };
+
   const fuzzyMatchAccount = (text: string, accs: typeof accounts) => {
     const lower = text.toLowerCase();
-    for (const acc of accs) {
+    // Try matching by multi-word account name first (longer names first for specificity)
+    const sorted = [...accs].sort((a, b) => b.name.length - a.name.length);
+    for (const acc of sorted) {
+      if (lower.includes(acc.name.toLowerCase())) return acc;
+    }
+    // Fallback: match individual words (>2 chars)
+    for (const acc of sorted) {
       const words = acc.name.toLowerCase().split(/\s+/);
       for (const w of words) {
         if (w.length > 2 && lower.includes(w)) return acc;

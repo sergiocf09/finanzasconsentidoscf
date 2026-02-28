@@ -1,54 +1,41 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Wallet, Building2, PiggyBank, CreditCard, TrendingUp, Pencil, Trash2, HandCoins } from "lucide-react";
+import {
+  Plus, Wallet, Building2, PiggyBank, CreditCard, TrendingUp, Trash2, HandCoins,
+  Home, Car, User, Landmark, ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAccounts, Account } from "@/hooks/useAccounts";
+import {
+  useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability,
+} from "@/hooks/useAccounts";
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 const typeIcons: Record<string, typeof Wallet> = {
-  cash: Wallet,
-  bank: Building2,
-  savings: PiggyBank,
-  investment: TrendingUp,
-  credit_card: CreditCard,
-  payable: HandCoins,
+  cash: Wallet, bank: Building2, savings: PiggyBank, investment: TrendingUp,
+  credit_card: CreditCard, payable: HandCoins, mortgage: Home, auto_loan: Car,
+  personal_loan: User, caucion_bursatil: Landmark,
 };
 
 const typeLabels: Record<string, string> = {
-  cash: "Efectivo",
-  bank: "Cuenta bancaria",
-  savings: "Ahorro",
-  investment: "Inversión",
-  credit_card: "Tarjeta de crédito",
-  payable: "Cuenta por pagar",
+  cash: "Efectivo", bank: "Cuenta bancaria", savings: "Ahorro", investment: "Inversión",
+  credit_card: "Tarjeta de crédito", payable: "Cuenta por pagar", mortgage: "Crédito hipotecario",
+  auto_loan: "Crédito automotriz", personal_loan: "Crédito personal", caucion_bursatil: "Caución bursátil",
 };
+
+const fmt = (value: number, currency: string) =>
+  new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
 
 export default function Accounts() {
   const navigate = useNavigate();
-  const { accounts, isLoading, totalBalance, deleteAccount } = useAccounts();
+  const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deleteAccount } = useAccounts();
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
-
-  const formatAmount = (value: number, currency: string) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.abs(value));
-  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -56,110 +43,129 @@ export default function Accounts() {
     setDeleteTarget(null);
   };
 
+  const assets = accounts.filter(a => isAssetType(a.type)).sort((a, b) => a.name.localeCompare(b.name));
+  const liabilitiesShort = accounts.filter(a => isLiabilityShort(a.type)).sort((a, b) => a.name.localeCompare(b.name));
+  const liabilitiesLong = accounts.filter(a => isLiabilityLong(a.type)).sort((a, b) => b.current_balance - a.current_balance);
+
+  const renderAccountRow = (account: Account) => {
+    const Icon = typeIcons[account.type] || Wallet;
+    const debt = isLiability(account.type);
+    return (
+      <div
+        key={account.id}
+        className="flex items-center gap-3 rounded-xl bg-card border border-border p-3 card-interactive cursor-pointer"
+        onClick={() => navigate(`/accounts/${account.id}`)}
+      >
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-muted")}>
+          <Icon className={cn("h-5 w-5", debt ? "text-expense" : "text-muted-foreground")} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{account.name}</p>
+          <p className="text-xs text-muted-foreground">{typeLabels[account.type] || account.type}</p>
+        </div>
+        <div className="text-right mr-1">
+          <p className={cn("text-sm font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
+            {debt && account.current_balance > 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
+          </p>
+          <p className="text-xs text-muted-foreground">{account.currency}</p>
+        </div>
+        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={(e) => { e.stopPropagation(); setDeleteTarget(account); }}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-heading font-bold text-foreground">Cuentas</h1>
-          <p className="text-muted-foreground">Administra tu dinero en diferentes lugares</p>
+          <p className="text-sm text-muted-foreground">Panorama de activos y pasivos</p>
         </div>
-        <Button className="gap-2" onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Nueva cuenta
+        <Button size="sm" className="gap-2" onClick={() => setFormOpen(true)}>
+          <Plus className="h-4 w-4" /> Nueva cuenta
         </Button>
       </div>
 
-      {/* Total Balance */}
-      <div className="rounded-2xl bg-primary p-6 text-primary-foreground card-elevated">
-        <p className="text-sm text-primary-foreground/80">Saldo total (MXN)</p>
-        {isLoading ? (
-          <Skeleton className="h-10 w-48 bg-primary-foreground/20 mt-1" />
-        ) : (
-          <p className="text-4xl font-bold font-heading mt-1">
-            {formatAmount(totalBalance, "MXN")}
-          </p>
-        )}
-        <p className="text-sm text-primary-foreground/80 mt-2">
-          En {accounts.length} cuenta{accounts.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
-      {/* Accounts List */}
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-2xl" />
-          ))}
-        </div>
+        <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
       ) : accounts.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Wallet className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p className="font-medium">Sin cuentas todavía</p>
-          <p className="text-sm mt-1">Crea tu primera cuenta para empezar a registrar movimientos.</p>
+          <p className="text-sm mt-1">Crea tu primera cuenta para empezar.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {accounts.map((account) => {
-            const Icon = typeIcons[account.type] || Wallet;
-            const isNegative = account.current_balance < 0;
-            const isDebt = account.type === "credit_card" || account.type === "payable";
-
-            return (
-              <div
-                key={account.id}
-                className="flex items-center gap-4 rounded-2xl bg-card border border-border p-4 card-interactive cursor-pointer"
-                onClick={() => navigate(`/accounts/${account.id}`)}
-              >
-                <div
-                  className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-xl",
-                    isDebt ? "bg-expense/10" : account.type === "savings" ? "bg-income/10" : "bg-muted"
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "h-6 w-6",
-                      isDebt ? "text-expense" : account.type === "savings" ? "text-income" : "text-muted-foreground"
-                    )}
-                  />
+        <>
+          {/* Summary cards by currency */}
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Asset totals per currency */}
+            {Object.entries(assetsByCurrency).map(([currency, total]) => (
+              <div key={`asset-${currency}`} className="rounded-2xl bg-primary p-4 text-primary-foreground">
+                <div className="flex items-center gap-2 mb-1">
+                  <ShieldCheck className="h-4 w-4 opacity-80" />
+                  <p className="text-xs opacity-80">Activos ({currency})</p>
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{account.name}</p>
-                  <p className="text-sm text-muted-foreground">{typeLabels[account.type] || account.type}</p>
-                </div>
-
-                <div className="text-right mr-2">
-                  <p
-                    className={cn(
-                      "font-semibold tabular-nums",
-                      isNegative ? "text-expense" : "text-foreground"
-                    )}
-                  >
-                    {isNegative && "-"}
-                    {formatAmount(account.current_balance, account.currency)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{account.currency}</p>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(account); }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <p className="text-2xl font-bold font-heading">{fmt(total, currency)}</p>
               </div>
-            );
-          })}
-        </div>
+            ))}
+            {/* Liability totals per currency */}
+            {Object.entries(liabilitiesByCurrency).map(([currency, total]) => (
+              <div key={`liab-${currency}`} className="rounded-2xl bg-expense/10 border border-expense/20 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <CreditCard className="h-4 w-4 text-expense opacity-80" />
+                  <p className="text-xs text-expense opacity-80">Pasivos ({currency})</p>
+                </div>
+                <p className="text-2xl font-bold font-heading text-expense">{fmt(total, currency)}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Two-column layout: assets left, liabilities right */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Assets */}
+            <div className="space-y-3">
+              <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-income" /> Activos
+              </h2>
+              {assets.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Sin cuentas de activo</p>
+              ) : assets.map(renderAccountRow)}
+            </div>
+
+            {/* Liabilities */}
+            <div className="space-y-3">
+              <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-expense" /> Pasivos
+              </h2>
+              {liabilitiesShort.length === 0 && liabilitiesLong.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Sin pasivos registrados</p>
+              ) : (
+                <>
+                  {liabilitiesShort.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
+                      {liabilitiesShort.map(renderAccountRow)}
+                    </div>
+                  )}
+                  {liabilitiesLong.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Mediano / Largo plazo</p>
+                      {liabilitiesLong.map(renderAccountRow)}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       <AccountForm open={formOpen} onOpenChange={setFormOpen} />
 
-      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -115,28 +115,33 @@ export function VoiceButton() {
         setEditCategoryId(matchedCat.id);
       }
 
-      // Fuzzy match accounts and strip account name from description
+      // Fuzzy match accounts (works for all types including income)
       const matchedFrom = fuzzyMatchAccount(finalText, accounts);
+      let matchedToAcc: typeof accounts[0] | null = null;
+
       if (matchedFrom) {
         setEditAccountId(matchedFrom.id);
-        // Strip account name words from the description
-        const descCleaned = stripAccountNameFromText(parsed.description || finalText, matchedFrom.name);
-        setEditDescription(descCleaned);
       } else {
-        // Default to cash account if exists, otherwise first account
         const cashAccount = accounts.find(a => a.type === 'cash' && a.is_active);
         setEditAccountId(cashAccount?.id || (accounts.length > 0 ? accounts[0].id : ""));
-        setEditDescription(parsed.description || "");
       }
 
       if (parsed.type === "transfer") {
-        const matchedTo = fuzzyMatchToAccount(finalText, accounts, matchedFrom?.id);
-        if (matchedTo) {
-          setEditToAccountId(matchedTo.id);
-          // Also strip to-account name from description
-          setEditDescription(prev => stripAccountNameFromText(prev, matchedTo.name));
+        matchedToAcc = fuzzyMatchToAccount(finalText, accounts, matchedFrom?.id) ?? null;
+        if (matchedToAcc) {
+          setEditToAccountId(matchedToAcc.id);
         }
       }
+
+      // Build clean description stripping action, amount, category, and account names
+      const cleanDesc = buildCleanDescription(
+        finalText,
+        parsed.type,
+        matchedCat?.name ?? null,
+        matchedFrom?.name ?? null,
+        matchedToAcc?.name ?? null,
+      );
+      setEditDescription(cleanDesc);
     }
   }, [scribe, committedText, partialText, accounts, categories, findCategoryByKeyword]);
 
@@ -156,48 +161,136 @@ export function VoiceButton() {
     return { ...base, type };
   };
 
+  // Normalize text: remove accents and convert to lowercase for fuzzy comparison
+  const normalize = (text: string): string =>
+    text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const stripAccountNameFromText = (text: string, accountName: string): string => {
     const words = accountName.toLowerCase().split(/\s+/);
     let result = text;
-    // Strip each word of the account name from the text
     for (const w of words) {
       if (w.length > 2) {
         result = result.replace(new RegExp(`\\b${w}\\b`, 'gi'), '');
       }
     }
-    // Also strip full account name
     result = result.replace(new RegExp(accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
     return result.replace(/\s+/g, ' ').trim();
   };
 
   const fuzzyMatchAccount = (text: string, accs: typeof accounts) => {
-    const lower = text.toLowerCase();
-    // Try matching by multi-word account name first (longer names first for specificity)
+    const norm = normalize(text);
     const sorted = [...accs].sort((a, b) => b.name.length - a.name.length);
+
+    // 1) Full normalized name match
     for (const acc of sorted) {
-      if (lower.includes(acc.name.toLowerCase())) return acc;
+      if (norm.includes(normalize(acc.name))) return acc;
     }
-    // Fallback: match individual words (>2 chars)
+
+    // 2) Match individual words (>2 chars) with normalization
     for (const acc of sorted) {
-      const words = acc.name.toLowerCase().split(/\s+/);
-      for (const w of words) {
-        if (w.length > 2 && lower.includes(w)) return acc;
+      const words = normalize(acc.name).split(/\s+/);
+      const significantWords = words.filter(w => w.length > 2);
+      // If any significant word matches, count it
+      for (const w of significantWords) {
+        if (norm.includes(w)) return acc;
       }
     }
+
+    // 3) Phonetic similarity: check if spoken words sound like account name parts
+    // e.g., "dolar" matches "dollar", "apo" matches "app"
+    const spokenWords = norm.split(/\s+/);
+    for (const acc of sorted) {
+      const accNorm = normalize(acc.name);
+      const accWords = accNorm.split(/\s+/).filter(w => w.length > 2);
+      let matchCount = 0;
+      for (const aw of accWords) {
+        for (const sw of spokenWords) {
+          // Check if one starts with the other or Levenshtein-like similarity
+          if (sw.length >= 3 && aw.length >= 3) {
+            if (aw.startsWith(sw.substring(0, 3)) || sw.startsWith(aw.substring(0, 3))) {
+              matchCount++;
+              break;
+            }
+          }
+        }
+      }
+      if (matchCount >= Math.max(1, Math.ceil(accWords.length * 0.5))) return acc;
+    }
+
     return null;
   };
 
   const fuzzyMatchToAccount = (text: string, accs: typeof accounts, excludeId?: string) => {
-    const lower = text.toLowerCase();
-    const match = lower.match(/(?:a|hacia)\s+(\w+)/);
+    const norm = normalize(text);
+    // Look for "a [account]" or "hacia [account]" pattern
+    const match = norm.match(/(?:\ba\b|\bhacia\b)\s+(\w+(?:\s+\w+)?)/);
     if (match) {
       const target = match[1];
       for (const acc of accs) {
         if (acc.id === excludeId) continue;
-        if (acc.name.toLowerCase().includes(target)) return acc;
+        if (normalize(acc.name).includes(target)) return acc;
+        // Also check first word match
+        const firstWord = normalize(acc.name).split(/\s+/)[0];
+        if (firstWord.length > 2 && target.includes(firstWord)) return acc;
+        if (target.length >= 3 && firstWord.startsWith(target.substring(0, 3))) return acc;
       }
     }
-    return null;
+    // Fallback: try fuzzy matching excluding "from" account
+    const filtered = accs.filter(a => a.id !== excludeId);
+    return fuzzyMatchAccount(text, filtered) || null;
+  };
+
+  // Build a clean description by stripping action, amount, currency, category, and account names
+  const buildCleanDescription = (
+    rawText: string,
+    type: string,
+    matchedCatName: string | null,
+    matchedAccountName: string | null,
+    matchedToAccountName: string | null,
+  ): string => {
+    let desc = rawText;
+
+    // Strip leading filler words like "y un", "un", "y"
+    desc = desc.replace(/^(y\s+un\s+|un\s+|y\s+)/i, "");
+
+    // Strip action keywords
+    desc = desc.replace(/\b(gasto|gasté|gastó|pagué|compré|ingreso|recibí|transferencia|transfiere|transferí|me pagaron)\b/gi, "");
+
+    // Strip amounts: digits, currency words, "mil", "$" symbols
+    desc = desc.replace(/\$?\s*\d{1,3}(?:[,.\s]?\d{3})*(?:\.\d{1,2})?\s*(mil\s+)?(pesos?|mxn|dólares?|dolares?|usd|euros?|eur)?/gi, "");
+    desc = desc.replace(/\b\d+\s*mil\b/gi, "");
+
+    // Strip category name if matched
+    if (matchedCatName) {
+      desc = desc.replace(new RegExp(`\\b${matchedCatName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), "");
+    }
+
+    // Strip account names if matched
+    if (matchedAccountName) {
+      const accWords = matchedAccountName.split(/\s+/);
+      for (const w of accWords) {
+        if (w.length > 2) desc = desc.replace(new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), "");
+      }
+    }
+    if (matchedToAccountName) {
+      const accWords = matchedToAccountName.split(/\s+/);
+      for (const w of accWords) {
+        if (w.length > 2) desc = desc.replace(new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), "");
+      }
+    }
+
+    // Strip filler/preposition words
+    desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una)\b/gi, " ");
+
+    // Clean up whitespace and punctuation
+    desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
+
+    // Capitalize first letter
+    if (desc.length > 0) {
+      desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+    }
+
+    return desc || rawText;
   };
 
   const handleConfirm = async () => {

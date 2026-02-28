@@ -26,6 +26,7 @@ export function VoiceButton() {
   const { categories, findCategoryByKeyword } = useCategories();
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
   const [partialText, setPartialText] = useState("");
@@ -52,25 +53,47 @@ export function VoiceButton() {
     },
   });
 
+  // Remove auto-start via useEffect — only start from direct user gesture
+  // Pre-fetch token when drawer opens so connection is faster when user taps mic
+  const [prefetchedToken, setPrefetchedToken] = useState<string | null>(null);
+
   useEffect(() => {
-    if (isOpen && !scribe.isConnected && !isConnecting && !parsedData) {
-      handleStartRecording();
+    if (isOpen && !parsedData) {
+      // Pre-fetch token in background so it's ready when user taps mic
+      supabase.functions.invoke("elevenlabs-scribe-token").then(({ data }) => {
+        if (data?.token) setPrefetchedToken(data.token);
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, parsedData]);
 
   const handleStartRecording = useCallback(async () => {
     setIsConnecting(true);
+    setIsReady(false);
     try {
+      // CRITICAL: getUserMedia called directly in click handler for browser security
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
-      if (error || !data?.token) throw new Error("No token");
-      await scribe.connect({ token: data.token, microphone: { echoCancellation: true, noiseSuppression: true } });
+
+      // Use pre-fetched token or fetch a new one
+      let token = prefetchedToken;
+      if (!token) {
+        const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
+        if (error || !data?.token) throw new Error("No token");
+        token = data.token;
+      }
+      setPrefetchedToken(null);
+
+      await scribe.connect({ token, microphone: { echoCancellation: true, noiseSuppression: true } });
+
+      // Signal to user that recording is active
+      setIsReady(true);
+      // Haptic feedback on mobile
+      if (navigator.vibrate) navigator.vibrate(100);
     } catch (error) {
       toast.error("No se pudo iniciar la grabación.");
     } finally {
       setIsConnecting(false);
     }
-  }, [scribe]);
+  }, [scribe, prefetchedToken]);
 
   const handleStopRecording = useCallback(async () => {
     await scribe.disconnect();
@@ -358,6 +381,8 @@ export function VoiceButton() {
     setPartialText("");
     setParsedData(null);
     setIsEditing(false);
+    setIsReady(false);
+    setPrefetchedToken(null);
     setEditAmount("");
     setEditType("expense");
     setEditAccountId("");
@@ -412,18 +437,28 @@ export function VoiceButton() {
                 disabled={isConnecting}
                 className={cn(
                   "flex h-16 w-16 items-center justify-center rounded-full transition-all shrink-0",
-                  scribe.isConnected ? "bg-expense text-expense-foreground animate-pulse" : "bg-primary text-primary-foreground hover:scale-105",
+                  scribe.isConnected
+                    ? "bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30"
+                    : "bg-primary text-primary-foreground hover:scale-105",
                   isConnecting && "opacity-50"
                 )}
               >
                 {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
               </button>
 
-              <p className="text-xs text-muted-foreground text-center px-2">
-                {isConnecting ? "Conectando..." : scribe.isConnected ? "Escuchando... Toca para detener" : parsedData ? "Revisa tu movimiento" : (
-                  <>
-                    Ejemplo: <span className="italic">"Gasto 500 pesos tarjeta gasolina"</span>
-                  </>
+              <p className="text-xs text-center px-2">
+                {isConnecting ? (
+                  <span className="text-muted-foreground">Preparando micrófono...</span>
+                ) : scribe.isConnected ? (
+                  <span className="text-expense font-semibold animate-pulse">🎙️ ¡Habla ahora! — Toca para detener</span>
+                ) : parsedData ? (
+                  <span className="text-muted-foreground">Revisa tu movimiento</span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    Toca el micrófono para empezar.
+                    <br />
+                    <span className="italic">Ej: "Gasto 500 pesos BBVA gasolina"</span>
+                  </span>
                 )}
               </p>
 

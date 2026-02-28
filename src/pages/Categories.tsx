@@ -22,15 +22,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const bucketLabels: Record<string, string> = {
-  essential: "Esencial",
-  discretionary: "Variable",
-  saving_investing: "Ahorro/Inversión",
+  stability: "Estabilidad",
+  lifestyle: "Calidad de vida",
+  build: "Construcción",
 };
 
 const bucketColors: Record<string, string> = {
-  essential: "bg-primary/10 text-primary",
-  discretionary: "bg-accent/10 text-accent-foreground",
-  saving_investing: "bg-income/10 text-income",
+  stability: "bg-[hsl(var(--block-stability)/0.1)] text-[hsl(var(--block-stability))]",
+  lifestyle: "bg-[hsl(var(--block-lifestyle)/0.1)] text-[hsl(var(--block-lifestyle))]",
+  build: "bg-[hsl(var(--block-build)/0.1)] text-[hsl(var(--block-build))]",
 };
 
 export default function Categories() {
@@ -41,16 +41,15 @@ export default function Categories() {
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
-  // Form state
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("expense");
-  const [bucket, setBucket] = useState<string>("discretionary");
+  const [bucket, setBucket] = useState<string>("lifestyle");
 
   const openCreate = () => {
     setEditCat(null);
     setName("");
     setType("expense");
-    setBucket("discretionary");
+    setBucket("lifestyle");
     setFormOpen(true);
   };
 
@@ -58,7 +57,7 @@ export default function Categories() {
     setEditCat(cat);
     setName(cat.name);
     setType(cat.type);
-    setBucket((cat as any).bucket || "discretionary");
+    setBucket((cat as any).bucket || "lifestyle");
     setFormOpen(true);
   };
 
@@ -109,8 +108,8 @@ export default function Categories() {
             <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">{cat.name}</p>
-              <span className={cn("text-xs px-2 py-0.5 rounded-full", bucketColors[(cat as any).bucket || "discretionary"])}>
-                {bucketLabels[(cat as any).bucket || "discretionary"]}
+              <span className={cn("text-xs px-2 py-0.5 rounded-full", bucketColors[(cat as any).bucket || "lifestyle"])}>
+                {bucketLabels[(cat as any).bucket || "lifestyle"]}
               </span>
             </div>
             {!cat.is_system && (
@@ -159,7 +158,7 @@ export default function Categories() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editCat ? "Editar categoría" : "Nueva categoría"}</DialogTitle>
-            <DialogDescription>Define nombre, tipo y clasificación presupuestaria.</DialogDescription>
+            <DialogDescription>Define nombre, tipo y bloque presupuestario.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -177,13 +176,13 @@ export default function Categories() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium">Clasificación (50/30/20)</label>
+              <label className="text-sm font-medium">Bloque presupuestario</label>
               <Select value={bucket} onValueChange={setBucket}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="essential">Esencial</SelectItem>
-                  <SelectItem value="discretionary">Variable</SelectItem>
-                  <SelectItem value="saving_investing">Ahorro/Inversión</SelectItem>
+                  <SelectItem value="stability">🔵 Estabilidad</SelectItem>
+                  <SelectItem value="lifestyle">🟡 Calidad de vida</SelectItem>
+                  <SelectItem value="build">🟢 Construcción</SelectItem>
                 </SelectContent>
               </Select>
             </div>

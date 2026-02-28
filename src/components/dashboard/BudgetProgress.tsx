@@ -27,7 +27,7 @@ export function BudgetProgress({
   };
 
   const getStatusColor = (percent: number) => {
-    if (percent >= 100) return "danger";
+    if (percent >= 100) return "over";
     if (percent >= 80) return "warning";
     return "safe";
   };
@@ -48,9 +48,9 @@ export function BudgetProgress({
           value={percentage}
           className={cn(
             "h-2",
-            status === "safe" && "[&>div]:bg-status-safe",
-            status === "warning" && "[&>div]:bg-status-warning",
-            status === "danger" && "[&>div]:bg-status-danger"
+            status === "safe" && "[&>div]:bg-[hsl(var(--block-build))]",
+            status === "warning" && "[&>div]:bg-[hsl(var(--block-lifestyle))]",
+            status === "over" && "[&>div]:bg-[hsl(var(--status-danger))]"
           )}
         />
       </div>
@@ -59,9 +59,9 @@ export function BudgetProgress({
         <span
           className={cn(
             "font-medium",
-            status === "safe" && "text-status-safe",
-            status === "warning" && "text-status-warning",
-            status === "danger" && "text-status-danger"
+            status === "safe" && "text-[hsl(var(--block-build))]",
+            status === "warning" && "text-[hsl(var(--block-lifestyle))]",
+            status === "over" && "text-[hsl(var(--status-danger))]"
           )}
         >
           {percentage.toFixed(0)}% usado

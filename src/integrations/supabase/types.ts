@@ -374,6 +374,42 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnostics: {
+        Row: {
+          analysis_months: number
+          build_pct: number
+          created_at: string | null
+          id: string
+          lifestyle_pct: number
+          stability_pct: number
+          stage: string
+          total_expenses: number
+          user_id: string
+        }
+        Insert: {
+          analysis_months?: number
+          build_pct?: number
+          created_at?: string | null
+          id?: string
+          lifestyle_pct?: number
+          stability_pct?: number
+          stage?: string
+          total_expenses?: number
+          user_id: string
+        }
+        Update: {
+          analysis_months?: number
+          build_pct?: number
+          created_at?: string | null
+          id?: string
+          lifestyle_pct?: number
+          stability_pct?: number
+          stage?: string
+          total_expenses?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       ebooks: {
         Row: {
           author: string | null

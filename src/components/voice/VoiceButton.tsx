@@ -44,6 +44,7 @@ export function VoiceButton() {
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
     commitStrategy: CommitStrategy.VAD,
+    languageCode: "es",
     onPartialTranscript: (data) => setPartialText(data.text),
     onCommittedTranscript: (data) => {
       setCommittedText((prev) => (prev ? `${prev} ${data.text}` : data.text).trim());

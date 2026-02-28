@@ -68,15 +68,34 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
   }, [account, open]);
 
   const fetchLastTransaction = async (accountId: string) => {
-    const { data } = await supabase
-      .from("transactions")
-      .select("description, amount, type, transaction_date")
-      .eq("account_id", accountId)
-      .order("transaction_date", { ascending: false })
-      .limit(1);
+    // Check both transactions and transfers for the most recent movement
+    const [txRes, trFromRes, trToRes] = await Promise.all([
+      supabase.from("transactions").select("description, amount, type, transaction_date, currency")
+        .eq("account_id", accountId).order("transaction_date", { ascending: false }).limit(1),
+      supabase.from("transfers").select("description, amount_from, transfer_date, currency_from, from_account_id, to_account_id")
+        .eq("from_account_id", accountId).order("transfer_date", { ascending: false }).limit(1),
+      supabase.from("transfers").select("description, amount_to, transfer_date, currency_to, from_account_id, to_account_id")
+        .eq("to_account_id", accountId).order("transfer_date", { ascending: false }).limit(1),
+    ]);
 
-    if (data && data.length > 0) {
-      setLastTx(data[0] as LastTransaction);
+    const candidates: { date: string; data: LastTransaction }[] = [];
+
+    if (txRes.data?.[0]) {
+      const t = txRes.data[0];
+      candidates.push({ date: t.transaction_date, data: { description: t.description, amount: t.amount, type: t.type, transaction_date: t.transaction_date } });
+    }
+    if (trFromRes.data?.[0]) {
+      const t = trFromRes.data[0];
+      candidates.push({ date: t.transfer_date, data: { description: t.description || "Transferencia enviada", amount: t.amount_from, type: "transfer_out", transaction_date: t.transfer_date } });
+    }
+    if (trToRes.data?.[0]) {
+      const t = trToRes.data[0];
+      candidates.push({ date: t.transfer_date, data: { description: t.description || "Transferencia recibida", amount: t.amount_to, type: "transfer_in", transaction_date: t.transfer_date } });
+    }
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.date.localeCompare(a.date));
+      setLastTx(candidates[0].data);
     } else {
       setLastTx(null);
     }
@@ -187,16 +206,13 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
             </p>
           </div>
 
-          {/* Last transaction context */}
-          {lastTx && showBalanceConfirm && (
+          {/* Always show last transaction context */}
+          {lastTx && (
             <div className="rounded-xl bg-secondary/50 border border-border p-4 space-y-2">
-              <p className="text-sm text-foreground font-medium">Confirma tu ajuste</p>
+              <p className="text-sm text-foreground font-medium">Último movimiento registrado</p>
               <p className="text-xs text-muted-foreground">
-                Tu último movimiento fue:{" "}
-                <span className="font-medium text-foreground">
-                  {lastTx.type === "expense" ? "Gasto" : lastTx.type === "income" ? "Ingreso" : "Transferencia"}{" "}
-                  de {fmt(lastTx.amount, account.currency)}
-                </span>
+                {lastTx.type === "expense" ? "Gasto" : lastTx.type === "income" ? "Ingreso" : lastTx.type === "transfer_out" ? "Transferencia enviada" : lastTx.type === "transfer_in" ? "Transferencia recibida" : "Transferencia"}{" "}
+                de <span className="font-medium text-foreground">{fmt(lastTx.amount, account.currency)}</span>
                 {lastTx.description && <> — {lastTx.description}</>}
                 {" "}el{" "}
                 {format(new Date(lastTx.transaction_date + "T12:00:00"), "d 'de' MMMM", { locale: es })}.
@@ -213,7 +229,7 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
             </div>
           )}
 
-          {!lastTx && showBalanceConfirm && hasDiff && (
+          {!lastTx && hasDiff && (
             <div className="rounded-xl bg-secondary/50 border border-border p-4">
               <p className="text-xs text-muted-foreground">
                 Se registrará un ajuste de saldo por{" "}

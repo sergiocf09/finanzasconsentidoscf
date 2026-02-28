@@ -71,9 +71,11 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">Configuración</h1>
-        <p className="text-muted-foreground">Personaliza tu experiencia en la app</p>
+      {/* Header — sticky */}
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-heading font-semibold text-foreground">Configuración</h1>
+        </div>
       </div>
 
       <div className="space-y-6">

@@ -22,14 +22,11 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">
-          Reportes
-        </h1>
-        <p className="text-muted-foreground">
-          Visualiza el comportamiento de tus finanzas
-        </p>
+      {/* Header — sticky */}
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-heading font-semibold text-foreground">Reportes</h1>
+        </div>
       </div>
 
       {/* Period Tabs */}

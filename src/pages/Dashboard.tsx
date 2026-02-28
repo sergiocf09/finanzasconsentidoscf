@@ -24,10 +24,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 stagger-children">
-      {/* Welcome */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-heading font-bold text-foreground">Hola, {displayName} 👋</h1>
-        <p className="text-muted-foreground">Tu dinero con calma. Tu vida con sentido.</p>
+      {/* Welcome — sticky */}
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+        <h1 className="text-lg font-heading font-semibold text-foreground">Hola, {displayName} 👋</h1>
       </div>
 
       {/* Financial summary: expandable asset/liability cards */}

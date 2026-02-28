@@ -174,25 +174,24 @@ export default function Budgets() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Presupuestos</h1>
-          <p className="text-sm text-muted-foreground">Tu dinero organizado con calma y claridad.</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" className="gap-2" onClick={() => setShowDiagnostic(!showDiagnostic)}>
-            <Activity className="h-4 w-4" />
-            Diagnóstico
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => handleGenerateSuggested(3)} disabled={generatingBudget}>
-            {generatingBudget ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Sugerido 3m
-          </Button>
-          <Button className="gap-2" onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Manual
-          </Button>
+      {/* Header — sticky */}
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-heading font-semibold text-foreground">Presupuestos</h1>
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setShowDiagnostic(!showDiagnostic)}>
+              <Activity className="h-3.5 w-3.5" />
+              Diagnóstico
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => handleGenerateSuggested(3)} disabled={generatingBudget}>
+              {generatingBudget ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Sugerido
+            </Button>
+            <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setFormOpen(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Manual
+            </Button>
+          </div>
         </div>
       </div>
 

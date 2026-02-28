@@ -95,15 +95,17 @@ export default function Accounts() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Cuentas</h1>
-          <p className="text-sm text-muted-foreground">Panorama de activos y pasivos</p>
+      {/* Header — sticky */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-foreground">Cuentas</h1>
+            <p className="text-sm text-muted-foreground">Panorama de activos y pasivos</p>
+          </div>
+          <Button size="sm" className="gap-2" onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4" /> Nueva cuenta
+          </Button>
         </div>
-        <Button size="sm" className="gap-2" onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4" /> Nueva cuenta
-        </Button>
       </div>
 
       {isLoading ? (
@@ -116,11 +118,14 @@ export default function Accounts() {
         </div>
       ) : (
         <>
-          {/* Summary cards by currency */}
+          {/* Summary cards by currency — clickable to scroll */}
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Asset totals per currency */}
             {Object.entries(assetsByCurrency).map(([currency, total]) => (
-              <div key={`asset-${currency}`} className="rounded-2xl bg-primary p-4 text-primary-foreground">
+              <div
+                key={`asset-${currency}`}
+                className="rounded-2xl bg-primary p-4 text-primary-foreground cursor-pointer card-interactive"
+                onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <ShieldCheck className="h-4 w-4 opacity-80" />
                   <p className="text-xs opacity-80">Activos ({currency})</p>
@@ -128,9 +133,12 @@ export default function Accounts() {
                 <p className="text-2xl font-bold font-heading">{fmt(total, currency)}</p>
               </div>
             ))}
-            {/* Liability totals per currency */}
             {Object.entries(liabilitiesByCurrency).map(([currency, total]) => (
-              <div key={`liab-${currency}`} className="rounded-2xl bg-expense/10 border border-expense/20 p-4">
+              <div
+                key={`liab-${currency}`}
+                className="rounded-2xl bg-expense/10 border border-expense/20 p-4 cursor-pointer card-interactive"
+                onClick={() => document.getElementById("section-liabilities")?.scrollIntoView({ behavior: "smooth" })}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <CreditCard className="h-4 w-4 text-expense opacity-80" />
                   <p className="text-xs text-expense opacity-80">Pasivos ({currency})</p>
@@ -144,7 +152,7 @@ export default function Accounts() {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Assets */}
             <div className="space-y-3">
-              <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
+              <h2 id="section-assets" className="text-sm font-heading font-semibold text-foreground flex items-center gap-2 scroll-mt-24">
                 <TrendingUp className="h-4 w-4 text-income" /> Activos
               </h2>
               {assets.length === 0 ? (
@@ -154,7 +162,7 @@ export default function Accounts() {
 
             {/* Liabilities */}
             <div className="space-y-3">
-              <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
+              <h2 id="section-liabilities" className="text-sm font-heading font-semibold text-foreground flex items-center gap-2 scroll-mt-24">
                 <CreditCard className="h-4 w-4 text-expense" /> Pasivos
               </h2>
               {liabilitiesShort.length === 0 && liabilitiesLong.length === 0 ? (

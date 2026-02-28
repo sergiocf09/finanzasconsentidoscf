@@ -29,12 +29,8 @@ export function FinancialSummaryCards() {
   const liabCurrencies = Object.entries(liabilitiesByCurrency);
 
   const handleCardClick = (key: string) => {
-    if (expandedKey === key) {
-      // Second click → navigate to accounts
-      navigate("/accounts");
-    } else {
-      setExpandedKey(key);
-    }
+    // Toggle expand/collapse only — no navigation
+    setExpandedKey(expandedKey === key ? null : key);
   };
 
   const handleAccountClick = (accountId: string, e: React.MouseEvent) => {

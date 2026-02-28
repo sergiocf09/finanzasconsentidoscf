@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Trash2, Receipt } from "lucide-react";
+import { Plus, Search, Trash2, Receipt, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -143,39 +143,53 @@ export default function Transactions() {
         </div>
       ) : (
         <div className="space-y-2">
-          {displayed.map((tx) => (
-            <div key={tx.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border cursor-pointer card-interactive"
+          {displayed.map((tx) => {
+            const isAdjustment = tx.type === "adjustment_income" || tx.type === "adjustment_expense";
+            return (
+            <div key={tx.id} className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border cursor-pointer card-interactive", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
               onClick={() => setSelectedTx(tx)}>
               <div className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0",
                 tx.type === "income" && "bg-income/10",
                 tx.type === "expense" && "bg-muted",
-                tx.type === "transfer" && "bg-transfer/10"
+                tx.type === "transfer" && "bg-transfer/10",
+                isAdjustment && "bg-muted"
               )}>
-                <Receipt className={cn(
-                  "h-5 w-5",
-                  tx.type === "income" && "text-income",
-                  tx.type === "expense" && "text-muted-foreground",
-                  tx.type === "transfer" && "text-transfer"
-                )} />
+                {isAdjustment ? (
+                  <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <Receipt className={cn(
+                    "h-5 w-5",
+                    tx.type === "income" && "text-income",
+                    tx.type === "expense" && "text-muted-foreground",
+                    tx.type === "transfer" && "text-transfer"
+                  )} />
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{tx.description || getCategoryName(tx.category_id)}</p>
-                <p className="text-xs text-muted-foreground truncate">{getCategoryName(tx.category_id)} · {getAccountName(tx.account_id)} · {formatDate(tx.transaction_date)}</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {isAdjustment ? "Ajuste de saldo" : (tx.description || getCategoryName(tx.category_id))}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isAdjustment ? `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}` : `${getCategoryName(tx.category_id)} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`}
+                </p>
               </div>
               <p className={cn(
                 "text-sm font-semibold tabular-nums shrink-0",
                 tx.type === "income" && "text-income",
                 tx.type === "expense" && "text-foreground",
-                tx.type === "transfer" && "text-transfer"
+                tx.type === "transfer" && "text-transfer",
+                isAdjustment && "text-muted-foreground"
               )}>
-                {tx.type === "expense" && "-"}{tx.type === "income" && "+"}{formatAmount(tx.amount, tx.currency)}
+                {tx.type === "expense" && "-"}{tx.type === "income" && "+"}{isAdjustment && (tx.type === "adjustment_expense" ? "-" : "+")}{formatAmount(tx.amount, tx.currency)}
               </p>
               <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(tx.id); }}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-          ))}
+            );
+          })}
+
 
           {hasMore && (
             <div className="text-center pt-4">

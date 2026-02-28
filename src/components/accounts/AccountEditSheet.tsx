@@ -153,10 +153,10 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
         await supabase.from("transactions").insert({
           user_id: user.id,
           account_id: account.id,
-          type: diff > 0 ? "income" : "expense",
+          type: diff > 0 ? "adjustment_income" : "adjustment_expense",
           amount: Math.abs(diff),
           currency: account.currency,
-          description: "Ajuste de saldo (reconciliación)",
+          description: "Ajuste de saldo",
           notes: `Saldo ajustado de ${fmt(account.current_balance, account.currency)} a ${fmt(parsedBalance, account.currency)}`,
           transaction_date: format(new Date(), "yyyy-MM-dd"),
         });

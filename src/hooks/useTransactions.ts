@@ -9,7 +9,7 @@ export interface Transaction {
   user_id: string;
   account_id: string;
   category_id: string | null;
-  type: 'income' | 'expense' | 'transfer';
+  type: 'income' | 'expense' | 'transfer' | 'adjustment_income' | 'adjustment_expense';
   amount: number;
   currency: string;
   exchange_rate: number;
@@ -112,11 +112,13 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
   });
 
   // Calculate totals
+  // Calculate totals — adjustments are excluded from income/expense
   const totals = transactionsQuery.data?.reduce(
     (acc, tx) => {
       if (tx.type === 'income') acc.income += tx.amount;
       else if (tx.type === 'expense') acc.expense += tx.amount;
       else if (tx.type === 'transfer') acc.transfer += tx.amount;
+      // adjustment_income and adjustment_expense are intentionally excluded
       return acc;
     },
     { income: 0, expense: 0, transfer: 0 }

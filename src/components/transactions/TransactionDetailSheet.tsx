@@ -39,8 +39,8 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
 
   const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name ?? "Sin categoría";
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";
-  const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia" };
-  const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground" };
+  const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia", adjustment_income: "Ajuste de saldo (+)", adjustment_expense: "Ajuste de saldo (-)" };
+  const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground", adjustment_income: "text-muted-foreground", adjustment_expense: "text-muted-foreground" };
 
   const dateFormatted = format(new Date(transaction.transaction_date + "T12:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es });
 

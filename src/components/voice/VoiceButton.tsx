@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -227,7 +226,6 @@ function cleanSpaces(text: string): string {
 function buildConcept(remaining: string): string {
   let desc = remaining;
   desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo)\b/gi, " ");
-  // Also strip type keywords that STT may have transcribed
   desc = desc.replace(/\b(gasto|gaste|gasté|gastó|pagué|pague|compré|compre|ingreso|recibí|recibi|transferencia|transfiere|transferí|transferi)\b/gi, " ");
   desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
   if (desc.length > 0) desc = desc.charAt(0).toUpperCase() + desc.slice(1);
@@ -256,13 +254,9 @@ function parseVoiceCommand(
 ): ParsedVoiceCommand {
   const type = preSelectedType;
 
-  // Category
   const { category, rest: afterCat } = matchCategory(rawText, categories, type);
-
-  // Amount
   const { amount, currency, rest: afterAmount } = extractAmount(afterCat);
 
-  // Accounts — use pre-selected for transfers, otherwise detect from text
   let fromAccount: AccountItem | null = null;
   let toAccount: AccountItem | null = null;
   let afterAccounts = afterAmount;
@@ -283,10 +277,8 @@ function parseVoiceCommand(
     afterAccounts = r;
   }
 
-  // Concept
   const concept = buildConcept(afterAccounts);
 
-  // Validation
   let error: string | null = null;
   if (!amount) {
     error = "No se detectó un monto. Edita o reintenta.";
@@ -295,6 +287,116 @@ function parseVoiceCommand(
   }
 
   return { type, category, amount, currency, fromAccount, toAccount, concept, error };
+}
+
+// ─── Web Speech API hook ────────────────────────────────────
+function useWebSpeechSTT() {
+  const recognitionRef = useRef<any>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState("");
+  const [finalText, setFinalText] = useState("");
+  const onResultRef = useRef<((text: string) => void) | null>(null);
+
+  const isSupported = typeof window !== "undefined" && 
+    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+
+  const start = useCallback((onFinalResult?: (text: string) => void) => {
+    if (!isSupported) {
+      toast.error("Tu navegador no soporta reconocimiento de voz.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.lang = "es-MX";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    
+    onResultRef.current = onFinalResult || null;
+    
+    let accumulated = "";
+
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      let final = "";
+      
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          final += result[0].transcript + " ";
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      
+      if (final.trim()) {
+        accumulated = (accumulated + " " + final).trim();
+        setFinalText(accumulated);
+      }
+      setInterimText(interim);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        toast.error("Permite el acceso al micrófono para usar voz.");
+      } else if (event.error !== "aborted") {
+        toast.error("Error de reconocimiento. Intenta de nuevo.");
+      }
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      // Deliver final result
+      const fullText = (accumulated + " " + interimText).trim();
+      if (fullText && onResultRef.current) {
+        // Don't call here - let stop() handle it
+      }
+    };
+
+    recognitionRef.current = recognition;
+    accumulated = "";
+    setFinalText("");
+    setInterimText("");
+    
+    try {
+      recognition.start();
+      setIsListening(true);
+      if (navigator.vibrate) navigator.vibrate(100);
+    } catch (e) {
+      console.error("Failed to start recognition:", e);
+      toast.error("No se pudo iniciar el micrófono.");
+    }
+  }, [isSupported]);
+
+  const stop = useCallback((): string => {
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      recognition.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    
+    // Return accumulated text
+    const result = (finalText + " " + interimText).trim();
+    setInterimText("");
+    return result;
+  }, [finalText, interimText]);
+
+  const reset = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setInterimText("");
+    setFinalText("");
+  }, []);
+
+  return { isListening, interimText, finalText, isSupported, start, stop, reset };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -306,13 +408,13 @@ export function VoiceButton() {
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const [isOpen, setIsOpen] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isReady, setIsReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
-  const [partialText, setPartialText] = useState("");
   const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Web Speech API
+  const stt = useWebSpeechSTT();
 
   // ─── Pre-selection state (BEFORE recording) ───────────────
   const [selectedType, setSelectedType] = useState<"expense" | "income" | "transfer" | null>(null);
@@ -328,62 +430,25 @@ export function VoiceButton() {
   const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const scribe = useScribe({
-    modelId: "scribe_v2_realtime",
-    commitStrategy: CommitStrategy.VAD,
-    languageCode: "es",
-    onPartialTranscript: (data) => setPartialText(data.text),
-    onCommittedTranscript: (data) => {
-      setCommittedText((prev) => (prev ? `${prev} ${data.text}` : data.text).trim());
-      setPartialText("");
-    },
-  });
-
-  // Pre-fetch token when drawer opens
-  const [prefetchedToken, setPrefetchedToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isOpen && !parseResult) {
-      supabase.functions.invoke("elevenlabs-scribe-token").then(({ data }) => {
-        if (data?.token) setPrefetchedToken(data.token);
-      });
-    }
-  }, [isOpen, parseResult]);
-
   const canStartRecording = selectedType !== null && (selectedType !== "transfer" || (preFromAccountId && preToAccountId && preFromAccountId !== preToAccountId));
 
   const handleStartRecording = useCallback(async () => {
     if (!canStartRecording) return;
-    setIsConnecting(true);
-    setIsReady(false);
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      let token = prefetchedToken;
-      if (!token) {
-        const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
-        if (error || !data?.token) throw new Error("No token");
-        token = data.token;
-      }
-      setPrefetchedToken(null);
-      await scribe.connect({ token, microphone: { echoCancellation: true, noiseSuppression: true } });
-      setIsReady(true);
-      if (navigator.vibrate) navigator.vibrate(100);
-    } catch {
-      toast.error("No se pudo iniciar la grabación.");
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [scribe, prefetchedToken, canStartRecording]);
+    stt.start();
+  }, [canStartRecording, stt]);
 
   const handleStopRecording = useCallback(async () => {
-    await scribe.disconnect();
-    const finalText = committedText || partialText;
-    if (!finalText) return;
-
-    if (!committedText && partialText) {
-      setCommittedText(partialText);
-      setPartialText("");
+    const rawText = stt.stop();
+    
+    // Use finalText + interimText since stop() returns current state
+    const finalText = rawText || (stt.finalText + " " + stt.interimText).trim();
+    
+    if (!finalText) {
+      toast.error("No se detectó audio. Intenta de nuevo.");
+      return;
     }
+
+    setCommittedText(finalText);
 
     const activeAccs = accounts.filter(a => a.is_active);
     const result = parseVoiceCommand(
@@ -405,14 +470,24 @@ export function VoiceButton() {
     setEditToAccountId(result.toAccount?.id || "");
     setEditDescription(result.concept);
 
-    // Default to cash for non-transfers if no account detected
+    // Default to first active account if no account detected
     if (!result.fromAccount && result.type !== "transfer") {
       const cashAcc = accounts.find(a => a.type === "cash" && a.is_active);
       if (cashAcc) setEditAccountId(cashAcc.id);
     }
 
+    // Log to voice_logs for diagnostics
+    if (user) {
+      supabase.from("voice_logs").insert([{
+        user_id: user.id,
+        transcript_raw: finalText,
+        parsed_json: result as any,
+        confidence: result.amount ? 80 : 30,
+      }]).then(() => {});
+    }
+
     if (result.error) toast.error(result.error);
-  }, [scribe, committedText, partialText, accounts, categories, selectedType, preFromAccountId, preToAccountId]);
+  }, [stt, accounts, categories, selectedType, preFromAccountId, preToAccountId, user]);
 
   const canConfirm = (): boolean => {
     const amount = parseFloat(editAmount);
@@ -436,13 +511,6 @@ export function VoiceButton() {
     setIsSaving(true);
     try {
       const amount = parseFloat(editAmount);
-
-      await supabase.from("voice_logs").insert([{
-        user_id: user.id,
-        transcript_raw: committedText,
-        parsed_json: parseResult as any,
-        confidence: parseResult?.amount ? 80 : 30,
-      }]);
 
       if (editType === "transfer") {
         const from = accounts.find(a => a.id === editAccountId)!;
@@ -489,12 +557,10 @@ export function VoiceButton() {
   };
 
   const handleReset = () => {
+    stt.reset();
     setCommittedText("");
-    setPartialText("");
     setParseResult(null);
     setIsEditing(false);
-    setIsReady(false);
-    setPrefetchedToken(null);
     setSelectedType(null);
     setPreFromAccountId("");
     setPreToAccountId("");
@@ -508,7 +574,7 @@ export function VoiceButton() {
   };
 
   const handleCancel = async () => {
-    if (scribe.isConnected) await scribe.disconnect();
+    stt.reset();
     handleReset();
     setIsOpen(false);
   };
@@ -524,12 +590,13 @@ export function VoiceButton() {
 
   const validationMsg = getValidationMessage();
 
-  // Type pill button styles
   const typePills: { value: "expense" | "income" | "transfer"; label: string; icon: string }[] = [
     { value: "expense", label: "Gasto", icon: "↓" },
     { value: "income", label: "Ingreso", icon: "↑" },
     { value: "transfer", label: "Transferencia", icon: "↔" },
   ];
+
+  const liveText = stt.finalText + (stt.interimText ? " " + stt.interimText : "");
 
   return (
     <>
@@ -564,6 +631,7 @@ export function VoiceButton() {
                       <button
                         key={value}
                         onClick={() => setSelectedType(value)}
+                        disabled={stt.isListening}
                         className={cn(
                           "flex-1 py-2.5 px-2 rounded-lg text-sm font-medium transition-all border-2",
                           selectedType === value
@@ -610,23 +678,28 @@ export function VoiceButton() {
                 </div>
               )}
 
-              {/* ─── STEP 2: Mic button (enabled only after type selected) ──── */}
+              {/* ─── STEP 2: Mic button ──── */}
               {!parseResult && (
                 <>
+                  {!stt.isSupported && (
+                    <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-sm text-destructive">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <span>Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.</span>
+                    </div>
+                  )}
                   <button
-                    onClick={scribe.isConnected ? handleStopRecording : handleStartRecording}
-                    disabled={isConnecting || !canStartRecording}
+                    onClick={stt.isListening ? handleStopRecording : handleStartRecording}
+                    disabled={!canStartRecording || !stt.isSupported}
                     className={cn(
                       "flex h-16 w-16 items-center justify-center rounded-full transition-all shrink-0",
-                      scribe.isConnected
+                      stt.isListening
                         ? "bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30"
-                        : canStartRecording
+                        : canStartRecording && stt.isSupported
                           ? "bg-primary text-primary-foreground hover:scale-105"
-                          : "bg-muted text-muted-foreground cursor-not-allowed",
-                      isConnecting && "opacity-50"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
                   >
-                    {isConnecting ? <Loader2 className="h-7 w-7 animate-spin" /> : scribe.isConnected ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+                    {stt.isListening ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
                   </button>
 
                   <p className="text-xs text-center px-2">
@@ -638,16 +711,14 @@ export function VoiceButton() {
                       <span className="text-muted-foreground">
                         Selecciona cuentas origen y destino
                       </span>
-                    ) : isConnecting ? (
-                      <span className="text-muted-foreground">Preparando micrófono...</span>
-                    ) : scribe.isConnected ? (
+                    ) : stt.isListening ? (
                       <span className="text-expense font-semibold animate-pulse">🎙️ ¡Habla ahora! — Toca para detener</span>
                     ) : (
                       <span className="text-muted-foreground">
                         Toca el micrófono y dicta.
                         <br />
                         <span className="italic">
-                          {selectedType === "expense" && 'Ej: "Restaurante 1500 pesos BBVA Sonora Grill"'}
+                          {selectedType === "expense" && 'Ej: "Gasolina mil pesos tarjeta Scotiabank"'}
                           {selectedType === "income" && 'Ej: "Pensión 57 mil pesos BBVA"'}
                           {selectedType === "transfer" && 'Ej: "Mil pesos pago tarjeta"'}
                         </span>
@@ -658,17 +729,17 @@ export function VoiceButton() {
               )}
 
               {/* Live transcript */}
-              {scribe.isConnected && (committedText || partialText) && (
+              {stt.isListening && liveText && (
                 <div className="w-full rounded-lg bg-secondary p-2">
                   <p className="text-center text-sm text-foreground break-words">
-                    {committedText && <span className="font-medium">{committedText} </span>}
-                    {partialText && <span className="text-muted-foreground italic">{partialText}</span>}
+                    {stt.finalText && <span className="font-medium">{stt.finalText} </span>}
+                    {stt.interimText && <span className="text-muted-foreground italic">{stt.interimText}</span>}
                   </p>
                 </div>
               )}
 
               {/* Parsed result - view mode */}
-              {!scribe.isConnected && parseResult && !isEditing && (
+              {!stt.isListening && parseResult && !isEditing && (
                 <div className="w-full space-y-2">
                   <div className="rounded-lg bg-secondary p-2 text-center">
                     <p className="text-xs text-muted-foreground">Transcripción:</p>
@@ -724,7 +795,7 @@ export function VoiceButton() {
               )}
 
               {/* Edit mode */}
-              {!scribe.isConnected && parseResult && isEditing && (
+              {!stt.isListening && parseResult && isEditing && (
                 <div className="w-full space-y-3">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Tipo</label>
@@ -787,7 +858,7 @@ export function VoiceButton() {
             </div>
 
             {/* Sticky bottom buttons */}
-            {!scribe.isConnected && parseResult && (
+            {!stt.isListening && parseResult && (
               <div className="px-4 py-3 border-t border-border shrink-0 bg-background space-y-2">
                 {validationMsg && !isEditing && (
                   <p className="text-xs text-destructive text-center flex items-center justify-center gap-1">
@@ -799,23 +870,25 @@ export function VoiceButton() {
                     <X className="h-4 w-4 mr-1" />Cancelar
                   </Button>
                   {isEditing ? (
-                    <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(false)}>
-                      Listo
+                    <Button variant="secondary" size="default" className="flex-1" onClick={() => setIsEditing(false)}>
+                      <Check className="h-4 w-4 mr-1" />Listo
                     </Button>
                   ) : (
                     <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(true)}>
                       <Edit2 className="h-4 w-4 mr-1" />Editar
                     </Button>
                   )}
-                  <Button
-                    size="default"
-                    className="flex-1"
-                    onClick={handleConfirm}
-                    disabled={isSaving || !canConfirm()}
-                  >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-                    {isSaving ? "..." : "Confirmar"}
-                  </Button>
+                  {!isEditing && (
+                    <Button
+                      size="default"
+                      className="flex-1"
+                      onClick={handleConfirm}
+                      disabled={!canConfirm() || isSaving}
+                    >
+                      {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                      Confirmar
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

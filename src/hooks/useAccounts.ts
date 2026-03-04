@@ -100,45 +100,43 @@ export function useAccounts() {
     },
   });
 
-  const deleteAccount = useMutation({
+  // Soft delete — marks inactive, preserves ledger
+  const deactivateAccount = useMutation({
     mutationFn: async (id: string) => {
-      // Delete related transfers first (FK constraint)
-      const { error: errTrFrom } = await supabase
-        .from('transfers')
-        .delete()
-        .eq('from_account_id', id);
-      if (errTrFrom) throw errTrFrom;
-
-      const { error: errTrTo } = await supabase
-        .from('transfers')
-        .delete()
-        .eq('to_account_id', id);
-      if (errTrTo) throw errTrTo;
-
-      // Delete related transactions
-      const { error: errTx } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('account_id', id);
-      if (errTx) throw errTx;
-
-      // Delete transactions where this is the related_account_id
-      const { error: errTxRel } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('related_account_id', id);
-      if (errTxRel) throw errTxRel;
-
-      // Now delete the account
       const { error } = await supabase
         .from('accounts')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast({ title: "Cuenta eliminada" });
+      toast({ title: "Cuenta desactivada", description: "La cuenta ya no aparece en listas activas." });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Hard delete — removes account and all related data
+  const deleteAccount = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: errTrFrom } = await supabase.from('transfers').delete().eq('from_account_id', id);
+      if (errTrFrom) throw errTrFrom;
+      const { error: errTrTo } = await supabase.from('transfers').delete().eq('to_account_id', id);
+      if (errTrTo) throw errTrTo;
+      const { error: errTx } = await supabase.from('transactions').delete().eq('account_id', id);
+      if (errTx) throw errTx;
+      const { error: errTxRel } = await supabase.from('transactions').delete().eq('related_account_id', id);
+      if (errTxRel) throw errTxRel;
+      const { error: errRecon } = await supabase.from('account_reconciliations').delete().eq('account_id', id);
+      if (errRecon) throw errRecon;
+      const { error } = await supabase.from('accounts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: "Cuenta eliminada permanentemente" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -146,12 +144,13 @@ export function useAccounts() {
   });
 
   const allAccounts = accountsQuery.data ?? [];
+  const activeOnly = allAccounts.filter(a => a.is_active);
 
   // Group balances by currency for assets
   const assetsByCurrency: Record<string, number> = {};
   const liabilitiesByCurrency: Record<string, number> = {};
   
-  allAccounts.forEach(acc => {
+  activeOnly.forEach(acc => {
     if (isAssetType(acc.type)) {
       assetsByCurrency[acc.currency] = (assetsByCurrency[acc.currency] ?? 0) + acc.current_balance;
     } else if (isLiability(acc.type)) {
@@ -159,7 +158,7 @@ export function useAccounts() {
     }
   });
 
-  const totalBalance = allAccounts.reduce((sum, acc) => {
+  const totalBalance = activeOnly.reduce((sum, acc) => {
     if (isLiability(acc.type)) {
       return sum - acc.current_balance;
     }
@@ -175,6 +174,7 @@ export function useAccounts() {
     liabilitiesByCurrency,
     createAccount,
     updateAccount,
+    deactivateAccount,
     deleteAccount,
   };
 }

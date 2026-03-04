@@ -48,6 +48,7 @@ const debtSchema = z.object({
   interest_rate: z.coerce.number().optional().default(0),
   minimum_payment: z.coerce.number().optional().default(0),
   due_day: z.coerce.number().min(1).max(31).optional(),
+  cut_day: z.coerce.number().min(1).max(31).optional(),
   start_date: z.date().optional(),
   currency: z.string().default("MXN"),
 });
@@ -96,6 +97,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
       interest_rate: data.interest_rate,
       minimum_payment: data.minimum_payment,
       due_day: data.due_day,
+      cut_day: data.cut_day,
       start_date: data.start_date ? format(data.start_date, "yyyy-MM-dd") : undefined,
       currency: data.currency,
     });
@@ -230,15 +232,29 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="cut_day"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Día de corte</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="1" max="31" placeholder="15" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="due_day"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Día de corte/pago</FormLabel>
+                    <FormLabel>Día de pago</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" max="31" placeholder="15" {...field} />
+                      <Input type="number" min="1" max="31" placeholder="5" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

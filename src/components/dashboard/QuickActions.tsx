@@ -43,13 +43,13 @@ export function QuickActions() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-2">
         {actions.map((action) => (
           <button
             key={action.label}
             onClick={action.onClick}
             className={cn(
-              "flex flex-col items-center gap-2 rounded-xl p-4 text-center transition-all card-interactive",
+              "flex flex-col items-center gap-1.5 rounded-xl p-3 text-center transition-all card-interactive",
               action.color === "expense" && "bg-expense/5 hover:bg-expense/10",
               action.color === "income" && "bg-income/5 hover:bg-income/10",
               action.color === "transfer" && "bg-transfer/5 hover:bg-transfer/10",

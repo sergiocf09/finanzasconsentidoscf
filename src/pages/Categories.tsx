@@ -121,7 +121,7 @@ export default function Categories() {
   const cats = filteredCategories();
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="pb-4">
       {/* Sticky header */}
       <div className="sticky top-14 lg:top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between">
@@ -138,7 +138,7 @@ export default function Categories() {
       ) : (
         <>
           {/* Block selector — Ingresos centered on top, then 3 expense blocks */}
-          <div className="space-y-2">
+          <div className="space-y-2 mt-4">
             {/* Ingresos row */}
             <div className="flex justify-center">
               <button
@@ -188,7 +188,7 @@ export default function Categories() {
           {/* Category list for active block */}
           {activeBlock && (
             <div className="space-y-2 animate-fade-in-up pt-2">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide sticky top-28 lg:top-14 z-10 bg-background/95 backdrop-blur-sm py-1">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide py-1">
                 {blocks.find(b => b.key === activeBlock)?.label} — {cats.length} categoría{cats.length !== 1 ? "s" : ""}
               </h2>
               {cats.length === 0 ? (

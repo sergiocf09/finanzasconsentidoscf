@@ -41,24 +41,31 @@ export default function Accounts() {
 
   const handleSoftDelete = async () => {
     if (!deleteTarget) return;
-    try {
-      await deactivateAccount.mutateAsync(deleteTarget.id);
-    } catch { /* handled */ }
+    try { await deactivateAccount.mutateAsync(deleteTarget.id); } catch { /* handled */ }
     setDeleteTarget(null);
   };
 
   const handleHardDelete = async () => {
     if (!deleteTarget) return;
-    try {
-      await deleteAccount.mutateAsync(deleteTarget.id);
-    } catch { /* handled */ }
+    try { await deleteAccount.mutateAsync(deleteTarget.id); } catch { /* handled */ }
     setDeleteTarget(null);
   };
 
   const activeAccounts = accounts.filter(a => a.is_active);
-  const assets = activeAccounts.filter(a => isAssetType(a.type)).sort((a, b) => a.name.localeCompare(b.name));
-  const liabilitiesShort = activeAccounts.filter(a => isLiabilityShort(a.type)).sort((a, b) => a.name.localeCompare(b.name));
-  const liabilitiesLong = activeAccounts.filter(a => isLiabilityLong(a.type)).sort((a, b) => b.current_balance - a.current_balance);
+
+  // Group by currency then type for full-width list
+  const allCurrencies = Array.from(new Set(activeAccounts.map(a => a.currency)));
+  // Sort: base currency (MXN) first
+  allCurrencies.sort((a, b) => (a === "MXN" ? -1 : b === "MXN" ? 1 : a.localeCompare(b)));
+
+  const assetsByCurr = (currency: string) =>
+    activeAccounts.filter(a => isAssetType(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
+
+  const liabsShortByCurr = (currency: string) =>
+    activeAccounts.filter(a => isLiabilityShort(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
+
+  const liabsLongByCurr = (currency: string) =>
+    activeAccounts.filter(a => isLiabilityLong(a.type) && a.currency === currency).sort((a, b) => b.current_balance - a.current_balance);
 
   const renderAccountRow = (account: Account) => {
     const Icon = typeIcons[account.type] || Wallet;
@@ -115,72 +122,85 @@ export default function Accounts() {
         </div>
       ) : (
         <>
-          {/* Summary cards: two columns always */}
+          {/* Summary cards: mirror of Dashboard — 2 columns */}
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(assetsByCurrency).map(([currency, total]) => (
-              <div
-                key={`asset-${currency}`}
-                className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
-                onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
-              >
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <ShieldCheck className="h-3.5 w-3.5 opacity-80" />
-                  <p className="text-[10px] opacity-80">Activos {currency}</p>
+            {/* Left: Assets */}
+            <div className="space-y-2">
+              {Object.entries(assetsByCurrency).map(([currency, total]) => (
+                <div
+                  key={`asset-${currency}`}
+                  className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
+                  onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <ShieldCheck className="h-3.5 w-3.5 opacity-80" />
+                    <p className="text-[10px] opacity-80">Activos {currency}</p>
+                  </div>
+                  <p className="text-lg font-bold font-heading">{fmt(total, currency)}</p>
                 </div>
-                <p className="text-lg font-bold font-heading">{fmt(total, currency)}</p>
-              </div>
-            ))}
-            {Object.entries(liabilitiesByCurrency).map(([currency, total]) => (
-              <div
-                key={`liab-${currency}`}
-                className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
-                onClick={() => document.getElementById("section-liabilities")?.scrollIntoView({ behavior: "smooth" })}
-              >
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <CreditCard className="h-3.5 w-3.5 text-expense opacity-80" />
-                  <p className="text-[10px] text-expense opacity-80">Pasivos {currency}</p>
+              ))}
+            </div>
+            {/* Right: Liabilities */}
+            <div className="space-y-2">
+              {Object.entries(liabilitiesByCurrency).map(([currency, total]) => (
+                <div
+                  key={`liab-${currency}`}
+                  className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
+                  onClick={() => document.getElementById("section-liabilities")?.scrollIntoView({ behavior: "smooth" })}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <CreditCard className="h-3.5 w-3.5 text-expense opacity-80" />
+                    <p className="text-[10px] text-expense opacity-80">Pasivos {currency}</p>
+                  </div>
+                  <p className="text-lg font-bold font-heading text-expense">{fmt(total, currency)}</p>
                 </div>
-                <p className="text-lg font-bold font-heading text-expense">{fmt(total, currency)}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* Two-column layout: always */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Assets */}
-            <div className="space-y-2">
-              <h2 id="section-assets" className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
-                <TrendingUp className="h-3.5 w-3.5 text-income" /> Activos
-              </h2>
-              {assets.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">Sin activos</p>
-              ) : assets.map(renderAccountRow)}
-            </div>
+          {/* Full-width account list: Activos MXN → Activos USD → Pasivos MXN → Pasivos USD */}
+          <div className="space-y-4">
+            {/* Assets by currency */}
+            {allCurrencies.map(currency => {
+              const items = assetsByCurr(currency);
+              if (items.length === 0) return null;
+              return (
+                <div key={`assets-${currency}`} className="space-y-1.5">
+                  <h2 id={currency === allCurrencies[0] ? "section-assets" : undefined}
+                    className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
+                    <TrendingUp className="h-3.5 w-3.5 text-income" /> Activos {currency}
+                  </h2>
+                  {items.map(renderAccountRow)}
+                </div>
+              );
+            })}
 
-            {/* Liabilities */}
-            <div className="space-y-2">
-              <h2 id="section-liabilities" className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
-                <CreditCard className="h-3.5 w-3.5 text-expense" /> Pasivos
-              </h2>
-              {liabilitiesShort.length === 0 && liabilitiesLong.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">Sin pasivos</p>
-              ) : (
-                <>
-                  {liabilitiesShort.length > 0 && (
+            {/* Liabilities by currency */}
+            {allCurrencies.map(currency => {
+              const short = liabsShortByCurr(currency);
+              const long = liabsLongByCurr(currency);
+              if (short.length === 0 && long.length === 0) return null;
+              return (
+                <div key={`liabs-${currency}`} className="space-y-1.5">
+                  <h2 id={currency === allCurrencies[0] ? "section-liabilities" : undefined}
+                    className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
+                    <CreditCard className="h-3.5 w-3.5 text-expense" /> Pasivos {currency}
+                  </h2>
+                  {short.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
-                      {liabilitiesShort.map(renderAccountRow)}
+                      {short.map(renderAccountRow)}
                     </div>
                   )}
-                  {liabilitiesLong.length > 0 && (
-                    <div className="space-y-1.5 mt-2">
+                  {long.length > 0 && (
+                    <div className="space-y-1.5">
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Largo plazo</p>
-                      {liabilitiesLong.map(renderAccountRow)}
+                      {long.map(renderAccountRow)}
                     </div>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </>
       )}

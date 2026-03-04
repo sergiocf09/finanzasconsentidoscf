@@ -1,0 +1,1 @@
+ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES public.accounts(id) ON DELETE SET NULL;

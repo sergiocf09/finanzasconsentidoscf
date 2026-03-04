@@ -37,7 +37,7 @@ export function FinancialSummaryCards() {
     return (
       <div
         key={account.id}
-        className="flex items-center gap-2 py-1.5 px-1 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
+        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
         onClick={(e) => handleAccountClick(account.id, e)}
       >
         <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
@@ -62,78 +62,85 @@ export function FinancialSummaryCards() {
     return null;
   }
 
-  // Merge all currencies
   const allCurrencies = Array.from(new Set([...assetCurrencies.map(([c]) => c), ...liabCurrencies.map(([c]) => c)]));
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {/* Left column: Assets */}
-      <div className="space-y-2">
-        {allCurrencies.map(currency => {
-          const total = assetsByCurrency[currency];
-          if (total === undefined) return null;
-          const key = `asset-${currency}`;
-          const isExpanded = expandedKey === key;
-          const accs = getAccountsForCard("asset", currency) as Account[];
-          return (
-            <Collapsible key={key} open={isExpanded}>
-              <CollapsibleTrigger asChild>
-                <div
-                  className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
-                  onClick={() => handleCardClick(key)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />
-                        <p className="text-[10px] opacity-80 truncate">Activos {currency}</p>
-                      </div>
-                      <p className="text-lg font-bold font-heading leading-tight">{fmt(total, currency)}</p>
+    <div className="space-y-2">
+      {/* Summary cards: two columns */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Left: Assets */}
+        <div className="space-y-2">
+          {allCurrencies.map(currency => {
+            const total = assetsByCurrency[currency];
+            if (total === undefined) return null;
+            const key = `asset-${currency}`;
+            const isExpanded = expandedKey === key;
+            return (
+              <div
+                key={key}
+                className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
+                onClick={() => handleCardClick(key)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />
+                      <p className="text-[10px] opacity-80 truncate">Activos {currency}</p>
                     </div>
-                    <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
+                    <p className="text-lg font-bold font-heading leading-tight">{fmt(total, currency)}</p>
                   </div>
+                  <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-1 rounded-lg bg-card border border-border p-2 space-y-0.5">
-                  {accs.map(renderAccountItem)}
-                  {accs.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-1">Sin cuentas</p>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right: Liabilities */}
+        <div className="space-y-2">
+          {allCurrencies.map(currency => {
+            const total = liabilitiesByCurrency[currency];
+            if (total === undefined) return null;
+            const key = `liab-${currency}`;
+            const isExpanded = expandedKey === key;
+            return (
+              <div
+                key={key}
+                className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
+                onClick={() => handleCardClick(key)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
+                      <p className="text-[10px] text-expense opacity-80 truncate">Pasivos {currency}</p>
+                    </div>
+                    <p className="text-lg font-bold font-heading text-expense leading-tight">{fmt(total, currency)}</p>
+                  </div>
+                  <ChevronDown className={cn("h-4 w-4 text-expense opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Right column: Liabilities */}
-      <div className="space-y-2">
-        {allCurrencies.map(currency => {
-          const total = liabilitiesByCurrency[currency];
-          if (total === undefined) return null;
-          const key = `liab-${currency}`;
-          const isExpanded = expandedKey === key;
-          const { short, long } = getAccountsForCard("liability", currency) as { short: Account[]; long: Account[] };
-          return (
-            <Collapsible key={key} open={isExpanded}>
-              <CollapsibleTrigger asChild>
-                <div
-                  className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
-                  onClick={() => handleCardClick(key)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
-                        <p className="text-[10px] text-expense opacity-80 truncate">Pasivos {currency}</p>
-                      </div>
-                      <p className="text-lg font-bold font-heading text-expense leading-tight">{fmt(total, currency)}</p>
-                    </div>
-                    <ChevronDown className={cn("h-4 w-4 text-expense opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mt-1 rounded-lg bg-card border border-border p-2 space-y-0.5">
+      {/* Expanded detail: full width, centered, 80% */}
+      {expandedKey && (
+        <div className="flex justify-center">
+          <div className="w-[85%] rounded-xl bg-card border border-border p-3 space-y-1">
+            {expandedKey.startsWith("asset-") && (() => {
+              const currency = expandedKey.replace("asset-", "");
+              const accs = getAccountsForCard("asset", currency) as Account[];
+              return accs.length > 0
+                ? accs.map(renderAccountItem)
+                : <p className="text-[10px] text-muted-foreground text-center py-1">Sin cuentas</p>;
+            })()}
+            {expandedKey.startsWith("liab-") && (() => {
+              const currency = expandedKey.replace("liab-", "");
+              const { short, long } = getAccountsForCard("liability", currency) as { short: Account[]; long: Account[] };
+              return (
+                <>
                   {short.length > 0 && (
                     <>
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
@@ -149,12 +156,12 @@ export function FinancialSummaryCards() {
                   {short.length === 0 && long.length === 0 && (
                     <p className="text-[10px] text-muted-foreground text-center py-1">Sin pasivos</p>
                   )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

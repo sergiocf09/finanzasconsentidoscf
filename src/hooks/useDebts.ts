@@ -20,6 +20,7 @@ export interface Debt {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  account_id: string | null;
 }
 
 export interface DebtPayment {
@@ -46,6 +47,16 @@ export interface CreateDebtData {
   currency?: string;
 }
 
+// Map debt type → account type
+const debtTypeToAccountType: Record<string, string> = {
+  credit_card: "credit_card",
+  personal_loan: "personal_loan",
+  mortgage: "mortgage",
+  car_loan: "auto_loan",
+  student_loan: "personal_loan",
+  other: "payable",
+};
+
 export function useDebts() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -54,31 +65,90 @@ export function useDebts() {
   const debtsQuery = useQuery({
     queryKey: ['debts', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1) Fetch debts
+      const { data: debts, error } = await supabase
         .from('debts')
         .select('*')
         .eq('is_active', true)
         .order('current_balance', { ascending: false });
-      
       if (error) throw error;
-      return data as Debt[];
+
+      // 2) Fetch liability accounts that don't have a linked debt
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('is_active', true)
+        .in('type', ['credit_card', 'personal_loan', 'mortgage', 'auto_loan', 'payable', 'caucion_bursatil']);
+
+      const linkedAccountIds = new Set((debts || []).filter(d => d.account_id).map(d => d.account_id));
+      const orphanAccounts = (accounts || []).filter(a => !linkedAccountIds.has(a.id));
+
+      // Auto-create debt entries for orphan liability accounts
+      if (orphanAccounts.length > 0 && user) {
+        const accountTypeToDebtType: Record<string, string> = {
+          credit_card: "credit_card",
+          personal_loan: "personal_loan",
+          mortgage: "mortgage",
+          auto_loan: "car_loan",
+          payable: "other",
+          caucion_bursatil: "other",
+        };
+        for (const acc of orphanAccounts) {
+          await supabase.from('debts').insert({
+            user_id: user.id,
+            name: acc.name,
+            type: accountTypeToDebtType[acc.type] || "other",
+            original_amount: acc.initial_balance || acc.current_balance || 0,
+            current_balance: acc.current_balance || 0,
+            currency: acc.currency,
+            account_id: acc.id,
+          });
+        }
+        // Re-fetch after sync
+        const { data: refreshed } = await supabase
+          .from('debts')
+          .select('*')
+          .eq('is_active', true)
+          .order('current_balance', { ascending: false });
+        return (refreshed || []) as Debt[];
+      }
+
+      return (debts || []) as Debt[];
     },
     enabled: !!user,
   });
 
   const createDebt = useMutation({
     mutationFn: async (data: CreateDebtData) => {
+      // 1) Create the liability account first
+      const accountType = debtTypeToAccountType[data.type] || "payable";
+      const { data: newAccount, error: accError } = await supabase
+        .from('accounts')
+        .insert({
+          user_id: user!.id,
+          name: data.name,
+          type: accountType,
+          currency: data.currency || "MXN",
+          initial_balance: data.original_amount,
+          current_balance: data.current_balance,
+        })
+        .select()
+        .single();
+      if (accError) throw accError;
+
+      // 2) Create the debt linked to the account
       const { error } = await supabase
         .from('debts')
         .insert({
           ...data,
           user_id: user!.id,
+          account_id: newAccount.id,
         });
-      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: "Deuda registrada" });
     },
     onError: (error) => {
@@ -93,9 +163,23 @@ export function useDebts() {
         .update(data)
         .eq('id', id);
       if (error) throw error;
+
+      // Sync name/balance to linked account
+      if (data.account_id || data.name || data.current_balance !== undefined) {
+        const { data: debt } = await supabase.from('debts').select('account_id').eq('id', id).single();
+        if (debt?.account_id) {
+          const updates: Record<string, any> = {};
+          if (data.name) updates.name = data.name;
+          if (data.current_balance !== undefined) updates.current_balance = data.current_balance;
+          if (Object.keys(updates).length > 0) {
+            await supabase.from('accounts').update(updates).eq('id', debt.account_id);
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: "Deuda actualizada" });
     },
     onError: (error) => {
@@ -105,14 +189,19 @@ export function useDebts() {
 
   const deleteDebt = useMutation({
     mutationFn: async (id: string) => {
+      // Get linked account
+      const { data: debt } = await supabase.from('debts').select('account_id').eq('id', id).single();
       // Delete payments first
-      const { error: errPay } = await supabase.from('debt_payments').delete().eq('debt_id', id);
-      if (errPay) throw errPay;
-      const { error } = await supabase.from('debts').delete().eq('id', id);
-      if (error) throw error;
+      await supabase.from('debt_payments').delete().eq('debt_id', id);
+      await supabase.from('debts').delete().eq('id', id);
+      // Deactivate linked account
+      if (debt?.account_id) {
+        await supabase.from('accounts').update({ is_active: false }).eq('id', debt.account_id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: "Deuda eliminada" });
     },
     onError: (error) => {
@@ -129,7 +218,6 @@ export function useDebts() {
           user_id: user!.id,
           payment_date: data.payment_date ?? new Date().toISOString().split('T')[0],
         });
-      
       if (error) throw error;
     },
     onSuccess: () => {

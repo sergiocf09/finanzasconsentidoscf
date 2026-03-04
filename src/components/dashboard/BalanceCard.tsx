@@ -33,7 +33,7 @@ export function BalanceCard({
   return (
     <div
       className={cn(
-        "rounded-2xl p-5 card-interactive",
+        "rounded-xl p-3 card-interactive",
         type === "balance" && "bg-primary text-primary-foreground",
         type === "income" && "bg-card border border-border",
         type === "expense" && "bg-card border border-border",
@@ -41,10 +41,10 @@ export function BalanceCard({
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
+        <div className="space-y-0.5 min-w-0">
           <p
             className={cn(
-              "text-sm font-medium",
+              "text-[10px] font-medium truncate",
               type === "balance" ? "text-primary-foreground/80" : "text-muted-foreground"
             )}
           >
@@ -52,7 +52,7 @@ export function BalanceCard({
           </p>
           <p
             className={cn(
-              "text-2xl font-bold font-heading tracking-tight",
+              "text-base font-bold font-heading tracking-tight leading-tight",
               type === "balance" && "text-primary-foreground",
               type === "income" && "text-income",
               type === "expense" && "text-expense",
@@ -66,7 +66,7 @@ export function BalanceCard({
 
         <div
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl",
+            "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
             type === "balance" && "bg-primary-foreground/20",
             type === "income" && "bg-income/10",
             type === "expense" && "bg-expense/10",
@@ -75,7 +75,7 @@ export function BalanceCard({
         >
           <Icon
             className={cn(
-              "h-5 w-5",
+              "h-4 w-4",
               type === "balance" && "text-primary-foreground",
               type === "income" && "text-income",
               type === "expense" && "text-expense",

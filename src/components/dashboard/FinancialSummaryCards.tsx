@@ -11,12 +11,6 @@ const typeIcons: Record<string, typeof Wallet> = {
   personal_loan: User, caucion_bursatil: Landmark,
 };
 
-const typeLabels: Record<string, string> = {
-  cash: "Efectivo", bank: "Cuenta bancaria", savings: "Ahorro", investment: "Inversión",
-  credit_card: "Tarjeta de crédito", payable: "Cuenta por pagar", mortgage: "Crédito hipotecario",
-  auto_loan: "Crédito automotriz", personal_loan: "Crédito personal", caucion_bursatil: "Caución bursátil",
-};
-
 const fmt = (v: number, currency: string) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(v));
 
@@ -29,7 +23,6 @@ export function FinancialSummaryCards() {
   const liabCurrencies = Object.entries(liabilitiesByCurrency);
 
   const handleCardClick = (key: string) => {
-    // Toggle expand/collapse only — no navigation
     setExpandedKey(expandedKey === key ? null : key);
   };
 
@@ -44,12 +37,12 @@ export function FinancialSummaryCards() {
     return (
       <div
         key={account.id}
-        className="flex items-center gap-3 py-2 px-1 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
+        className="flex items-center gap-2 py-1.5 px-1 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
         onClick={(e) => handleAccountClick(account.id, e)}
       >
-        <Icon className={cn("h-4 w-4 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
-        <span className="text-sm text-foreground flex-1 truncate">{account.name}</span>
-        <span className={cn("text-sm font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
+        <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
+        <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
+        <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
           {debt && account.current_balance > 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
         </span>
       </div>
@@ -58,10 +51,10 @@ export function FinancialSummaryCards() {
 
   const getAccountsForCard = (type: "asset" | "liability", currency: string) => {
     if (type === "asset") {
-      return accounts.filter(a => isAssetType(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
+      return accounts.filter(a => a.is_active && isAssetType(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
     }
-    const short = accounts.filter(a => isLiabilityShort(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
-    const long = accounts.filter(a => isLiabilityLong(a.type) && a.currency === currency).sort((a, b) => b.current_balance - a.current_balance);
+    const short = accounts.filter(a => a.is_active && isLiabilityShort(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
+    const long = accounts.filter(a => a.is_active && isLiabilityLong(a.type) && a.currency === currency).sort((a, b) => b.current_balance - a.current_balance);
     return { short, long };
   };
 
@@ -69,11 +62,16 @@ export function FinancialSummaryCards() {
     return null;
   }
 
+  // Merge all currencies
+  const allCurrencies = Array.from(new Set([...assetCurrencies.map(([c]) => c), ...liabCurrencies.map(([c]) => c)]));
+
   return (
-    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-      {/* Assets column */}
-      <div className="space-y-3">
-        {assetCurrencies.map(([currency, total]) => {
+    <div className="grid grid-cols-2 gap-2">
+      {/* Left column: Assets */}
+      <div className="space-y-2">
+        {allCurrencies.map(currency => {
+          const total = assetsByCurrency[currency];
+          if (total === undefined) return null;
           const key = `asset-${currency}`;
           const isExpanded = expandedKey === key;
           const accs = getAccountsForCard("asset", currency) as Account[];
@@ -81,25 +79,25 @@ export function FinancialSummaryCards() {
             <Collapsible key={key} open={isExpanded}>
               <CollapsibleTrigger asChild>
                 <div
-                  className="rounded-2xl bg-primary p-4 text-primary-foreground cursor-pointer card-interactive"
+                  className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
                   onClick={() => handleCardClick(key)}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <ShieldCheck className="h-4 w-4 opacity-80" />
-                        <p className="text-xs opacity-80">Activos ({currency})</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />
+                        <p className="text-[10px] opacity-80 truncate">Activos {currency}</p>
                       </div>
-                      <p className="text-2xl font-bold font-heading">{fmt(total, currency)}</p>
+                      <p className="text-lg font-bold font-heading leading-tight">{fmt(total, currency)}</p>
                     </div>
-                    <ChevronDown className={cn("h-5 w-5 opacity-60 transition-transform", isExpanded && "rotate-180")} />
+                    <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                   </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-1 rounded-xl bg-card border border-border p-3 space-y-1">
+                <div className="mt-1 rounded-lg bg-card border border-border p-2 space-y-0.5">
                   {accs.map(renderAccountItem)}
-                  {accs.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">Sin cuentas</p>}
+                  {accs.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-1">Sin cuentas</p>}
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -107,9 +105,11 @@ export function FinancialSummaryCards() {
         })}
       </div>
 
-      {/* Liabilities column */}
-      <div className="space-y-3">
-        {liabCurrencies.map(([currency, total]) => {
+      {/* Right column: Liabilities */}
+      <div className="space-y-2">
+        {allCurrencies.map(currency => {
+          const total = liabilitiesByCurrency[currency];
+          if (total === undefined) return null;
           const key = `liab-${currency}`;
           const isExpanded = expandedKey === key;
           const { short, long } = getAccountsForCard("liability", currency) as { short: Account[]; long: Account[] };
@@ -117,37 +117,37 @@ export function FinancialSummaryCards() {
             <Collapsible key={key} open={isExpanded}>
               <CollapsibleTrigger asChild>
                 <div
-                  className="rounded-2xl bg-expense/10 border border-expense/20 p-4 cursor-pointer card-interactive"
+                  className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
                   onClick={() => handleCardClick(key)}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <CreditCard className="h-4 w-4 text-expense opacity-80" />
-                        <p className="text-xs text-expense opacity-80">Pasivos ({currency})</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
+                        <p className="text-[10px] text-expense opacity-80 truncate">Pasivos {currency}</p>
                       </div>
-                      <p className="text-2xl font-bold font-heading text-expense">{fmt(total, currency)}</p>
+                      <p className="text-lg font-bold font-heading text-expense leading-tight">{fmt(total, currency)}</p>
                     </div>
-                    <ChevronDown className={cn("h-5 w-5 text-expense opacity-60 transition-transform", isExpanded && "rotate-180")} />
+                    <ChevronDown className={cn("h-4 w-4 text-expense opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                   </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-1 rounded-xl bg-card border border-border p-3 space-y-1">
+                <div className="mt-1 rounded-lg bg-card border border-border p-2 space-y-0.5">
                   {short.length > 0 && (
                     <>
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide pt-1">Corto plazo</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
                       {short.map(renderAccountItem)}
                     </>
                   )}
                   {long.length > 0 && (
                     <>
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide pt-2">Largo plazo</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide pt-1">Largo plazo</p>
                       {long.map(renderAccountItem)}
                     </>
                   )}
                   {short.length === 0 && long.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-2">Sin pasivos</p>
+                    <p className="text-[10px] text-muted-foreground text-center py-1">Sin pasivos</p>
                   )}
                 </div>
               </CollapsibleContent>

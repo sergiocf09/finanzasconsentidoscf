@@ -123,7 +123,7 @@ export default function Categories() {
   return (
     <div className="space-y-6 pb-4">
       {/* Sticky header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+      <div className="sticky top-14 lg:top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-heading font-semibold text-foreground">Categorías</h1>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={openCreate}>
@@ -187,8 +187,8 @@ export default function Categories() {
 
           {/* Category list for active block */}
           {activeBlock && (
-            <div className="space-y-2 animate-fade-in-up">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            <div className="space-y-2 animate-fade-in-up pt-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide sticky top-28 lg:top-14 z-10 bg-background/95 backdrop-blur-sm py-1">
                 {blocks.find(b => b.key === activeBlock)?.label} — {cats.length} categoría{cats.length !== 1 ? "s" : ""}
               </h2>
               {cats.length === 0 ? (

@@ -34,30 +34,31 @@ const fmt = (value: number, currency: string) =>
 
 export default function Accounts() {
   const navigate = useNavigate();
-  const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deleteAccount } = useAccounts();
+  const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deactivateAccount, deleteAccount } = useAccounts();
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
 
-  const handleDelete = async () => {
+  const handleSoftDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await deleteAccount.mutateAsync(deleteTarget.id);
-    } catch {
-      // Error handled by mutation
-    }
+      await deactivateAccount.mutateAsync(deleteTarget.id);
+    } catch { /* handled */ }
     setDeleteTarget(null);
   };
 
-  // Count transactions for delete warning
-  const getTransactionCount = async (accountId: string) => {
-    // We show warning in the dialog itself
-    return 0;
+  const handleHardDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteAccount.mutateAsync(deleteTarget.id);
+    } catch { /* handled */ }
+    setDeleteTarget(null);
   };
 
-  const assets = accounts.filter(a => isAssetType(a.type)).sort((a, b) => a.name.localeCompare(b.name));
-  const liabilitiesShort = accounts.filter(a => isLiabilityShort(a.type)).sort((a, b) => a.name.localeCompare(b.name));
-  const liabilitiesLong = accounts.filter(a => isLiabilityLong(a.type)).sort((a, b) => b.current_balance - a.current_balance);
+  const activeAccounts = accounts.filter(a => a.is_active);
+  const assets = activeAccounts.filter(a => isAssetType(a.type)).sort((a, b) => a.name.localeCompare(b.name));
+  const liabilitiesShort = activeAccounts.filter(a => isLiabilityShort(a.type)).sort((a, b) => a.name.localeCompare(b.name));
+  const liabilitiesLong = activeAccounts.filter(a => isLiabilityLong(a.type)).sort((a, b) => b.current_balance - a.current_balance);
 
   const renderAccountRow = (account: Account) => {
     const Icon = typeIcons[account.type] || Wallet;
@@ -191,21 +192,24 @@ export default function Accounts() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta cuenta?</AlertDialogTitle>
+            <AlertDialogTitle>¿Deseas eliminar esta cuenta?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                Estás a punto de eliminar <span className="font-medium text-foreground">"{deleteTarget?.name}"</span>.
+                Cuenta: <span className="font-medium text-foreground">"{deleteTarget?.name}"</span>
               </span>
               <span className="block">
-                Si tiene movimientos asociados, la eliminación podría fallar. En ese caso, te recomendamos desactivarla desde la edición.
+                La cuenta se desactivará y dejará de aparecer en las listas. El historial contable se mantiene intacto.
               </span>
-              <span className="block font-medium text-foreground">Esta acción no se puede deshacer.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sí, eliminar
+            <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={handleHardDelete}>
+              Eliminar permanentemente
+            </Button>
+            <AlertDialogAction onClick={handleSoftDelete}>
+              Desactivar cuenta
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

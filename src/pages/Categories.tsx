@@ -121,7 +121,7 @@ export default function Categories() {
   const cats = filteredCategories();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       {/* Sticky header */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between">
@@ -151,7 +151,7 @@ export default function Categories() {
               >
                 {blocks[0].icon}
                 {blocks[0].label}
-                <span className="text-xs opacity-70">({categories.filter(c => c.type === "income").length})</span>
+                <span className="text-sm font-bold opacity-80">{categories.filter(c => c.type === "income").length}</span>
               </button>
             </div>
 
@@ -178,7 +178,7 @@ export default function Categories() {
                   >
                     {block.icon}
                     <span className="leading-tight text-center">{block.label}</span>
-                    <span className="text-[10px] font-medium opacity-70">({count})</span>
+                    <span className="text-sm font-bold opacity-80">{count}</span>
                   </button>
                 );
               })}

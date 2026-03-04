@@ -367,6 +367,7 @@ export type Database = {
           creditor: string | null
           currency: string
           current_balance: number
+          cut_day: number | null
           due_day: number | null
           id: string
           interest_rate: number | null
@@ -384,6 +385,7 @@ export type Database = {
           creditor?: string | null
           currency?: string
           current_balance: number
+          cut_day?: number | null
           due_day?: number | null
           id?: string
           interest_rate?: number | null
@@ -401,6 +403,7 @@ export type Database = {
           creditor?: string | null
           currency?: string
           current_balance?: number
+          cut_day?: number | null
           due_day?: number | null
           id?: string
           interest_rate?: number | null

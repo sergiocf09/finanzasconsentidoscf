@@ -14,6 +14,7 @@ export interface Debt {
   interest_rate: number;
   minimum_payment: number;
   due_day: number | null;
+  cut_day: number | null;
   start_date: string | null;
   currency: string;
   is_active: boolean;
@@ -40,6 +41,7 @@ export interface CreateDebtData {
   interest_rate?: number;
   minimum_payment?: number;
   due_day?: number;
+  cut_day?: number;
   start_date?: string;
   currency?: string;
 }
@@ -84,6 +86,40 @@ export function useDebts() {
     },
   });
 
+  const updateDebt = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Debt> & { id: string }) => {
+      const { error } = await supabase
+        .from('debts')
+        .update(data)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      toast({ title: "Deuda actualizada" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteDebt = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete payments first
+      const { error: errPay } = await supabase.from('debt_payments').delete().eq('debt_id', id);
+      if (errPay) throw errPay;
+      const { error } = await supabase.from('debts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      toast({ title: "Deuda eliminada" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const addPayment = useMutation({
     mutationFn: async (data: { debt_id: string; amount: number; payment_date?: string; notes?: string }) => {
       const { error } = await supabase
@@ -105,11 +141,8 @@ export function useDebts() {
     },
   });
 
-  // Calculate totals
   const totalDebt = debtsQuery.data?.reduce((sum, d) => sum + d.current_balance, 0) ?? 0;
   const totalMinimumPayment = debtsQuery.data?.reduce((sum, d) => sum + d.minimum_payment, 0) ?? 0;
-
-  // Sort for snowball (smallest balance first) and avalanche (highest interest first)
   const snowballOrder = [...(debtsQuery.data ?? [])].sort((a, b) => a.current_balance - b.current_balance);
   const avalancheOrder = [...(debtsQuery.data ?? [])].sort((a, b) => b.interest_rate - a.interest_rate);
 
@@ -122,6 +155,8 @@ export function useDebts() {
     snowballOrder,
     avalancheOrder,
     createDebt,
+    updateDebt,
+    deleteDebt,
     addPayment,
   };
 }

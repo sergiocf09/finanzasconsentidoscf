@@ -76,10 +76,24 @@ function spanishWordsToNumber(text: string): { value: number | null; matched: st
   return { value: found ? total : null, matched: matchedWords.join(" ") };
 }
 
+// ─── Keyword-based category fallback dictionary ─────────────
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  "Transporte": ["gasolina", "gasolinera", "uber", "taxi", "didi", "cabify", "estacionamiento", "peaje", "caseta"],
+  "Restaurantes": ["restaurante", "comida", "cena", "desayuno", "almuerzo", "cafe", "cafeteria"],
+  "Supermercado": ["supermercado", "super", "walmart", "costco", "soriana", "chedraui", "heb", "oxxo"],
+  "Salud": ["farmacia", "medicinas", "doctor", "hospital", "dentista", "consultorio", "medicina"],
+  "Servicios": ["cfe", "luz", "agua", "internet", "telefono", "celular", "gas", "telmex"],
+  "Entretenimiento": ["cine", "netflix", "spotify", "golf", "gimnasio", "gym"],
+  "Educación": ["colegiatura", "escuela", "universidad", "curso", "libro", "libros"],
+  "Hogar": ["renta", "alquiler", "mantenimiento", "limpieza", "mueble", "muebles"],
+  "Ropa": ["ropa", "zapatos", "tienda", "zara", "liverpool"],
+};
+
 // ─── Amount extraction ──────────────────────────────────────
-function extractAmount(text: string): { amount: number | null; currency: string; rest: string } {
+function extractAmount(text: string): { amount: number | null; currency: string; rest: string; warning: string | null } {
   let rest = text;
   let currency = "MXN";
+  let warning: string | null = null;
 
   const normText = normalize(rest);
 
@@ -92,34 +106,39 @@ function extractAmount(text: string): { amount: number | null; currency: string;
     const amount = parseFloat(milMatch[1]) * 1000;
     rest = rest.replace(milMatch[0], " ");
     rest = stripCurrencyWords(rest);
-    return { amount, currency, rest: cleanSpaces(rest) };
+    return { amount, currency, rest: cleanSpaces(rest), warning };
   }
 
-  // Pattern 2: standard digits
+  // Pattern 2: standard digits (but NOT if followed by "mil" — handled above)
   const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[.,\s]\d{3})*(?:\.\d{1,2}(?!\d))?)/);
   if (digitMatch) {
     let raw = digitMatch[1];
+    // Treat dots as thousands separators if followed by exactly 3 digits
     raw = raw.replace(/\.(\d{3})(?!\d)/g, "$1");
     raw = raw.replace(/[,\s]/g, "");
     const amount = parseFloat(raw);
     if (amount > 0) {
       rest = rest.replace(digitMatch[0], " ");
       rest = stripCurrencyWords(rest);
-      return { amount, currency, rest: cleanSpaces(rest) };
+      return { amount, currency, rest: cleanSpaces(rest), warning };
     }
   }
 
   // Pattern 3: Spanish word numbers
   const { value: wordAmount, matched } = spanishWordsToNumber(rest);
   if (wordAmount && wordAmount > 0) {
+    // Validation: if text contains "mil" but amount < 500, flag as suspect
+    if (normalize(rest).includes("mil") && wordAmount < 500) {
+      warning = "El monto detectado parece incorrecto. Edita el monto o vuelve a dictarlo.";
+    }
     for (const w of matched.split(/\s+/)) {
       if (w) rest = rest.replace(new RegExp(`\\b${w}\\b`, "i"), " ");
     }
     rest = stripCurrencyWords(rest);
-    return { amount: wordAmount, currency, rest: cleanSpaces(rest) };
+    return { amount: wordAmount, currency, rest: cleanSpaces(rest), warning };
   }
 
-  return { amount: null, currency, rest };
+  return { amount: null, currency, rest, warning: null };
 }
 
 function stripCurrencyWords(text: string): string {
@@ -135,6 +154,7 @@ function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "
   const norm = normalize(text);
   const sorted = [...typedCats].sort((a, b) => b.name.length - a.name.length);
 
+  // 1) Match by category keywords field
   for (const cat of sorted) {
     if (cat.keywords?.some(kw => kw && norm.includes(normalize(kw)))) {
       const rest = stripPhrase(text, cat.name);
@@ -148,9 +168,24 @@ function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "
     }
   }
 
+  // 2) Match by category name
   for (const cat of sorted) {
     if (norm.includes(normalize(cat.name))) {
       return { category: cat, rest: stripPhrase(text, cat.name) };
+    }
+  }
+
+  // 3) Fallback: keyword dictionary → try to find matching category by name
+  for (const [catName, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (norm.includes(kw)) {
+        // Find a user category whose name matches
+        const match = sorted.find(c => normalize(c.name).includes(normalize(catName)));
+        if (match) {
+          const rest = text.replace(new RegExp(`\\b${kw}\\b`, "gi"), " ");
+          return { category: match, rest: cleanSpaces(rest) };
+        }
+      }
     }
   }
 
@@ -166,12 +201,14 @@ function matchAccountInText(text: string, accs: AccountItem[], excludeId?: strin
   const active = accs.filter(a => a.is_active && a.id !== excludeId);
   const sorted = [...active].sort((a, b) => b.name.length - a.name.length);
 
+  // Full name match
   for (const acc of sorted) {
     if (norm.includes(normalize(acc.name))) {
       return { account: acc, rest: stripPhrase(text, acc.name) };
     }
   }
 
+  // Partial word match (all significant words)
   for (const acc of sorted) {
     const accWords = normalize(acc.name).split(/\s+/).filter(w => w.length > 2);
     if (accWords.length === 0) continue;
@@ -182,6 +219,7 @@ function matchAccountInText(text: string, accs: AccountItem[], excludeId?: strin
     }
   }
 
+  // Fuzzy partial match (50%+ words)
   for (const acc of sorted) {
     const accWords = normalize(acc.name).split(/\s+/).filter(w => w.length > 2);
     if (accWords.length === 0) continue;
@@ -205,6 +243,14 @@ function matchAccountInText(text: string, accs: AccountItem[], excludeId?: strin
     }
   }
 
+  // Check for "efectivo" → cash account
+  if (norm.includes("efectivo")) {
+    const cashAcc = active.find(a => a.type === "cash");
+    if (cashAcc) {
+      return { account: cashAcc, rest: stripWord(text, "efectivo") };
+    }
+  }
+
   return { account: null, rest: text };
 }
 
@@ -225,7 +271,9 @@ function cleanSpaces(text: string): string {
 
 function buildConcept(remaining: string): string {
   let desc = remaining;
-  desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo)\b/gi, " ");
+  // Remove functional words
+  desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo|te|pago|pagué|pague|pagado|tarjeta|credito|crédito|débito|debito)\b/gi, " ");
+  // Remove type words
   desc = desc.replace(/\b(gasto|gaste|gasté|gastó|pagué|pague|compré|compre|ingreso|recibí|recibi|transferencia|transfiere|transferí|transferi)\b/gi, " ");
   desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
   if (desc.length > 0) desc = desc.charAt(0).toUpperCase() + desc.slice(1);
@@ -242,6 +290,7 @@ interface ParsedVoiceCommand {
   toAccount: AccountItem | null;
   concept: string;
   error: string | null;
+  warning: string | null;
 }
 
 function parseVoiceCommand(
@@ -255,7 +304,7 @@ function parseVoiceCommand(
   const type = preSelectedType;
 
   const { category, rest: afterCat } = matchCategory(rawText, categories, type);
-  const { amount, currency, rest: afterAmount } = extractAmount(afterCat);
+  const { amount, currency, rest: afterAmount, warning } = extractAmount(afterCat);
 
   let fromAccount: AccountItem | null = null;
   let toAccount: AccountItem | null = null;
@@ -286,7 +335,7 @@ function parseVoiceCommand(
     error = "Selecciona las cuentas origen y destino.";
   }
 
-  return { type, category, amount, currency, fromAccount, toAccount, concept, error };
+  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning };
 }
 
 // ─── Web Speech API hook ────────────────────────────────────
@@ -295,12 +344,12 @@ function useWebSpeechSTT() {
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
-  const onResultRef = useRef<((text: string) => void) | null>(null);
+  const isListeningRef = useRef(false);
 
   const isSupported = typeof window !== "undefined" && 
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  const start = useCallback((onFinalResult?: (text: string) => void) => {
+  const start = useCallback(() => {
     if (!isSupported) {
       toast.error("Tu navegador no soporta reconocimiento de voz.");
       return;
@@ -313,8 +362,6 @@ function useWebSpeechSTT() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    
-    onResultRef.current = onFinalResult || null;
     
     let accumulated = "";
 
@@ -342,19 +389,22 @@ function useWebSpeechSTT() {
       console.error("Speech recognition error:", event.error);
       if (event.error === "not-allowed") {
         toast.error("Permite el acceso al micrófono para usar voz.");
+      } else if (event.error === "no-speech") {
+        // Silent — just restart if still listening
       } else if (event.error !== "aborted") {
         toast.error("Error de reconocimiento. Intenta de nuevo.");
       }
       setIsListening(false);
+      isListeningRef.current = false;
     };
 
     recognition.onend = () => {
-      setIsListening(false);
-      // Deliver final result
-      const fullText = (accumulated + " " + interimText).trim();
-      if (fullText && onResultRef.current) {
-        // Don't call here - let stop() handle it
+      // Auto-restart if still supposed to be listening
+      if (isListeningRef.current) {
+        try { recognition.start(); } catch (e) { /* ignore */ }
+        return;
       }
+      setIsListening(false);
     };
 
     recognitionRef.current = recognition;
@@ -365,6 +415,7 @@ function useWebSpeechSTT() {
     try {
       recognition.start();
       setIsListening(true);
+      isListeningRef.current = true;
       if (navigator.vibrate) navigator.vibrate(100);
     } catch (e) {
       console.error("Failed to start recognition:", e);
@@ -373,6 +424,7 @@ function useWebSpeechSTT() {
   }, [isSupported]);
 
   const stop = useCallback((): string => {
+    isListeningRef.current = false;
     const recognition = recognitionRef.current;
     if (recognition) {
       recognition.stop();
@@ -380,13 +432,13 @@ function useWebSpeechSTT() {
     }
     setIsListening(false);
     
-    // Return accumulated text
     const result = (finalText + " " + interimText).trim();
     setInterimText("");
     return result;
   }, [finalText, interimText]);
 
   const reset = useCallback(() => {
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
@@ -413,10 +465,9 @@ export function VoiceButton() {
   const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Web Speech API
   const stt = useWebSpeechSTT();
 
-  // ─── Pre-selection state (BEFORE recording) ───────────────
+  // ─── Pre-selection state ───────────────
   const [selectedType, setSelectedType] = useState<"expense" | "income" | "transfer" | null>(null);
   const [preFromAccountId, setPreFromAccountId] = useState("");
   const [preToAccountId, setPreToAccountId] = useState("");
@@ -439,8 +490,6 @@ export function VoiceButton() {
 
   const handleStopRecording = useCallback(async () => {
     const rawText = stt.stop();
-    
-    // Use finalText + interimText since stop() returns current state
     const finalText = rawText || (stt.finalText + " " + stt.interimText).trim();
     
     if (!finalText) {
@@ -461,22 +510,21 @@ export function VoiceButton() {
     );
     setParseResult(result);
 
-    // Pre-fill edit fields
     setEditType(result.type);
-    setEditAmount(result.amount ? String(result.amount) : "");
+    setEditAmount(result.amount ? String(Math.round(result.amount)) : "");
     setEditDate(format(new Date(), "yyyy-MM-dd"));
     setEditCategoryId(result.category?.id || "");
     setEditAccountId(result.fromAccount?.id || "");
     setEditToAccountId(result.toAccount?.id || "");
     setEditDescription(result.concept);
 
-    // Default to first active account if no account detected
+    // Default to cash if no account detected (non-transfer)
     if (!result.fromAccount && result.type !== "transfer") {
       const cashAcc = accounts.find(a => a.type === "cash" && a.is_active);
       if (cashAcc) setEditAccountId(cashAcc.id);
     }
 
-    // Log to voice_logs for diagnostics
+    // Log
     if (user) {
       supabase.from("voice_logs").insert([{
         user_id: user.id,
@@ -486,6 +534,7 @@ export function VoiceButton() {
       }]).then(() => {});
     }
 
+    if (result.warning) toast.warning(result.warning);
     if (result.error) toast.error(result.error);
   }, [stt, accounts, categories, selectedType, preFromAccountId, preToAccountId, user]);
 
@@ -584,7 +633,7 @@ export function VoiceButton() {
   const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground" };
 
   const fmt = (amount: number, currency: string = "MXN") =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
+    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name ?? "";
 
@@ -612,8 +661,8 @@ export function VoiceButton() {
       </button>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); else setIsOpen(true); }}>
-        <DrawerContent className="max-h-[95vh] min-h-[60vh]">
-          <div className="mx-auto w-full max-w-md flex flex-col h-full overflow-hidden">
+        <DrawerContent className="max-h-[95vh]">
+          <div className="mx-auto w-full max-w-md flex flex-col" style={{ maxHeight: "calc(95vh - 1rem)" }}>
             <DrawerHeader className="text-center pb-1 shrink-0">
               <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
               <DrawerDescription className="text-xs leading-tight">
@@ -621,11 +670,11 @@ export function VoiceButton() {
               </DrawerDescription>
             </DrawerHeader>
 
-            <div className="flex flex-col items-center px-4 space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="flex flex-col items-center px-4 space-y-2 overflow-y-auto flex-1 min-h-0 pb-2">
 
-              {/* ─── STEP 1: Type pre-selection (pill buttons) ──── */}
+              {/* ─── STEP 1: Type pre-selection ──── */}
               {!parseResult && (
-                <div className="w-full space-y-3">
+                <div className="w-full space-y-2">
                   <div className="flex gap-2 w-full">
                     {typePills.map(({ value, label, icon }) => (
                       <button
@@ -633,7 +682,7 @@ export function VoiceButton() {
                         onClick={() => setSelectedType(value)}
                         disabled={stt.isListening}
                         className={cn(
-                          "flex-1 py-2.5 px-2 rounded-lg text-sm font-medium transition-all border-2",
+                          "flex-1 py-2 px-1 rounded-lg text-sm font-medium transition-all border-2",
                           selectedType === value
                             ? value === "expense"
                               ? "border-expense bg-expense/10 text-expense"
@@ -649,7 +698,6 @@ export function VoiceButton() {
                     ))}
                   </div>
 
-                  {/* Transfer account selectors */}
                   {selectedType === "transfer" && (
                     <div className="w-full space-y-2 rounded-lg bg-secondary p-3">
                       <div>
@@ -691,7 +739,7 @@ export function VoiceButton() {
                     onClick={stt.isListening ? handleStopRecording : handleStartRecording}
                     disabled={!canStartRecording || !stt.isSupported}
                     className={cn(
-                      "flex h-16 w-16 items-center justify-center rounded-full transition-all shrink-0",
+                      "flex h-14 w-14 items-center justify-center rounded-full transition-all shrink-0",
                       stt.isListening
                         ? "bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30"
                         : canStartRecording && stt.isSupported
@@ -699,7 +747,7 @@ export function VoiceButton() {
                           : "bg-muted text-muted-foreground cursor-not-allowed"
                     )}
                   >
-                    {stt.isListening ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
+                    {stt.isListening ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
                   </button>
 
                   <p className="text-xs text-center px-2">
@@ -718,7 +766,7 @@ export function VoiceButton() {
                         Toca el micrófono y dicta.
                         <br />
                         <span className="italic">
-                          {selectedType === "expense" && 'Ej: "Gasolina mil pesos tarjeta Scotiabank"'}
+                          {selectedType === "expense" && 'Ej: "Gasolina mil pesos Scotiabank"'}
                           {selectedType === "income" && 'Ej: "Pensión 57 mil pesos BBVA"'}
                           {selectedType === "transfer" && 'Ej: "Mil pesos pago tarjeta"'}
                         </span>
@@ -743,7 +791,7 @@ export function VoiceButton() {
                 <div className="w-full space-y-2">
                   <div className="rounded-lg bg-secondary p-2 text-center">
                     <p className="text-xs text-muted-foreground">Transcripción:</p>
-                    <p className="text-sm font-medium text-foreground break-words">{committedText}</p>
+                    <p className="text-sm font-medium text-foreground break-words line-clamp-2">{committedText}</p>
                   </div>
 
                   {parseResult.error && (
@@ -753,7 +801,14 @@ export function VoiceButton() {
                     </div>
                   )}
 
-                  <div className="text-sm space-y-1">
+                  {parseResult.warning && !parseResult.error && (
+                    <div className="flex items-center gap-2 rounded-lg bg-yellow-500/10 p-2 text-sm text-yellow-700 dark:text-yellow-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <span>{parseResult.warning}</span>
+                    </div>
+                  )}
+
+                  <div className="text-sm space-y-0.5">
                     <div className="flex justify-between py-1 border-b border-border">
                       <span className="text-muted-foreground">Tipo:</span>
                       <span className={cn("font-medium", typeColors[editType])}>{typeLabels[editType] ?? "—"}</span>
@@ -780,10 +835,6 @@ export function VoiceButton() {
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between py-1 border-b border-border">
-                      <span className="text-muted-foreground">Fecha:</span>
-                      <span className="font-medium">{editDate}</span>
-                    </div>
                     {editDescription && (
                       <div className="flex justify-between py-1">
                         <span className="text-muted-foreground">Concepto:</span>
@@ -796,7 +847,7 @@ export function VoiceButton() {
 
               {/* Edit mode */}
               {!stt.isListening && parseResult && isEditing && (
-                <div className="w-full space-y-3">
+                <div className="w-full space-y-2">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Tipo</label>
                     <Select value={editType} onValueChange={setEditType}>
@@ -823,7 +874,7 @@ export function VoiceButton() {
                   )}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Monto</label>
-                    <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} />
+                    <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="text-lg font-bold" />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{editType === "transfer" ? "Cuenta origen" : "Cuenta"}</label>
@@ -857,7 +908,7 @@ export function VoiceButton() {
               )}
             </div>
 
-            {/* Sticky bottom buttons */}
+            {/* Sticky bottom buttons — ALWAYS visible */}
             {!stt.isListening && parseResult && (
               <div className="px-4 py-3 border-t border-border shrink-0 bg-background space-y-2">
                 {validationMsg && !isEditing && (

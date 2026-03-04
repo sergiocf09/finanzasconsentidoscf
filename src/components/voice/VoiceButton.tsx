@@ -24,6 +24,17 @@ const normalize = (t: string) =>
 type AccountItem = ReturnType<typeof useAccounts>["accounts"][number];
 type CategoryItem = ReturnType<typeof useCategories>["categories"][number];
 
+// ─── Transcript Sanitizer ───────────────────────────────────
+function sanitizeTranscript(raw: string): string {
+  // 1) Deduplicate consecutive repeated words (>2 repeats → keep 1)
+  let clean = raw.replace(/\b(\w+)(?:\s+\1){2,}\b/gi, "$1");
+  // 2) Deduplicate consecutive repeated bigrams
+  clean = clean.replace(/\b((\w+)\s+(\w+))(?:\s+\1){1,}\b/gi, "$1");
+  // 3) Collapse spaces
+  clean = clean.replace(/\s+/g, " ").trim();
+  return clean;
+}
+
 // ─── Spanish word-to-number map ─────────────────────────────
 const SPANISH_NUMS: Record<string, number> = {
   cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
@@ -109,11 +120,10 @@ function extractAmount(text: string): { amount: number | null; currency: string;
     return { amount, currency, rest: cleanSpaces(rest), warning };
   }
 
-  // Pattern 2: standard digits (but NOT if followed by "mil" — handled above)
+  // Pattern 2: standard digits
   const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[.,\s]\d{3})*(?:\.\d{1,2}(?!\d))?)/);
   if (digitMatch) {
     let raw = digitMatch[1];
-    // Treat dots as thousands separators if followed by exactly 3 digits
     raw = raw.replace(/\.(\d{3})(?!\d)/g, "$1");
     raw = raw.replace(/[,\s]/g, "");
     const amount = parseFloat(raw);
@@ -127,7 +137,6 @@ function extractAmount(text: string): { amount: number | null; currency: string;
   // Pattern 3: Spanish word numbers
   const { value: wordAmount, matched } = spanishWordsToNumber(rest);
   if (wordAmount && wordAmount > 0) {
-    // Validation: if text contains "mil" but amount < 500, flag as suspect
     if (normalize(rest).includes("mil") && wordAmount < 500) {
       warning = "El monto detectado parece incorrecto. Edita el monto o vuelve a dictarlo.";
     }
@@ -175,11 +184,10 @@ function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "
     }
   }
 
-  // 3) Fallback: keyword dictionary → try to find matching category by name
+  // 3) Fallback: keyword dictionary
   for (const [catName, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     for (const kw of keywords) {
       if (norm.includes(kw)) {
-        // Find a user category whose name matches
         const match = sorted.find(c => normalize(c.name).includes(normalize(catName)));
         if (match) {
           const rest = text.replace(new RegExp(`\\b${kw}\\b`, "gi"), " ");
@@ -192,54 +200,101 @@ function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "
   return { category: null, rest: text };
 }
 
-// ─── Account matching ───────────────────────────────────────
+// ─── Fuzzy Account matching (token-based + Levenshtein) ─────
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function tokenSimilarity(token: string, target: string): number {
+  if (target.includes(token) || token.includes(target)) return 1;
+  const dist = levenshtein(token, target);
+  const maxLen = Math.max(token.length, target.length);
+  return maxLen === 0 ? 0 : 1 - dist / maxLen;
+}
+
+// Account aliases: generate from name
+function generateAliases(name: string): string[] {
+  const norm = normalize(name);
+  const words = norm.split(/\s+/).filter(w => w.length > 1);
+  const aliases: string[] = [norm];
+  // Each significant word (>2 chars) as alias
+  for (const w of words) {
+    if (w.length > 2) aliases.push(w);
+  }
+  // First + last word
+  if (words.length >= 2) {
+    aliases.push(words[0] + " " + words[words.length - 1]);
+  }
+  return aliases;
+}
+
+const STOPWORDS_ACCOUNT = new Set(["de", "del", "la", "el", "los", "las", "con", "por", "en", "a", "tarjeta", "credito", "crédito", "debito", "débito", "cuenta"]);
+
 function matchAccountInText(text: string, accs: AccountItem[], excludeId?: string): {
   account: AccountItem | null;
   rest: string;
+  score: number;
 } {
   const norm = normalize(text);
+  const spokenTokens = norm.split(/\s+/).filter(w => w.length > 2 && !STOPWORDS_ACCOUNT.has(w));
   const active = accs.filter(a => a.is_active && a.id !== excludeId);
-  const sorted = [...active].sort((a, b) => b.name.length - a.name.length);
 
-  // Full name match
-  for (const acc of sorted) {
-    if (norm.includes(normalize(acc.name))) {
-      return { account: acc, rest: stripPhrase(text, acc.name) };
-    }
-  }
+  // Score each account
+  const scored: { acc: AccountItem; score: number; matchedTokens: string[] }[] = [];
 
-  // Partial word match (all significant words)
-  for (const acc of sorted) {
-    const accWords = normalize(acc.name).split(/\s+/).filter(w => w.length > 2);
-    if (accWords.length === 0) continue;
-    if (accWords.every(w => norm.includes(w))) {
-      let rest = text;
-      for (const w of accWords) rest = stripWord(rest, w);
-      return { account: acc, rest: cleanSpaces(rest) };
-    }
-  }
-
-  // Fuzzy partial match (50%+ words)
-  for (const acc of sorted) {
-    const accWords = normalize(acc.name).split(/\s+/).filter(w => w.length > 2);
-    if (accWords.length === 0) continue;
-    const spokenWords = norm.split(/\s+/);
-    let matchCount = 0;
+  for (const acc of active) {
+    const aliases = generateAliases(acc.name);
+    const accTokens = normalize(acc.name).split(/\s+/).filter(w => w.length > 2 && !STOPWORDS_ACCOUNT.has(w));
+    
+    let bestScore = 0;
     const matchedSpoken: string[] = [];
-    for (const aw of accWords) {
-      for (const sw of spokenWords) {
-        if (sw.length >= 3 && aw.length >= 3 &&
-          (aw.startsWith(sw.substring(0, 3)) || sw.startsWith(aw.substring(0, 3)))) {
-          matchCount++;
-          matchedSpoken.push(sw);
-          break;
-        }
+
+    // Full alias match
+    for (const alias of aliases) {
+      if (norm.includes(alias)) {
+        bestScore = Math.max(bestScore, 0.95);
       }
     }
-    if (matchCount >= Math.max(1, Math.ceil(accWords.length * 0.5))) {
-      let rest = text;
-      for (const sw of matchedSpoken) rest = stripWord(rest, sw);
-      return { account: acc, rest: cleanSpaces(rest) };
+
+    // Token-by-token matching
+    if (accTokens.length > 0) {
+      let tokenMatches = 0;
+      for (const at of accTokens) {
+        let bestTokenScore = 0;
+        let bestSpoken = "";
+        for (const st of spokenTokens) {
+          const sim = tokenSimilarity(st, at);
+          if (sim > bestTokenScore) {
+            bestTokenScore = sim;
+            bestSpoken = st;
+          }
+        }
+        if (bestTokenScore >= 0.7) {
+          tokenMatches++;
+          if (bestSpoken && !matchedSpoken.includes(bestSpoken)) matchedSpoken.push(bestSpoken);
+        }
+      }
+      const ratio = tokenMatches / accTokens.length;
+      bestScore = Math.max(bestScore, ratio * 0.9);
+    }
+
+    if (bestScore >= 0.4) {
+      scored.push({ acc, score: bestScore, matchedTokens: matchedSpoken });
     }
   }
 
@@ -247,11 +302,21 @@ function matchAccountInText(text: string, accs: AccountItem[], excludeId?: strin
   if (norm.includes("efectivo")) {
     const cashAcc = active.find(a => a.type === "cash");
     if (cashAcc) {
-      return { account: cashAcc, rest: stripWord(text, "efectivo") };
+      scored.push({ acc: cashAcc, score: 0.95, matchedTokens: ["efectivo"] });
     }
   }
 
-  return { account: null, rest: text };
+  if (scored.length === 0) return { account: null, rest: text, score: 0 };
+
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+
+  // If score too low or tie → return null (will trigger confirmation)
+  if (best.score < 0.5) return { account: null, rest: text, score: best.score };
+
+  let rest = text;
+  for (const t of best.matchedTokens) rest = stripWord(rest, t);
+  return { account: best.acc, rest: cleanSpaces(rest), score: best.score };
 }
 
 // ─── String cleanup helpers ─────────────────────────────────
@@ -271,16 +336,23 @@ function cleanSpaces(text: string): string {
 
 function buildConcept(remaining: string): string {
   let desc = remaining;
-  // Remove functional words
   desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo|te|pago|pagué|pague|pagado|tarjeta|credito|crédito|débito|debito)\b/gi, " ");
-  // Remove type words
   desc = desc.replace(/\b(gasto|gaste|gasté|gastó|pagué|pague|compré|compre|ingreso|recibí|recibi|transferencia|transfiere|transferí|transferi)\b/gi, " ");
   desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
+  // Deduplicate words in concept
+  const words = desc.split(" ");
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const w of words) {
+    const lw = w.toLowerCase();
+    if (!seen.has(lw)) { seen.add(lw); deduped.push(w); }
+  }
+  desc = deduped.join(" ");
   if (desc.length > 0) desc = desc.charAt(0).toUpperCase() + desc.slice(1);
   return desc;
 }
 
-// ─── Parse voice command (type comes from UI, not from text) ─
+// ─── Parse voice command ─────────────────────────────────────
 interface ParsedVoiceCommand {
   type: "expense" | "income" | "transfer";
   category: CategoryItem | null;
@@ -291,6 +363,7 @@ interface ParsedVoiceCommand {
   concept: string;
   error: string | null;
   warning: string | null;
+  accountScore: number;
 }
 
 function parseVoiceCommand(
@@ -302,28 +375,34 @@ function parseVoiceCommand(
   preSelectedToAccountId?: string,
 ): ParsedVoiceCommand {
   const type = preSelectedType;
+  // Sanitize transcript first
+  const cleanText = sanitizeTranscript(rawText);
 
-  const { category, rest: afterCat } = matchCategory(rawText, categories, type);
+  const { category, rest: afterCat } = matchCategory(cleanText, categories, type);
   const { amount, currency, rest: afterAmount, warning } = extractAmount(afterCat);
 
   let fromAccount: AccountItem | null = null;
   let toAccount: AccountItem | null = null;
   let afterAccounts = afterAmount;
+  let accountScore = 0;
 
   if (type === "transfer" && preSelectedFromAccountId && preSelectedToAccountId) {
     fromAccount = accounts.find(a => a.id === preSelectedFromAccountId) || null;
     toAccount = accounts.find(a => a.id === preSelectedToAccountId) || null;
     afterAccounts = afterAmount;
+    accountScore = 1;
   } else if (type === "transfer") {
-    const { account: acc1, rest: r1 } = matchAccountInText(afterAmount, accounts);
+    const { account: acc1, rest: r1, score: s1 } = matchAccountInText(afterAmount, accounts);
     fromAccount = acc1;
-    const { account: acc2, rest: r2 } = matchAccountInText(r1, accounts, acc1?.id);
+    const { account: acc2, rest: r2, score: s2 } = matchAccountInText(r1, accounts, acc1?.id);
     toAccount = acc2;
     afterAccounts = r2;
+    accountScore = Math.min(s1, s2);
   } else {
-    const { account, rest: r } = matchAccountInText(afterAmount, accounts);
+    const { account, rest: r, score } = matchAccountInText(afterAmount, accounts);
     fromAccount = account;
     afterAccounts = r;
+    accountScore = score;
   }
 
   const concept = buildConcept(afterAccounts);
@@ -335,7 +414,7 @@ function parseVoiceCommand(
     error = "Selecciona las cuentas origen y destino.";
   }
 
-  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning };
+  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning, accountScore };
 }
 
 // ─── Web Speech API hook ────────────────────────────────────
@@ -390,7 +469,7 @@ function useWebSpeechSTT() {
       if (event.error === "not-allowed") {
         toast.error("Permite el acceso al micrófono para usar voz.");
       } else if (event.error === "no-speech") {
-        // Silent — just restart if still listening
+        // Silent
       } else if (event.error !== "aborted") {
         toast.error("Error de reconocimiento. Intenta de nuevo.");
       }
@@ -399,7 +478,6 @@ function useWebSpeechSTT() {
     };
 
     recognition.onend = () => {
-      // Auto-restart if still supposed to be listening
       if (isListeningRef.current) {
         try { recognition.start(); } catch (e) { /* ignore */ }
         return;
@@ -462,6 +540,7 @@ export function VoiceButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
+  const [cleanTranscript, setCleanTranscript] = useState("");
   const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -497,7 +576,10 @@ export function VoiceButton() {
       return;
     }
 
+    // Sanitize transcript
+    const cleaned = sanitizeTranscript(finalText);
     setCommittedText(finalText);
+    setCleanTranscript(cleaned);
 
     const activeAccs = accounts.filter(a => a.is_active);
     const result = parseVoiceCommand(
@@ -524,13 +606,13 @@ export function VoiceButton() {
       if (cashAcc) setEditAccountId(cashAcc.id);
     }
 
-    // Log
+    // Log with both raw and clean
     if (user) {
       supabase.from("voice_logs").insert([{
         user_id: user.id,
         transcript_raw: finalText,
-        parsed_json: result as any,
-        confidence: result.amount ? 80 : 30,
+        parsed_json: { ...result, transcript_clean: cleaned } as any,
+        confidence: result.amount ? (result.accountScore > 0.7 ? 85 : 60) : 30,
       }]).then(() => {});
     }
 
@@ -573,7 +655,7 @@ export function VoiceButton() {
           amount_to: amount,
           currency_to: to.currency,
           transfer_date: editDate,
-          description: editDescription || committedText,
+          description: editDescription || cleanTranscript || committedText,
           created_from: "voice",
         });
         queryClient.invalidateQueries({ queryKey: ["transfers"] });
@@ -586,7 +668,7 @@ export function VoiceButton() {
           type: editType,
           amount,
           currency: acc.currency,
-          description: editDescription || committedText,
+          description: editDescription || cleanTranscript || committedText,
           transaction_date: editDate,
           voice_transcript: committedText,
         });
@@ -608,6 +690,7 @@ export function VoiceButton() {
   const handleReset = () => {
     stt.reset();
     setCommittedText("");
+    setCleanTranscript("");
     setParseResult(null);
     setIsEditing(false);
     setSelectedType(null);
@@ -791,7 +874,7 @@ export function VoiceButton() {
                 <div className="w-full space-y-2">
                   <div className="rounded-lg bg-secondary p-2 text-center">
                     <p className="text-xs text-muted-foreground">Transcripción:</p>
-                    <p className="text-sm font-medium text-foreground break-words line-clamp-2">{committedText}</p>
+                    <p className="text-sm font-medium text-foreground break-words line-clamp-2">{cleanTranscript || committedText}</p>
                   </div>
 
                   {parseResult.error && (

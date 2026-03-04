@@ -66,36 +66,35 @@ export default function Accounts() {
     return (
       <div
         key={account.id}
-        className="flex items-center gap-3 rounded-xl bg-card border border-border p-3 card-interactive cursor-pointer"
+        className="flex items-center gap-2 rounded-lg bg-card border border-border p-2.5 card-interactive cursor-pointer"
         onClick={() => navigate(`/accounts/${account.id}`)}
       >
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-muted")}>
-          <Icon className={cn("h-5 w-5", debt ? "text-expense" : "text-muted-foreground")} />
+        <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-muted")}>
+          <Icon className={cn("h-4 w-4", debt ? "text-expense" : "text-muted-foreground")} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{account.name}</p>
-          <p className="text-xs text-muted-foreground">{typeLabels[account.type] || account.type}</p>
+          <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
+          <p className="text-[10px] text-muted-foreground">{typeLabels[account.type] || account.type}</p>
         </div>
-        <div className="text-right mr-1">
-          <p className={cn("text-sm font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
+        <div className="text-right mr-0.5">
+          <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
             {debt && account.current_balance > 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
           </p>
-          <p className="text-xs text-muted-foreground">{account.currency}</p>
         </div>
-        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-primary"
+        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
           onClick={(e) => { e.stopPropagation(); setEditTarget(account); }}>
-          <Pencil className="h-4 w-4" />
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
           onClick={(e) => { e.stopPropagation(); setDeleteTarget(account); }}>
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
     );
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header — sticky */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between">
@@ -116,66 +115,66 @@ export default function Accounts() {
         </div>
       ) : (
         <>
-          {/* Summary cards by currency — clickable to scroll */}
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Summary cards: two columns always */}
+          <div className="grid grid-cols-2 gap-2">
             {Object.entries(assetsByCurrency).map(([currency, total]) => (
               <div
                 key={`asset-${currency}`}
-                className="rounded-2xl bg-primary p-4 text-primary-foreground cursor-pointer card-interactive"
+                className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
                 onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <ShieldCheck className="h-4 w-4 opacity-80" />
-                  <p className="text-xs opacity-80">Activos ({currency})</p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <ShieldCheck className="h-3.5 w-3.5 opacity-80" />
+                  <p className="text-[10px] opacity-80">Activos {currency}</p>
                 </div>
-                <p className="text-2xl font-bold font-heading">{fmt(total, currency)}</p>
+                <p className="text-lg font-bold font-heading">{fmt(total, currency)}</p>
               </div>
             ))}
             {Object.entries(liabilitiesByCurrency).map(([currency, total]) => (
               <div
                 key={`liab-${currency}`}
-                className="rounded-2xl bg-expense/10 border border-expense/20 p-4 cursor-pointer card-interactive"
+                className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
                 onClick={() => document.getElementById("section-liabilities")?.scrollIntoView({ behavior: "smooth" })}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <CreditCard className="h-4 w-4 text-expense opacity-80" />
-                  <p className="text-xs text-expense opacity-80">Pasivos ({currency})</p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <CreditCard className="h-3.5 w-3.5 text-expense opacity-80" />
+                  <p className="text-[10px] text-expense opacity-80">Pasivos {currency}</p>
                 </div>
-                <p className="text-2xl font-bold font-heading text-expense">{fmt(total, currency)}</p>
+                <p className="text-lg font-bold font-heading text-expense">{fmt(total, currency)}</p>
               </div>
             ))}
           </div>
 
-          {/* Two-column layout: assets left, liabilities right */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          {/* Two-column layout: always */}
+          <div className="grid grid-cols-2 gap-3">
             {/* Assets */}
-            <div className="space-y-3">
-              <h2 id="section-assets" className="text-sm font-heading font-semibold text-foreground flex items-center gap-2 scroll-mt-24">
-                <TrendingUp className="h-4 w-4 text-income" /> Activos
+            <div className="space-y-2">
+              <h2 id="section-assets" className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
+                <TrendingUp className="h-3.5 w-3.5 text-income" /> Activos
               </h2>
               {assets.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">Sin cuentas de activo</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">Sin activos</p>
               ) : assets.map(renderAccountRow)}
             </div>
 
             {/* Liabilities */}
-            <div className="space-y-3">
-              <h2 id="section-liabilities" className="text-sm font-heading font-semibold text-foreground flex items-center gap-2 scroll-mt-24">
-                <CreditCard className="h-4 w-4 text-expense" /> Pasivos
+            <div className="space-y-2">
+              <h2 id="section-liabilities" className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
+                <CreditCard className="h-3.5 w-3.5 text-expense" /> Pasivos
               </h2>
               {liabilitiesShort.length === 0 && liabilitiesLong.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">Sin pasivos registrados</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">Sin pasivos</p>
               ) : (
                 <>
                   {liabilitiesShort.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
                       {liabilitiesShort.map(renderAccountRow)}
                     </div>
                   )}
                   {liabilitiesLong.length > 0 && (
-                    <div className="space-y-2 mt-4">
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Mediano / Largo plazo</p>
+                    <div className="space-y-1.5 mt-2">
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Largo plazo</p>
                       {liabilitiesLong.map(renderAccountRow)}
                     </div>
                   )}

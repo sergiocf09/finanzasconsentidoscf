@@ -26,11 +26,39 @@ type CategoryItem = ReturnType<typeof useCategories>["categories"][number];
 
 // ─── Transcript Sanitizer ───────────────────────────────────
 function sanitizeTranscript(raw: string): string {
-  // 1) Deduplicate consecutive repeated words (>2 repeats → keep 1)
-  let clean = raw.replace(/\b(\w+)(?:\s+\1){2,}\b/gi, "$1");
-  // 2) Deduplicate consecutive repeated bigrams
+  let clean = raw;
+  
+  // 1) Sentence-level dedup: if a sentence repeats, keep only first occurrence
+  // Split by period/comma and check for repeated chunks
+  const sentences = clean.split(/[.,]\s*/);
+  if (sentences.length > 1) {
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    for (const s of sentences) {
+      const key = s.toLowerCase().trim();
+      if (key.length < 3) continue;
+      // Check if this sentence is substantially similar to one already seen
+      let isDup = false;
+      for (const prev of seen) {
+        if (prev.includes(key) || key.includes(prev) || 
+            (key.length > 10 && prev.length > 10 && key.substring(0, Math.min(key.length, 20)) === prev.substring(0, Math.min(prev.length, 20)))) {
+          isDup = true;
+          break;
+        }
+      }
+      if (!isDup) {
+        seen.add(key);
+        unique.push(s.trim());
+      }
+    }
+    clean = unique.join(", ");
+  }
+  
+  // 2) Deduplicate consecutive repeated words (>2 repeats → keep 1)
+  clean = clean.replace(/\b(\w+)(?:\s+\1){2,}\b/gi, "$1");
+  // 3) Deduplicate consecutive repeated bigrams
   clean = clean.replace(/\b((\w+)\s+(\w+))(?:\s+\1){1,}\b/gi, "$1");
-  // 3) Collapse spaces
+  // 4) Collapse spaces
   clean = clean.replace(/\s+/g, " ").trim();
   return clean;
 }
@@ -111,24 +139,23 @@ function extractAmount(text: string): { amount: number | null; currency: string;
   if (normText.includes("dolar") || normText.includes("usd") || normText.includes("dollar")) currency = "USD";
   else if (normText.includes("euro") || normText.includes("eur")) currency = "EUR";
 
-  // Pattern 1: digits + "mil"
+  // Pattern 1: digits + "mil" (e.g. "2 mil", "54 mil")
   const milMatch = rest.match(/(\d+(?:\.\d+)?)\s*mil/i);
   if (milMatch) {
     const amount = parseFloat(milMatch[1]) * 1000;
     rest = rest.replace(milMatch[0], " ");
     rest = stripCurrencyWords(rest);
-    return { amount, currency, rest: cleanSpaces(rest), warning };
+    return { amount: Math.round(amount), currency, rest: cleanSpaces(rest), warning };
   }
 
-  // Pattern 2: standard digits
-  const digitMatch = rest.match(/\$?\s*(\d{1,3}(?:[.,\s]\d{3})*(?:\.\d{1,2}(?!\d))?)/);
-  if (digitMatch) {
-    let raw = digitMatch[1];
-    raw = raw.replace(/\.(\d{3})(?!\d)/g, "$1");
-    raw = raw.replace(/[,\s]/g, "");
-    const amount = parseFloat(raw);
+  // Pattern 2: plain digit sequences (e.g. "2800", "1500", "300")
+  // Match any sequence of digits, no decimals (voice never uses cents)
+  const plainDigitMatch = rest.match(/\$?\s*(\d{2,})/);
+  if (plainDigitMatch) {
+    let raw = plainDigitMatch[1];
+    const amount = parseInt(raw, 10);
     if (amount > 0) {
-      rest = rest.replace(digitMatch[0], " ");
+      rest = rest.replace(plainDigitMatch[0], " ");
       rest = stripCurrencyWords(rest);
       return { amount, currency, rest: cleanSpaces(rest), warning };
     }
@@ -144,7 +171,7 @@ function extractAmount(text: string): { amount: number | null; currency: string;
       if (w) rest = rest.replace(new RegExp(`\\b${w}\\b`, "i"), " ");
     }
     rest = stripCurrencyWords(rest);
-    return { amount: wordAmount, currency, rest: cleanSpaces(rest), warning };
+    return { amount: Math.round(wordAmount), currency, rest: cleanSpaces(rest), warning };
   }
 
   return { amount: null, currency, rest, warning: null };
@@ -334,10 +361,23 @@ function cleanSpaces(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function buildConcept(remaining: string): string {
+function buildConcept(remaining: string, accountName?: string, categoryName?: string): string {
   let desc = remaining;
+  // Strip account name tokens from concept
+  if (accountName) {
+    for (const token of accountName.split(/\s+/)) {
+      if (token.length > 2) desc = desc.replace(new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), " ");
+    }
+  }
+  // Strip category name tokens from concept
+  if (categoryName) {
+    for (const token of categoryName.split(/\s+/)) {
+      if (token.length > 2) desc = desc.replace(new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), " ");
+    }
+  }
   desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo|te|pago|pagué|pague|pagado|tarjeta|credito|crédito|débito|debito)\b/gi, " ");
   desc = desc.replace(/\b(gasto|gaste|gasté|gastó|pagué|pague|compré|compre|ingreso|recibí|recibi|transferencia|transfiere|transferí|transferi)\b/gi, " ");
+  desc = desc.replace(/\b\d+\b/g, " "); // Strip leftover digits
   desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
   // Deduplicate words in concept
   const words = desc.split(" ");
@@ -345,6 +385,7 @@ function buildConcept(remaining: string): string {
   const deduped: string[] = [];
   for (const w of words) {
     const lw = w.toLowerCase();
+    if (lw.length < 2) continue; // skip single chars
     if (!seen.has(lw)) { seen.add(lw); deduped.push(w); }
   }
   desc = deduped.join(" ");
@@ -405,7 +446,7 @@ function parseVoiceCommand(
     accountScore = score;
   }
 
-  const concept = buildConcept(afterAccounts);
+  const concept = buildConcept(afterAccounts, fromAccount?.name || toAccount?.name, category?.name);
 
   let error: string | null = null;
   if (!amount) {

@@ -91,6 +91,49 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     },
   });
 
+  const updateTransaction = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Transaction> & { id: string }) => {
+      // If amount or type changed, we need to delete-then-reinsert for trigger correctness
+      // But simpler: just update the row. The trigger only fires on INSERT/DELETE, not UPDATE.
+      // So we must handle balance manually or use a different approach.
+      // Safest: delete old, insert new (triggers handle balance automatically).
+      const { data: oldTx, error: fetchErr } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      // Delete old (trigger reverses old balance)
+      const { error: delErr } = await supabase.from('transactions').delete().eq('id', id);
+      if (delErr) throw delErr;
+
+      // Insert updated (trigger applies new balance)
+      const merged = { ...oldTx, ...data };
+      delete (merged as any).id;
+      delete (merged as any).created_at;
+      delete (merged as any).updated_at;
+      merged.amount_in_base = merged.amount * (merged.exchange_rate ?? 1);
+
+      const { data: newTx, error: insErr } = await supabase
+        .from('transactions')
+        .insert(merged)
+        .select()
+        .single();
+      if (insErr) throw insErr;
+      return newTx;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      toast({ title: "Movimiento actualizado" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const deleteTransaction = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -130,6 +173,7 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     error: transactionsQuery.error,
     totals,
     createTransaction,
+    updateTransaction,
     deleteTransaction,
   };
 }

@@ -1,11 +1,19 @@
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Edit2, Check, X } from "lucide-react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useTransactions } from "@/hooks/useTransactions";
 
 interface Transaction {
   id: string;
@@ -29,8 +37,32 @@ interface TransactionDetailSheetProps {
 }
 
 export function TransactionDetailSheet({ transaction, open, onOpenChange }: TransactionDetailSheetProps) {
-  const { categories } = useCategories();
+  const { categories, expenseCategories, incomeCategories } = useCategories();
   const { accounts } = useAccounts();
+  const { updateTransaction } = useTransactions();
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Edit state
+  const [editAmount, setEditAmount] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editAccountId, setEditAccountId] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
+  useEffect(() => {
+    if (transaction && open) {
+      setEditAmount(String(transaction.amount));
+      setEditType(transaction.type);
+      setEditAccountId(transaction.account_id);
+      setEditCategoryId(transaction.category_id || "");
+      setEditDescription(transaction.description || "");
+      setEditDate(transaction.transaction_date);
+      setEditNotes(transaction.notes || "");
+      setIsEditing(false);
+    }
+  }, [transaction, open]);
 
   if (!transaction) return null;
 
@@ -39,10 +71,103 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
 
   const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name ?? "Sin categoría";
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";
-  const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia", adjustment_income: "Ajuste de saldo (+)", adjustment_expense: "Ajuste de saldo (-)" };
+  const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia", adjustment_income: "Ajuste (+)", adjustment_expense: "Ajuste (-)" };
   const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground", adjustment_income: "text-muted-foreground", adjustment_expense: "text-muted-foreground" };
 
   const dateFormatted = format(new Date(transaction.transaction_date + "T12:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es });
+
+  const filteredCategories = editType === "income" ? incomeCategories : expenseCategories;
+  const activeAccounts = accounts.filter(a => a.is_active);
+
+  const handleSave = async () => {
+    const amount = parseFloat(editAmount);
+    if (!amount || amount <= 0 || !editAccountId) return;
+
+    await updateTransaction.mutateAsync({
+      id: transaction.id,
+      type: editType as any,
+      amount,
+      account_id: editAccountId,
+      category_id: editCategoryId || null,
+      description: editDescription || null,
+      notes: editNotes || null,
+      transaction_date: editDate,
+    });
+    setIsEditing(false);
+    onOpenChange(false);
+  };
+
+  if (isEditing) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
+          <SheetHeader className="pb-2">
+            <SheetTitle className="font-heading text-lg">Editar movimiento</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground">Tipo</label>
+                <Select value={editType} onValueChange={setEditType}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Gasto</SelectItem>
+                    <SelectItem value="income">Ingreso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground">Monto</label>
+                <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="h-9" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
+                <Select value={editAccountId} onValueChange={setEditAccountId}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {activeAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground">Categoría</label>
+                <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground">Fecha</label>
+                <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="h-9" />
+              </div>
+              <div className="flex-[2]">
+                <label className="text-xs font-medium text-muted-foreground">Descripción</label>
+                <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} className="h-9" placeholder="Descripción" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Notas</label>
+              <Input value={editNotes} onChange={e => setEditNotes(e.target.value)} className="h-9" placeholder="Notas adicionales" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>
+                <X className="h-4 w-4 mr-1" /> Cancelar
+              </Button>
+              <Button className="flex-1" onClick={handleSave} disabled={updateTransaction.isPending}>
+                <Check className="h-4 w-4 mr-1" /> Guardar
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   const rows: { label: string; value: string; className?: string }[] = [
     { label: "Tipo", value: typeLabels[transaction.type] ?? transaction.type, className: typeColors[transaction.type] },
@@ -55,24 +180,25 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
   if (transaction.related_account_id) {
     rows.push({ label: "Cuenta destino", value: getAccountName(transaction.related_account_id) });
   }
-
   rows.push({ label: "Categoría", value: getCategoryName(transaction.category_id) });
+  if (transaction.description) rows.push({ label: "Descripción", value: transaction.description });
+  if (transaction.notes) rows.push({ label: "Notas", value: transaction.notes });
+  if (transaction.voice_transcript) rows.push({ label: "Transcripción de voz", value: transaction.voice_transcript });
 
-  if (transaction.description) {
-    rows.push({ label: "Descripción", value: transaction.description });
-  }
-  if (transaction.notes) {
-    rows.push({ label: "Notas", value: transaction.notes });
-  }
-  if (transaction.voice_transcript) {
-    rows.push({ label: "Transcripción de voz", value: transaction.voice_transcript });
-  }
+  const canEdit = !["adjustment_income", "adjustment_expense", "transfer"].includes(transaction.type);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
         <SheetHeader className="pb-2">
-          <SheetTitle className="font-heading text-lg">Detalle del movimiento</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="font-heading text-lg">Detalle del movimiento</SheetTitle>
+            {canEdit && (
+              <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit2 className="h-4 w-4 mr-1" /> Editar
+              </Button>
+            )}
+          </div>
         </SheetHeader>
         <div className="space-y-2">
           {rows.map((row) => (

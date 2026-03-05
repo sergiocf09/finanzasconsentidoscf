@@ -386,6 +386,46 @@ function buildConcept(remaining: string, accountName?: string, categoryName?: st
   return desc;
 }
 
+// ─── Date detection from voice ───────────────────────────────
+function detectVoiceDate(text: string): { date: string; rest: string; label: string } {
+  const today = new Date();
+  const norm = normalize(text);
+  
+  // "ayer"
+  if (/\bayer\b/.test(norm)) {
+    const d = new Date(today); d.setDate(d.getDate() - 1);
+    return { date: format(d, "yyyy-MM-dd"), rest: text.replace(/\bayer\b/gi, " ").replace(/\s+/g, " ").trim(), label: "Ayer" };
+  }
+  // "antier" / "anteayer"
+  if (/\b(antier|anteayer)\b/.test(norm)) {
+    const d = new Date(today); d.setDate(d.getDate() - 2);
+    return { date: format(d, "yyyy-MM-dd"), rest: text.replace(/\b(antier|anteayer)\b/gi, " ").replace(/\s+/g, " ").trim(), label: "Antier" };
+  }
+  // "hace X días"
+  const haceDias = norm.match(/hace\s+(\d+)\s+dias?/);
+  if (haceDias) {
+    const d = new Date(today); d.setDate(d.getDate() - parseInt(haceDias[1]));
+    return { date: format(d, "yyyy-MM-dd"), rest: text.replace(/hace\s+\d+\s+días?/gi, " ").replace(/\s+/g, " ").trim(), label: `Hace ${haceDias[1]} días` };
+  }
+  // "el día X" or "el X" (day of current month)
+  const elDia = norm.match(/\b(?:el\s+(?:dia\s+)?|dia\s+)(\d{1,2})\b/);
+  if (elDia) {
+    const day = parseInt(elDia[1]);
+    if (day >= 1 && day <= 31) {
+      const d = new Date(today.getFullYear(), today.getMonth(), day);
+      if (d > today) d.setMonth(d.getMonth() - 1); // if future, assume last month
+      return { date: format(d, "yyyy-MM-dd"), rest: text.replace(/\b(?:el\s+(?:día\s+)?|día\s+)\d{1,2}\b/gi, " ").replace(/\s+/g, " ").trim(), label: `El ${day}` };
+    }
+  }
+  // "hoy" or default
+  if (/\bhoy\b/.test(norm)) {
+    return { date: format(today, "yyyy-MM-dd"), rest: text.replace(/\bhoy\b/gi, " ").replace(/\s+/g, " ").trim(), label: "Hoy" };
+  }
+  
+  // Default: today
+  return { date: format(today, "yyyy-MM-dd"), rest: text, label: "Hoy" };
+}
+
 // ─── Parse voice command ─────────────────────────────────────
 interface ParsedVoiceCommand {
   type: "expense" | "income" | "transfer";
@@ -400,6 +440,8 @@ interface ParsedVoiceCommand {
   accountScore: number;
   accountStatus: "matched" | "uncertain" | "missing";
   topCandidates: AccountItem[];
+  date: string;
+  dateLabel: string;
 }
 
 function parseVoiceCommand(
@@ -413,7 +455,10 @@ function parseVoiceCommand(
   const type = preSelectedType;
   const cleanText = sanitizeTranscript(rawText);
 
-  const { category, rest: afterCat } = matchCategory(cleanText, categories, type);
+  // Detect date first and strip from text
+  const { date, rest: afterDate, label: dateLabel } = detectVoiceDate(cleanText);
+
+  const { category, rest: afterCat } = matchCategory(afterDate, categories, type);
   const { amount, currency, rest: afterAmount, warning } = extractAmount(afterCat);
 
   let fromAccount: AccountItem | null = null;
@@ -457,7 +502,7 @@ function parseVoiceCommand(
     error = "Selecciona las cuentas origen y destino.";
   }
 
-  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning, accountScore, accountStatus, topCandidates };
+  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning, accountScore, accountStatus, topCandidates, date, dateLabel };
 }
 
 // ─── Web Speech API hook (FIXED: no continuous, proper final handling) ────
@@ -643,7 +688,7 @@ export function VoiceButton() {
 
       setEditType(result.type);
       setEditAmount(result.amount ? String(result.amount) : "");
-      setEditDate(format(new Date(), "yyyy-MM-dd"));
+      setEditDate(result.date);
       setEditCategoryId(result.category?.id || "");
       setEditAccountId(result.fromAccount?.id || "");
       setEditToAccountId(result.toAccount?.id || "");
@@ -956,11 +1001,15 @@ export function VoiceButton() {
                       </div>
                     )}
                     {editDescription && (
-                      <div className="flex justify-between py-1">
+                      <div className="flex justify-between py-1 border-b border-border">
                         <span className="text-muted-foreground">Concepto:</span>
                         <span className="font-medium truncate ml-2 max-w-[180px]">{editDescription}</span>
                       </div>
                     )}
+                    <div className="flex justify-between py-1">
+                      <span className="text-muted-foreground">Fecha:</span>
+                      <span className="font-medium">{editDate === format(new Date(), "yyyy-MM-dd") ? "Hoy" : editDate}</span>
+                    </div>
                   </div>
 
                   {/* ─── 3-COLUMN ACCOUNT SELECTOR (Tarjetas | Bancos | Efectivo) ──── */}

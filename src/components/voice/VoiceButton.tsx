@@ -963,53 +963,59 @@ export function VoiceButton() {
                     )}
                   </div>
 
-                  {/* ─── QUICK-SELECT ACCOUNT CHIPS (when account missing/uncertain) ──── */}
-                  {!editAccountId && editType !== "transfer" && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-medium text-muted-foreground">Selecciona cuenta:</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {activeAccounts.slice(0, 10).map(acc => (
-                          <button
-                            key={acc.id}
-                            onClick={() => setEditAccountId(acc.id)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                              editAccountId === acc.id
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border bg-card text-foreground hover:border-primary/50"
-                            )}
-                          >
-                            {acc.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* ─── 3-COLUMN ACCOUNT SELECTOR (Tarjetas | Bancos | Efectivo) ──── */}
+                  {((!editAccountId || parseResult.accountStatus === "uncertain") && editType !== "transfer") && (() => {
+                    const cardAccs = activeAccounts.filter(a => a.type === "credit_card");
+                    const bankAccs = activeAccounts.filter(a => ["bank", "checking", "savings", "investment"].includes(a.type));
+                    const cashAccs = activeAccounts.filter(a => ["cash"].includes(a.type));
+                    const showSelector = cardAccs.length > 0 || bankAccs.length > 0 || cashAccs.length > 0;
+                    if (!showSelector) return null;
 
-                  {/* Uncertain account - show chips to confirm or change */}
-                  {editAccountId && parseResult.accountStatus === "uncertain" && editType !== "transfer" && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
-                        ⚠️ ¿Es correcta la cuenta? Toca para cambiar:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {activeAccounts.slice(0, 8).map(acc => (
-                          <button
-                            key={acc.id}
-                            onClick={() => setEditAccountId(acc.id)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                              editAccountId === acc.id
-                                ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
-                                : "border-border bg-card text-foreground hover:border-primary/50"
+                    const chipBtn = (acc: typeof activeAccounts[0]) => (
+                      <button
+                        key={acc.id}
+                        onClick={() => setEditAccountId(acc.id)}
+                        className={cn(
+                          "w-full px-2 py-1.5 rounded-lg text-xs font-medium border transition-all text-left truncate",
+                          editAccountId === acc.id
+                            ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                            : "border-border bg-card text-foreground hover:border-primary/50"
+                        )}
+                      >
+                        {acc.name}
+                      </button>
+                    );
+
+                    return (
+                      <div className="space-y-1.5 w-full">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {editAccountId && parseResult.accountStatus === "uncertain"
+                            ? "⚠️ ¿Es correcta? Toca para cambiar:"
+                            : "Selecciona cuenta:"}
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 max-h-[180px] overflow-y-auto">
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Tarjetas</p>
+                            {cardAccs.length > 0 ? cardAccs.map(chipBtn) : (
+                              <p className="text-[10px] text-muted-foreground/50 text-center">—</p>
                             )}
-                          >
-                            {acc.name}
-                          </button>
-                        ))}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Bancos</p>
+                            {bankAccs.length > 0 ? bankAccs.map(chipBtn) : (
+                              <p className="text-[10px] text-muted-foreground/50 text-center">—</p>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Efectivo</p>
+                            {cashAccs.length > 0 ? cashAccs.map(chipBtn) : (
+                              <p className="text-[10px] text-muted-foreground/50 text-center">—</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 

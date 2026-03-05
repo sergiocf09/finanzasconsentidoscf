@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -26,39 +26,14 @@ type CategoryItem = ReturnType<typeof useCategories>["categories"][number];
 
 // ─── Transcript Sanitizer ───────────────────────────────────
 function sanitizeTranscript(raw: string): string {
-  let clean = raw;
-  
-  // 1) Sentence-level dedup: if a sentence repeats, keep only first occurrence
-  // Split by period/comma and check for repeated chunks
-  const sentences = clean.split(/[.,]\s*/);
-  if (sentences.length > 1) {
-    const seen = new Set<string>();
-    const unique: string[] = [];
-    for (const s of sentences) {
-      const key = s.toLowerCase().trim();
-      if (key.length < 3) continue;
-      // Check if this sentence is substantially similar to one already seen
-      let isDup = false;
-      for (const prev of seen) {
-        if (prev.includes(key) || key.includes(prev) || 
-            (key.length > 10 && prev.length > 10 && key.substring(0, Math.min(key.length, 20)) === prev.substring(0, Math.min(prev.length, 20)))) {
-          isDup = true;
-          break;
-        }
-      }
-      if (!isDup) {
-        seen.add(key);
-        unique.push(s.trim());
-      }
-    }
-    clean = unique.join(", ");
-  }
-  
-  // 2) Deduplicate consecutive repeated words (>2 repeats → keep 1)
+  let clean = raw.replace(/\s+/g, " ").trim();
+  // Deduplicate consecutive repeated words (3+ → 1)
   clean = clean.replace(/\b(\w+)(?:\s+\1){2,}\b/gi, "$1");
-  // 3) Deduplicate consecutive repeated bigrams
+  // Deduplicate consecutive repeated bigrams
   clean = clean.replace(/\b((\w+)\s+(\w+))(?:\s+\1){1,}\b/gi, "$1");
-  // 4) Collapse spaces
+  // Deduplicate consecutive repeated trigrams
+  clean = clean.replace(/\b((\w+)\s+(\w+)\s+(\w+))(?:\s+\1){1,}\b/gi, "$1");
+  // Collapse spaces
   clean = clean.replace(/\s+/g, " ").trim();
   return clean;
 }
@@ -79,22 +54,22 @@ const SPANISH_NUMS: Record<string, number> = {
   ochocientos: 800, ochocientas: 800, novecientos: 900, novecientas: 900,
 };
 
-function spanishWordsToNumber(text: string): { value: number | null; matched: string } {
+function spanishWordsToNumber(text: string): { value: number | null; matchedTokens: string[] } {
   const norm = normalize(text);
   const words = norm.split(/\s+/);
   let total = 0;
   let current = 0;
   let found = false;
-  const matchedWords: string[] = [];
+  const matchedTokens: string[] = [];
 
   for (const w of words) {
-    if (w === "y") { matchedWords.push(w); continue; }
+    if (w === "y") { matchedTokens.push(w); continue; }
     if (w === "mil") {
       if (current === 0) current = 1;
       total += current * 1000;
       current = 0;
       found = true;
-      matchedWords.push(w);
+      matchedTokens.push(w);
       continue;
     }
     if (w === "millon" || w === "millones") {
@@ -102,17 +77,17 @@ function spanishWordsToNumber(text: string): { value: number | null; matched: st
       total += current * 1000000;
       current = 0;
       found = true;
-      matchedWords.push(w);
+      matchedTokens.push(w);
       continue;
     }
     if (SPANISH_NUMS[w] !== undefined) {
       current += SPANISH_NUMS[w];
       found = true;
-      matchedWords.push(w);
+      matchedTokens.push(w);
     }
   }
   total += current;
-  return { value: found ? total : null, matched: matchedWords.join(" ") };
+  return { value: found ? total : null, matchedTokens };
 }
 
 // ─── Keyword-based category fallback dictionary ─────────────
@@ -133,27 +108,38 @@ function extractAmount(text: string): { amount: number | null; currency: string;
   let rest = text;
   let currency = "MXN";
   let warning: string | null = null;
-
   const normText = normalize(rest);
 
   if (normText.includes("dolar") || normText.includes("usd") || normText.includes("dollar")) currency = "USD";
   else if (normText.includes("euro") || normText.includes("eur")) currency = "EUR";
 
-  // Pattern 1: digits + "mil" (e.g. "2 mil", "54 mil")
-  const milMatch = rest.match(/(\d+(?:\.\d+)?)\s*mil/i);
+  // Pattern 1: digit(s) + "mil" (e.g. "35 mil", "2 mil 800")
+  const milMatch = rest.match(/(\d+)\s*mil\s*(\d+)?/i);
   if (milMatch) {
-    const amount = parseFloat(milMatch[1]) * 1000;
+    let amount = parseInt(milMatch[1], 10) * 1000;
+    if (milMatch[2]) amount += parseInt(milMatch[2], 10);
     rest = rest.replace(milMatch[0], " ");
     rest = stripCurrencyWords(rest);
-    return { amount: Math.round(amount), currency, rest: cleanSpaces(rest), warning };
+    return { amount, currency, rest: cleanSpaces(rest), warning };
   }
 
-  // Pattern 2: plain digit sequences (e.g. "2800", "1500", "300")
-  // Match any sequence of digits, no decimals (voice never uses cents)
+  // Pattern 2: digits with commas/dots as thousands separators (e.g. "35,100", "35.100")
+  // Important: treat dots/commas followed by exactly 3 digits as thousands separators (no cents)
+  const formattedMatch = rest.match(/(\d{1,3}(?:[.,]\d{3})+)/);
+  if (formattedMatch) {
+    const raw = formattedMatch[1].replace(/[.,]/g, "");
+    const amount = parseInt(raw, 10);
+    if (amount > 0) {
+      rest = rest.replace(formattedMatch[0], " ");
+      rest = stripCurrencyWords(rest);
+      return { amount, currency, rest: cleanSpaces(rest), warning };
+    }
+  }
+
+  // Pattern 3: plain digit sequences (e.g. "2800", "1500", "300")
   const plainDigitMatch = rest.match(/\$?\s*(\d{2,})/);
   if (plainDigitMatch) {
-    let raw = plainDigitMatch[1];
-    const amount = parseInt(raw, 10);
+    const amount = parseInt(plainDigitMatch[1], 10);
     if (amount > 0) {
       rest = rest.replace(plainDigitMatch[0], " ");
       rest = stripCurrencyWords(rest);
@@ -161,17 +147,17 @@ function extractAmount(text: string): { amount: number | null; currency: string;
     }
   }
 
-  // Pattern 3: Spanish word numbers
-  const { value: wordAmount, matched } = spanishWordsToNumber(rest);
+  // Pattern 4: Spanish word numbers ("treinta y cinco mil cien")
+  const { value: wordAmount, matchedTokens } = spanishWordsToNumber(rest);
   if (wordAmount && wordAmount > 0) {
     if (normalize(rest).includes("mil") && wordAmount < 500) {
-      warning = "El monto detectado parece incorrecto. Edita el monto o vuelve a dictarlo.";
+      warning = "El monto detectado parece incorrecto. Edita el monto.";
     }
-    for (const w of matched.split(/\s+/)) {
-      if (w) rest = rest.replace(new RegExp(`\\b${w}\\b`, "i"), " ");
+    for (const w of matchedTokens) {
+      if (w && w !== "y") rest = rest.replace(new RegExp(`\\b${w}\\b`, "i"), " ");
     }
     rest = stripCurrencyWords(rest);
-    return { amount: Math.round(wordAmount), currency, rest: cleanSpaces(rest), warning };
+    return { amount: wordAmount, currency, rest: cleanSpaces(rest), warning };
   }
 
   return { amount: null, currency, rest, warning: null };
@@ -193,14 +179,13 @@ function matchCategory(text: string, cats: CategoryItem[], txType: "expense" | "
   // 1) Match by category keywords field
   for (const cat of sorted) {
     if (cat.keywords?.some(kw => kw && norm.includes(normalize(kw)))) {
-      const rest = stripPhrase(text, cat.name);
-      let cleaned = rest;
+      let rest = text;
       for (const kw of cat.keywords ?? []) {
-        if (kw && normalize(cleaned).includes(normalize(kw))) {
-          cleaned = stripPhrase(cleaned, kw);
+        if (kw && normalize(rest).includes(normalize(kw))) {
+          rest = stripPhrase(rest, kw);
         }
       }
-      return { category: cat, rest: cleaned };
+      return { category: cat, rest };
     }
   }
 
@@ -254,16 +239,13 @@ function tokenSimilarity(token: string, target: string): number {
   return maxLen === 0 ? 0 : 1 - dist / maxLen;
 }
 
-// Account aliases: generate from name
 function generateAliases(name: string): string[] {
   const norm = normalize(name);
   const words = norm.split(/\s+/).filter(w => w.length > 1);
   const aliases: string[] = [norm];
-  // Each significant word (>2 chars) as alias
   for (const w of words) {
     if (w.length > 2) aliases.push(w);
   }
-  // First + last word
   if (words.length >= 2) {
     aliases.push(words[0] + " " + words[words.length - 1]);
   }
@@ -272,16 +254,19 @@ function generateAliases(name: string): string[] {
 
 const STOPWORDS_ACCOUNT = new Set(["de", "del", "la", "el", "los", "las", "con", "por", "en", "a", "tarjeta", "credito", "crédito", "debito", "débito", "cuenta"]);
 
-function matchAccountInText(text: string, accs: AccountItem[], excludeId?: string): {
+interface AccountMatchResult {
   account: AccountItem | null;
   rest: string;
   score: number;
-} {
+  status: "matched" | "uncertain" | "missing";
+  topCandidates: AccountItem[];
+}
+
+function matchAccountInText(text: string, accs: AccountItem[], excludeId?: string): AccountMatchResult {
   const norm = normalize(text);
   const spokenTokens = norm.split(/\s+/).filter(w => w.length > 2 && !STOPWORDS_ACCOUNT.has(w));
   const active = accs.filter(a => a.is_active && a.id !== excludeId);
 
-  // Score each account
   const scored: { acc: AccountItem; score: number; matchedTokens: string[] }[] = [];
 
   for (const acc of active) {
@@ -320,12 +305,12 @@ function matchAccountInText(text: string, accs: AccountItem[], excludeId?: strin
       bestScore = Math.max(bestScore, ratio * 0.9);
     }
 
-    if (bestScore >= 0.4) {
+    if (bestScore >= 0.3) {
       scored.push({ acc, score: bestScore, matchedTokens: matchedSpoken });
     }
   }
 
-  // Check for "efectivo" → cash account
+  // Check for explicit "efectivo" keyword → cash account (ONLY if word is present)
   if (norm.includes("efectivo")) {
     const cashAcc = active.find(a => a.type === "cash");
     if (cashAcc) {
@@ -333,17 +318,26 @@ function matchAccountInText(text: string, accs: AccountItem[], excludeId?: strin
     }
   }
 
-  if (scored.length === 0) return { account: null, rest: text, score: 0 };
+  if (scored.length === 0) {
+    return { account: null, rest: text, score: 0, status: "missing", topCandidates: active.slice(0, 8) };
+  }
 
   scored.sort((a, b) => b.score - a.score);
   const best = scored[0];
+  const topCandidates = scored.slice(0, 5).map(s => s.acc);
 
-  // If score too low or tie → return null (will trigger confirmation)
-  if (best.score < 0.5) return { account: null, rest: text, score: best.score };
-
-  let rest = text;
-  for (const t of best.matchedTokens) rest = stripWord(rest, t);
-  return { account: best.acc, rest: cleanSpaces(rest), score: best.score };
+  // Thresholds: >= 0.80 auto-select, 0.50-0.79 uncertain, < 0.50 missing
+  if (best.score >= 0.80) {
+    let rest = text;
+    for (const t of best.matchedTokens) rest = stripWord(rest, t);
+    return { account: best.acc, rest: cleanSpaces(rest), score: best.score, status: "matched", topCandidates };
+  } else if (best.score >= 0.50) {
+    let rest = text;
+    for (const t of best.matchedTokens) rest = stripWord(rest, t);
+    return { account: best.acc, rest: cleanSpaces(rest), score: best.score, status: "uncertain", topCandidates };
+  } else {
+    return { account: null, rest: text, score: best.score, status: "missing", topCandidates };
+  }
 }
 
 // ─── String cleanup helpers ─────────────────────────────────
@@ -363,29 +357,28 @@ function cleanSpaces(text: string): string {
 
 function buildConcept(remaining: string, accountName?: string, categoryName?: string): string {
   let desc = remaining;
-  // Strip account name tokens from concept
   if (accountName) {
     for (const token of accountName.split(/\s+/)) {
       if (token.length > 2) desc = desc.replace(new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), " ");
     }
   }
-  // Strip category name tokens from concept
   if (categoryName) {
     for (const token of categoryName.split(/\s+/)) {
       if (token.length > 2) desc = desc.replace(new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), " ");
     }
   }
-  desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo|te|pago|pagué|pague|pagado|tarjeta|credito|crédito|débito|debito)\b/gi, " ");
+  // Strip stopwords, action verbs, leftover digits
+  desc = desc.replace(/\b(por|de|en|con|la|el|los|las|del|al|para|y|a|un|una|que|se|su|mi|tu|lo|te|pago|pagué|pague|pagado|tarjeta|credito|crédito|débito|debito|efectivo)\b/gi, " ");
   desc = desc.replace(/\b(gasto|gaste|gasté|gastó|pagué|pague|compré|compre|ingreso|recibí|recibi|transferencia|transfiere|transferí|transferi)\b/gi, " ");
-  desc = desc.replace(/\b\d+\b/g, " "); // Strip leftover digits
+  desc = desc.replace(/\b\d+\b/g, " ");
   desc = desc.replace(/[.,;:\-–—]+/g, " ").replace(/\s+/g, " ").trim();
-  // Deduplicate words in concept
+  // Deduplicate words
   const words = desc.split(" ");
   const seen = new Set<string>();
   const deduped: string[] = [];
   for (const w of words) {
     const lw = w.toLowerCase();
-    if (lw.length < 2) continue; // skip single chars
+    if (lw.length < 2) continue;
     if (!seen.has(lw)) { seen.add(lw); deduped.push(w); }
   }
   desc = deduped.join(" ");
@@ -405,6 +398,8 @@ interface ParsedVoiceCommand {
   error: string | null;
   warning: string | null;
   accountScore: number;
+  accountStatus: "matched" | "uncertain" | "missing";
+  topCandidates: AccountItem[];
 }
 
 function parseVoiceCommand(
@@ -416,7 +411,6 @@ function parseVoiceCommand(
   preSelectedToAccountId?: string,
 ): ParsedVoiceCommand {
   const type = preSelectedType;
-  // Sanitize transcript first
   const cleanText = sanitizeTranscript(rawText);
 
   const { category, rest: afterCat } = matchCategory(cleanText, categories, type);
@@ -426,24 +420,32 @@ function parseVoiceCommand(
   let toAccount: AccountItem | null = null;
   let afterAccounts = afterAmount;
   let accountScore = 0;
+  let accountStatus: "matched" | "uncertain" | "missing" = "missing";
+  let topCandidates: AccountItem[] = [];
 
   if (type === "transfer" && preSelectedFromAccountId && preSelectedToAccountId) {
     fromAccount = accounts.find(a => a.id === preSelectedFromAccountId) || null;
     toAccount = accounts.find(a => a.id === preSelectedToAccountId) || null;
     afterAccounts = afterAmount;
     accountScore = 1;
+    accountStatus = "matched";
+    topCandidates = [];
   } else if (type === "transfer") {
-    const { account: acc1, rest: r1, score: s1 } = matchAccountInText(afterAmount, accounts);
-    fromAccount = acc1;
-    const { account: acc2, rest: r2, score: s2 } = matchAccountInText(r1, accounts, acc1?.id);
-    toAccount = acc2;
-    afterAccounts = r2;
-    accountScore = Math.min(s1, s2);
+    const r1 = matchAccountInText(afterAmount, accounts);
+    fromAccount = r1.account;
+    const r2 = matchAccountInText(r1.rest, accounts, r1.account?.id);
+    toAccount = r2.account;
+    afterAccounts = r2.rest;
+    accountScore = Math.min(r1.score, r2.score);
+    accountStatus = r1.status === "missing" || r2.status === "missing" ? "missing" : r1.status === "uncertain" || r2.status === "uncertain" ? "uncertain" : "matched";
+    topCandidates = r1.topCandidates;
   } else {
-    const { account, rest: r, score } = matchAccountInText(afterAmount, accounts);
-    fromAccount = account;
-    afterAccounts = r;
-    accountScore = score;
+    const r = matchAccountInText(afterAmount, accounts);
+    fromAccount = r.account;
+    afterAccounts = r.rest;
+    accountScore = r.score;
+    accountStatus = r.status;
+    topCandidates = r.topCandidates;
   }
 
   const concept = buildConcept(afterAccounts, fromAccount?.name || toAccount?.name, category?.name);
@@ -455,16 +457,16 @@ function parseVoiceCommand(
     error = "Selecciona las cuentas origen y destino.";
   }
 
-  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning, accountScore };
+  return { type, category, amount, currency, fromAccount, toAccount, concept, error, warning, accountScore, accountStatus, topCandidates };
 }
 
-// ─── Web Speech API hook ────────────────────────────────────
+// ─── Web Speech API hook (FIXED: no continuous, proper final handling) ────
 function useWebSpeechSTT() {
   const recognitionRef = useRef<any>(null);
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
-  const isListeningRef = useRef(false);
+  const finalSegmentsRef = useRef<string[]>([]);
 
   const isSupported = typeof window !== "undefined" && 
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
@@ -478,31 +480,37 @@ function useWebSpeechSTT() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
+    // CRITICAL SETTINGS:
+    // continuous=false → single utterance, avoids re-emission of previous segments
+    // interimResults=true → show live text while speaking
     recognition.lang = "es-MX";
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    
-    let accumulated = "";
+    recognition.maxAlternatives = 3;
 
     recognition.onresult = (event: any) => {
-      let interim = "";
-      let final = "";
+      let currentInterim = "";
       
       for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          final += result[0].transcript + " ";
+          // Pick best alternative (first one is usually best)
+          const transcript = result[0].transcript.trim();
+          if (transcript) {
+            // Only add if not already in our segments (prevents duplication)
+            const existing = finalSegmentsRef.current.join(" ").toLowerCase();
+            if (!existing.includes(transcript.toLowerCase())) {
+              finalSegmentsRef.current.push(transcript);
+              const joined = finalSegmentsRef.current.join(" ");
+              setFinalText(sanitizeTranscript(joined));
+            }
+          }
+          currentInterim = ""; // Clear interim once final arrives
         } else {
-          interim += result[0].transcript;
+          currentInterim = result[0].transcript;
         }
       }
-      
-      if (final.trim()) {
-        accumulated = (accumulated + " " + final).trim();
-        setFinalText(accumulated);
-      }
-      setInterimText(interim);
+      setInterimText(currentInterim);
     };
 
     recognition.onerror = (event: any) => {
@@ -510,31 +518,27 @@ function useWebSpeechSTT() {
       if (event.error === "not-allowed") {
         toast.error("Permite el acceso al micrófono para usar voz.");
       } else if (event.error === "no-speech") {
-        // Silent
+        // Silent - user didn't speak
       } else if (event.error !== "aborted") {
         toast.error("Error de reconocimiento. Intenta de nuevo.");
       }
       setIsListening(false);
-      isListeningRef.current = false;
     };
 
     recognition.onend = () => {
-      if (isListeningRef.current) {
-        try { recognition.start(); } catch (e) { /* ignore */ }
-        return;
-      }
+      // With continuous=false, recognition ends after one utterance.
+      // We DON'T restart - this is intentional to prevent repetition.
       setIsListening(false);
     };
 
     recognitionRef.current = recognition;
-    accumulated = "";
+    finalSegmentsRef.current = [];
     setFinalText("");
     setInterimText("");
     
     try {
       recognition.start();
       setIsListening(true);
-      isListeningRef.current = true;
       if (navigator.vibrate) navigator.vibrate(100);
     } catch (e) {
       console.error("Failed to start recognition:", e);
@@ -543,7 +547,6 @@ function useWebSpeechSTT() {
   }, [isSupported]);
 
   const stop = useCallback((): string => {
-    isListeningRef.current = false;
     const recognition = recognitionRef.current;
     if (recognition) {
       recognition.stop();
@@ -551,13 +554,14 @@ function useWebSpeechSTT() {
     }
     setIsListening(false);
     
-    const result = (finalText + " " + interimText).trim();
+    // Build final result from segments + any remaining interim
+    const segments = finalSegmentsRef.current.join(" ");
+    const result = sanitizeTranscript((segments + " " + interimText).trim());
     setInterimText("");
     return result;
-  }, [finalText, interimText]);
+  }, [interimText]);
 
   const reset = useCallback(() => {
-    isListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
@@ -565,6 +569,7 @@ function useWebSpeechSTT() {
     setIsListening(false);
     setInterimText("");
     setFinalText("");
+    finalSegmentsRef.current = [];
   }, []);
 
   return { isListening, interimText, finalText, isSupported, start, stop, reset };
@@ -587,7 +592,7 @@ export function VoiceButton() {
 
   const stt = useWebSpeechSTT();
 
-  // ─── Pre-selection state ───────────────
+  // Pre-selection state
   const [selectedType, setSelectedType] = useState<"expense" | "income" | "transfer" | null>(null);
   const [preFromAccountId, setPreFromAccountId] = useState("");
   const [preToAccountId, setPreToAccountId] = useState("");
@@ -601,65 +606,75 @@ export function VoiceButton() {
   const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const canStartRecording = selectedType !== null && (selectedType !== "transfer" || (preFromAccountId && preToAccountId && preFromAccountId !== preToAccountId));
+  // ─── ONE-TAP: selecting type immediately starts recording ────
+  const handleTypeSelect = useCallback((type: "expense" | "income" | "transfer") => {
+    setSelectedType(type);
+    // For non-transfer, start recording immediately
+    if (type !== "transfer") {
+      // Small delay to let state update
+      setTimeout(() => {
+        stt.start();
+      }, 150);
+    }
+  }, [stt]);
 
-  const handleStartRecording = useCallback(async () => {
-    if (!canStartRecording) return;
+  // Auto-process when STT stops listening and we have text
+  const hasProcessed = useRef(false);
+  useEffect(() => {
+    if (!stt.isListening && (stt.finalText || stt.interimText) && selectedType && !parseResult && !hasProcessed.current) {
+      hasProcessed.current = true;
+      const rawText = (stt.finalText + " " + stt.interimText).trim();
+      if (!rawText) return;
+      
+      const cleaned = sanitizeTranscript(rawText);
+      setCommittedText(rawText);
+      setCleanTranscript(cleaned);
+
+      const activeAccs = accounts.filter(a => a.is_active);
+      const result = parseVoiceCommand(
+        rawText,
+        selectedType,
+        activeAccs,
+        categories,
+        selectedType === "transfer" ? preFromAccountId : undefined,
+        selectedType === "transfer" ? preToAccountId : undefined,
+      );
+      setParseResult(result);
+
+      setEditType(result.type);
+      setEditAmount(result.amount ? String(result.amount) : "");
+      setEditDate(format(new Date(), "yyyy-MM-dd"));
+      setEditCategoryId(result.category?.id || "");
+      setEditAccountId(result.fromAccount?.id || "");
+      setEditToAccountId(result.toAccount?.id || "");
+      setEditDescription(result.concept);
+
+      // NO default to Efectivo - leave blank if not detected
+      // User must select from chips
+
+      // Log
+      if (user) {
+        supabase.from("voice_logs").insert([{
+          user_id: user.id,
+          transcript_raw: rawText,
+          parsed_json: { ...result, transcript_clean: cleaned } as any,
+          confidence: result.amount ? (result.accountScore > 0.7 ? 85 : 60) : 30,
+        }]).then(() => {});
+      }
+
+      if (result.warning) toast.warning(result.warning);
+      if (result.error) toast.error(result.error);
+    }
+  }, [stt.isListening, stt.finalText, stt.interimText, selectedType, parseResult, accounts, categories, preFromAccountId, preToAccountId, user]);
+
+  const handleStopRecording = useCallback(() => {
+    stt.stop();
+    // Processing will happen in the useEffect above
+  }, [stt]);
+
+  const handleStartRecording = useCallback(() => {
     stt.start();
-  }, [canStartRecording, stt]);
-
-  const handleStopRecording = useCallback(async () => {
-    const rawText = stt.stop();
-    const finalText = rawText || (stt.finalText + " " + stt.interimText).trim();
-    
-    if (!finalText) {
-      toast.error("No se detectó audio. Intenta de nuevo.");
-      return;
-    }
-
-    // Sanitize transcript
-    const cleaned = sanitizeTranscript(finalText);
-    setCommittedText(finalText);
-    setCleanTranscript(cleaned);
-
-    const activeAccs = accounts.filter(a => a.is_active);
-    const result = parseVoiceCommand(
-      finalText,
-      selectedType!,
-      activeAccs,
-      categories,
-      selectedType === "transfer" ? preFromAccountId : undefined,
-      selectedType === "transfer" ? preToAccountId : undefined,
-    );
-    setParseResult(result);
-
-    setEditType(result.type);
-    setEditAmount(result.amount ? String(Math.round(result.amount)) : "");
-    setEditDate(format(new Date(), "yyyy-MM-dd"));
-    setEditCategoryId(result.category?.id || "");
-    setEditAccountId(result.fromAccount?.id || "");
-    setEditToAccountId(result.toAccount?.id || "");
-    setEditDescription(result.concept);
-
-    // Default to cash if no account detected (non-transfer)
-    if (!result.fromAccount && result.type !== "transfer") {
-      const cashAcc = accounts.find(a => a.type === "cash" && a.is_active);
-      if (cashAcc) setEditAccountId(cashAcc.id);
-    }
-
-    // Log with both raw and clean
-    if (user) {
-      supabase.from("voice_logs").insert([{
-        user_id: user.id,
-        transcript_raw: finalText,
-        parsed_json: { ...result, transcript_clean: cleaned } as any,
-        confidence: result.amount ? (result.accountScore > 0.7 ? 85 : 60) : 30,
-      }]).then(() => {});
-    }
-
-    if (result.warning) toast.warning(result.warning);
-    if (result.error) toast.error(result.error);
-  }, [stt, accounts, categories, selectedType, preFromAccountId, preToAccountId, user]);
+  }, [stt]);
 
   const canConfirm = (): boolean => {
     const amount = parseFloat(editAmount);
@@ -730,6 +745,7 @@ export function VoiceButton() {
 
   const handleReset = () => {
     stt.reset();
+    hasProcessed.current = false;
     setCommittedText("");
     setCleanTranscript("");
     setParseResult(null);
@@ -790,20 +806,20 @@ export function VoiceButton() {
             <DrawerHeader className="text-center pb-1 shrink-0">
               <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
               <DrawerDescription className="text-xs leading-tight">
-                Selecciona el tipo, luego dicta el movimiento
+                Toca el tipo para empezar a grabar
               </DrawerDescription>
             </DrawerHeader>
 
             <div className="flex flex-col items-center px-4 space-y-2 overflow-y-auto flex-1 min-h-0 pb-2">
 
-              {/* ─── STEP 1: Type pre-selection ──── */}
+              {/* ─── STEP 1: Type selection (one-tap starts recording) ──── */}
               {!parseResult && (
                 <div className="w-full space-y-2">
                   <div className="flex gap-2 w-full">
                     {typePills.map(({ value, label, icon }) => (
                       <button
                         key={value}
-                        onClick={() => setSelectedType(value)}
+                        onClick={() => handleTypeSelect(value)}
                         disabled={stt.isListening}
                         className={cn(
                           "flex-1 py-2 px-1 rounded-lg text-sm font-medium transition-all border-2",
@@ -845,72 +861,52 @@ export function VoiceButton() {
                           </SelectContent>
                         </Select>
                       </div>
+                      {preFromAccountId && preToAccountId && preFromAccountId !== preToAccountId && (
+                        <Button
+                          className="w-full mt-2"
+                          onClick={handleStartRecording}
+                          disabled={stt.isListening}
+                        >
+                          <Mic className="h-4 w-4 mr-2" /> Grabar monto
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ─── STEP 2: Mic button ──── */}
-              {!parseResult && (
-                <>
-                  {!stt.isSupported && (
-                    <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-sm text-destructive">
-                      <AlertTriangle className="h-4 w-4 shrink-0" />
-                      <span>Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.</span>
-                    </div>
-                  )}
+              {/* ─── Listening indicator ──── */}
+              {!parseResult && stt.isListening && (
+                <div className="flex flex-col items-center gap-2 py-2">
                   <button
-                    onClick={stt.isListening ? handleStopRecording : handleStartRecording}
-                    disabled={!canStartRecording || !stt.isSupported}
-                    className={cn(
-                      "flex h-14 w-14 items-center justify-center rounded-full transition-all shrink-0",
-                      stt.isListening
-                        ? "bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30"
-                        : canStartRecording && stt.isSupported
-                          ? "bg-primary text-primary-foreground hover:scale-105"
-                          : "bg-muted text-muted-foreground cursor-not-allowed"
-                    )}
+                    onClick={handleStopRecording}
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-expense text-expense-foreground animate-pulse ring-4 ring-expense/30 transition-all"
                   >
-                    {stt.isListening ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                    <MicOff className="h-7 w-7" />
                   </button>
+                  <p className="text-sm text-expense font-semibold animate-pulse">🎙️ ¡Habla ahora! — Toca para detener</p>
+                </div>
+              )}
 
-                  <p className="text-xs text-center px-2">
-                    {!selectedType ? (
-                      <span className="text-muted-foreground font-medium">
-                        👆 Selecciona tipo: Gasto, Ingreso o Transferencia
-                      </span>
-                    ) : selectedType === "transfer" && (!preFromAccountId || !preToAccountId) ? (
-                      <span className="text-muted-foreground">
-                        Selecciona cuentas origen y destino
-                      </span>
-                    ) : stt.isListening ? (
-                      <span className="text-expense font-semibold animate-pulse">🎙️ ¡Habla ahora! — Toca para detener</span>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        Toca el micrófono y dicta.
-                        <br />
-                        <span className="italic">
-                          {selectedType === "expense" && 'Ej: "Gasolina mil pesos Scotiabank"'}
-                          {selectedType === "income" && 'Ej: "Pensión 57 mil pesos BBVA"'}
-                          {selectedType === "transfer" && 'Ej: "Mil pesos pago tarjeta"'}
-                        </span>
-                      </span>
-                    )}
-                  </p>
-                </>
+              {/* ─── Status when not listening and no result yet ──── */}
+              {!parseResult && !stt.isListening && selectedType && selectedType !== "transfer" && (
+                <p className="text-xs text-muted-foreground text-center italic">
+                  {selectedType === "expense" && 'Ej: "Gasolina mil pesos Scotiabank"'}
+                  {selectedType === "income" && 'Ej: "Renta 35 mil pesos BBVA"'}
+                </p>
               )}
 
               {/* Live transcript */}
               {stt.isListening && liveText && (
                 <div className="w-full rounded-lg bg-secondary p-2">
-                  <p className="text-center text-sm text-foreground break-words">
+                  <p className="text-center text-sm text-foreground break-words line-clamp-2">
                     {stt.finalText && <span className="font-medium">{stt.finalText} </span>}
                     {stt.interimText && <span className="text-muted-foreground italic">{stt.interimText}</span>}
                   </p>
                 </div>
               )}
 
-              {/* Parsed result - view mode */}
+              {/* ─── Parsed result - view mode ──── */}
               {!stt.isListening && parseResult && !isEditing && (
                 <div className="w-full space-y-2">
                   <div className="rounded-lg bg-secondary p-2 text-center">
@@ -966,6 +962,54 @@ export function VoiceButton() {
                       </div>
                     )}
                   </div>
+
+                  {/* ─── QUICK-SELECT ACCOUNT CHIPS (when account missing/uncertain) ──── */}
+                  {!editAccountId && editType !== "transfer" && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">Selecciona cuenta:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeAccounts.slice(0, 10).map(acc => (
+                          <button
+                            key={acc.id}
+                            onClick={() => setEditAccountId(acc.id)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                              editAccountId === acc.id
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-card text-foreground hover:border-primary/50"
+                            )}
+                          >
+                            {acc.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Uncertain account - show chips to confirm or change */}
+                  {editAccountId && parseResult.accountStatus === "uncertain" && editType !== "transfer" && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
+                        ⚠️ ¿Es correcta la cuenta? Toca para cambiar:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeAccounts.slice(0, 8).map(acc => (
+                          <button
+                            key={acc.id}
+                            onClick={() => setEditAccountId(acc.id)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                              editAccountId === acc.id
+                                ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                                : "border-border bg-card text-foreground hover:border-primary/50"
+                            )}
+                          >
+                            {acc.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1032,7 +1076,7 @@ export function VoiceButton() {
               )}
             </div>
 
-            {/* Sticky bottom buttons — ALWAYS visible */}
+            {/* Sticky bottom buttons */}
             {!stt.isListening && parseResult && (
               <div className="px-4 py-3 border-t border-border shrink-0 bg-background space-y-2">
                 {validationMsg && !isEditing && (

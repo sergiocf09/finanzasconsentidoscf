@@ -123,7 +123,7 @@ export default function Categories() {
   return (
     <div className="pb-4">
       {/* Sticky header */}
-      <div className="sticky top-14 lg:top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+      <div className="sticky top-0 z-30 bg-background pb-2 pt-2 -mx-1 px-1 border-b border-border">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-heading font-semibold text-foreground">Categorías</h1>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={openCreate}>

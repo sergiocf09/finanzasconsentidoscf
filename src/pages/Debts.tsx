@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useDebts, Debt } from "@/hooks/useDebts";
 import { DebtForm } from "@/components/debts/DebtForm";
-import { useNavigate } from "react-router-dom";
+import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
 
 const typeIcons: Record<string, typeof CreditCard> = {
   credit_card: CreditCard, personal_loan: User, mortgage: Home, car_loan: Car,
@@ -29,8 +29,8 @@ export default function Debts() {
   const { debts, isLoading, totalDebt, totalMinimumPayment, snowballOrder, createDebt, deleteDebt } = useDebts();
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Debt | null>(null);
+  const [editTarget, setEditTarget] = useState<Debt | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
-  const navigate = useNavigate();
 
   const formatAmount = (value: number, currency: string) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
@@ -53,7 +53,7 @@ export default function Debts() {
       <div
         key={debt.id}
         className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-card border border-border card-interactive cursor-pointer group"
-        onClick={() => navigate(`/accounts/${debt.account_id || debt.id}`)}
+        onClick={() => setEditTarget(debt)}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-expense/10 shrink-0">
           <Icon className="h-4 w-4 text-expense" />
@@ -172,6 +172,7 @@ export default function Debts() {
       )}
 
       <DebtForm open={formOpen} onOpenChange={setFormOpen} />
+      <DebtEditSheet debt={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -73,7 +73,7 @@ export default function Debts() {
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
           </div>
         </div>
-        <div className="text-right shrink-0">
+        <div className="text-right shrink-0 ml-auto">
           <p className="text-sm font-bold text-expense tabular-nums">
             {debt.current_balance !== 0 ? "-" : ""}{formatAmount(debt.current_balance, debt.currency)}
           </p>
@@ -84,14 +84,16 @@ export default function Debts() {
           )}
         </div>
         <Button
-          variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0"
+          variant="ghost" size="icon" className="h-7 w-7 shrink-0"
           onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
+          title="Editar deuda"
         >
-          <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
         <Button
-          variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0"
+          variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100"
           onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
+          title="Eliminar deuda"
         >
           <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
         </Button>

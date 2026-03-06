@@ -85,7 +85,7 @@ export default function Accounts() {
         </div>
         <div className="text-right mr-0.5">
           <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
-            {debt && account.current_balance > 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
+            {debt && account.current_balance !== 0 ? "-" : ""}{account.currency === "USD" ? "USD " : ""}{fmt(account.current_balance, account.currency)}
           </p>
         </div>
         <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
@@ -152,7 +152,7 @@ export default function Accounts() {
                     <CreditCard className="h-3.5 w-3.5 text-expense opacity-80" />
                     <p className="text-[10px] text-expense opacity-80">Pasivos {currency}</p>
                   </div>
-                  <p className="text-lg font-bold font-heading text-expense">{fmt(total, currency)}</p>
+                  <p className="text-lg font-bold font-heading text-expense">-{fmt(total, currency)}</p>
                 </div>
               ))}
             </div>

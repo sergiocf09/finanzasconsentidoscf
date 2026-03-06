@@ -33,7 +33,7 @@ export default function Debts() {
   const navigate = useNavigate();
 
   const formatAmount = (value: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -42,7 +42,7 @@ export default function Debts() {
   };
 
   const sortDebts = (list: Debt[]) =>
-    [...list].sort((a, b) => sortAsc ? a.current_balance - b.current_balance : b.current_balance - a.current_balance);
+    [...list].sort((a, b) => sortAsc ? Math.abs(a.current_balance) - Math.abs(b.current_balance) : Math.abs(b.current_balance) - Math.abs(a.current_balance));
 
   const shortTerm = sortDebts(debts.filter(d => SHORT_TERM_TYPES.includes(d.type)));
   const longTerm = sortDebts(debts.filter(d => LONG_TERM_TYPES.includes(d.type)));
@@ -73,7 +73,7 @@ export default function Debts() {
         </div>
         <div className="text-right shrink-0">
           <p className="text-sm font-bold text-expense tabular-nums">
-            {formatAmount(debt.current_balance, debt.currency)}
+            {debt.current_balance !== 0 ? "-" : ""}{formatAmount(debt.current_balance, debt.currency)}
           </p>
           {debt.minimum_payment > 0 && (
             <p className="text-[10px] text-muted-foreground">
@@ -127,7 +127,7 @@ export default function Debts() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-expense/5 border border-expense/20 p-3">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Deuda total</p>
-              <p className="text-lg font-bold font-heading text-expense">{formatAmount(totalDebt, "MXN")}</p>
+              <p className="text-lg font-bold font-heading text-expense">-{formatAmount(totalDebt, "MXN")}</p>
             </div>
             <div className="rounded-xl bg-card border border-border p-3">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Pago mín. mensual</p>
@@ -152,19 +152,22 @@ export default function Debts() {
           )}
 
           {/* Strategy suggestion */}
-          {snowballOrder.length >= 2 && (
-            <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10 p-4">
-              <div className="flex items-start gap-3">
-                <TrendingDown className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">Estrategia: Bola de nieve</p>
-                  <p className="text-xs text-muted-foreground">
-                    Paga primero <span className="font-medium text-foreground">{snowballOrder[0].name}</span> ({formatAmount(snowballOrder[0].current_balance, snowballOrder[0].currency)})
-                  </p>
+          {snowballOrder.length >= 2 && (() => {
+            const first = snowballOrder.find(d => Math.abs(d.current_balance) > 0) || snowballOrder[0];
+            return (
+              <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10 p-4">
+                <div className="flex items-start gap-3">
+                  <TrendingDown className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium text-foreground">Estrategia: Bola de nieve</p>
+                    <p className="text-xs text-muted-foreground">
+                      Paga primero <span className="font-medium text-foreground">{first.name}</span> (-{formatAmount(first.current_balance, first.currency)})
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

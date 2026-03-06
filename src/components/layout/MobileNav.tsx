@@ -3,8 +3,9 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Receipt,
-  PiggyBank,
   Wallet,
+  PiggyBank,
+  CreditCard,
   MoreHorizontal,
 } from "lucide-react";
 import {
@@ -20,8 +21,9 @@ import { Leaf } from "lucide-react";
 const mobileNavItems = [
   { name: "Inicio", href: "/", icon: LayoutDashboard },
   { name: "Movimientos", href: "/transactions", icon: Receipt },
-  { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
   { name: "Cuentas", href: "/accounts", icon: Wallet },
+  { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
+  { name: "Deudas", href: "/debts", icon: CreditCard },
 ];
 
 interface MobileNavProps {
@@ -49,8 +51,8 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
       </header>
 
       {/* Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-t border-border">
-        <div className="flex h-16 items-center justify-around px-2">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-t border-border safe-area-bottom">
+        <div className="flex h-16 items-center justify-around px-1">
           {mobileNavItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (
@@ -58,14 +60,14 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-2 text-xs font-medium transition-colors",
+                  "flex flex-col items-center gap-0.5 min-w-0 flex-1 py-2 text-[10px] leading-tight font-medium transition-colors text-center",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span className="break-words line-clamp-2">{item.name}</span>
               </Link>
             );
           })}
@@ -73,8 +75,8 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
           {/* More Menu */}
           <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetTrigger asChild>
-              <button className="flex flex-col items-center gap-1 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                <MoreHorizontal className="h-5 w-5" />
+              <button className="flex flex-col items-center gap-0.5 min-w-0 flex-1 py-2 text-[10px] leading-tight font-medium text-muted-foreground hover:text-foreground transition-colors text-center">
+                <MoreHorizontal className="h-5 w-5 shrink-0" />
                 <span>Más</span>
               </button>
             </SheetTrigger>

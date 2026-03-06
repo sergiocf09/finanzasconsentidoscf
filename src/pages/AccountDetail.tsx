@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isLiability } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useCategories } from "@/hooks/useCategories";
 import { useReconciliations } from "@/hooks/useReconciliations";
+import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,8 @@ export default function AccountDetail() {
   const { transfers } = useTransfers(id);
   const { categories } = useCategories();
   const { reconciliations, deleteReconciliation } = useReconciliations(id);
+  const [selectedTx, setSelectedTx] = useState<any>(null);
+
   const account = accounts.find((a) => a.id === id);
 
   if (!account) {
@@ -29,6 +33,7 @@ export default function AccountDetail() {
     );
   }
 
+  const isLiab = isLiability(account.type);
   const accountTxs = transactions.filter((t) => t.account_id === id);
   const getAccountName = (accId: string) => accounts.find((a) => a.id === accId)?.name ?? "—";
   const getCategoryName = (catId: string | null) => categories.find((c) => c.id === catId)?.name ?? "";
@@ -59,17 +64,39 @@ export default function AccountDetail() {
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const renderItem = (item: typeof allItems[0]) => (
-    <div key={item.id} className="flex items-center gap-3 py-3 border-b border-border last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{item.description || item.type}</p>
-        <p className="text-xs text-muted-foreground">{format(new Date(item.date), "d MMM yyyy", { locale: es })}</p>
+  // For liabilities, flip the display sign: expenses should show negative
+  const displayAmount = (item: typeof allItems[0]) => {
+    if (isLiab && item.source === "tx") {
+      return item.type === "expense" ? -Math.abs(item.amount) : item.amount;
+    }
+    return item.amount;
+  };
+
+  const handleItemClick = (item: typeof allItems[0]) => {
+    if (item.source === "tx") {
+      const tx = accountTxs.find(t => t.id === item.id);
+      if (tx) setSelectedTx(tx);
+    }
+  };
+
+  const renderItem = (item: typeof allItems[0]) => {
+    const amt = displayAmount(item);
+    return (
+      <div
+        key={item.id}
+        className={cn("flex items-center gap-3 py-3 border-b border-border last:border-0", item.source === "tx" && "cursor-pointer hover:bg-muted/50 rounded-lg px-1 -mx-1")}
+        onClick={() => handleItemClick(item)}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground line-clamp-2">{item.description || item.type}</p>
+          <p className="text-xs text-muted-foreground">{format(new Date(item.date), "d MMM yyyy", { locale: es })}</p>
+        </div>
+        <p className={cn("font-semibold tabular-nums text-sm shrink-0", amt < 0 ? "text-expense" : "text-income")}>
+          {amt < 0 ? "-" : "+"}{fmt(Math.abs(amt), item.currency)}
+        </p>
       </div>
-      <p className={cn("font-semibold tabular-nums text-sm", item.amount < 0 ? "text-expense" : "text-income")}>
-        {item.amount < 0 ? "-" : "+"}{fmt(Math.abs(item.amount), item.currency)}
-      </p>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -166,6 +193,12 @@ export default function AccountDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <TransactionDetailSheet
+        transaction={selectedTx}
+        open={!!selectedTx}
+        onOpenChange={(open) => { if (!open) setSelectedTx(null); }}
+      />
     </div>
   );
 }

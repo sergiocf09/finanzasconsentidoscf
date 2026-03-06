@@ -11,7 +11,7 @@ import Transactions from "./pages/Transactions";
 import Budgets from "./pages/Budgets";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
-import Transfers from "./pages/Transfers";
+// Transfers page removed — unified into Transactions
 import Debts from "./pages/Debts";
 import EmergencyFund from "./pages/EmergencyFund";
 import Reports from "./pages/Reports";
@@ -44,7 +44,7 @@ const App = () => (
               <Route path="/budgets" element={<Budgets />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
-              <Route path="/transfers" element={<Transfers />} />
+              <Route path="/transfers" element={<Transactions />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/emergency-fund" element={<EmergencyFund />} />

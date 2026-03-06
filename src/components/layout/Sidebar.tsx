@@ -5,7 +5,7 @@ import {
   Receipt,
   PiggyBank,
   Wallet,
-  ArrowRightLeft,
+  
   CreditCard,
   Target,
   BarChart3,
@@ -18,7 +18,6 @@ import {
 const navigation = [
   { name: "Inicio", href: "/", icon: LayoutDashboard },
   { name: "Movimientos", href: "/transactions", icon: Receipt },
-  { name: "Transferencias", href: "/transfers", icon: ArrowRightLeft },
   { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
   { name: "Cuentas", href: "/accounts", icon: Wallet },
   { name: "Categorías", href: "/categories", icon: Tag },

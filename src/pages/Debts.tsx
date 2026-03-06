@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
+import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ChevronDown, ChevronUp, ArrowUpDown, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useDebts, Debt } from "@/hooks/useDebts";
 import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
+import { useNavigate } from "react-router-dom";
 
 const typeIcons: Record<string, typeof CreditCard> = {
   credit_card: CreditCard, personal_loan: User, mortgage: Home, car_loan: Car,
@@ -31,6 +32,7 @@ export default function Debts() {
   const [deleteTarget, setDeleteTarget] = useState<Debt | null>(null);
   const [editTarget, setEditTarget] = useState<Debt | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
+  const navigate = useNavigate();
 
   const formatAmount = (value: number, currency: string) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
@@ -53,7 +55,7 @@ export default function Debts() {
       <div
         key={debt.id}
         className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-card border border-border card-interactive cursor-pointer group"
-        onClick={() => setEditTarget(debt)}
+        onClick={() => navigate(`/accounts/${debt.account_id || debt.id}`)}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-expense/10 shrink-0">
           <Icon className="h-4 w-4 text-expense" />
@@ -81,6 +83,12 @@ export default function Debts() {
             </p>
           )}
         </div>
+        <Button
+          variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0"
+          onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
+        >
+          <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+        </Button>
         <Button
           variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0"
           onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}

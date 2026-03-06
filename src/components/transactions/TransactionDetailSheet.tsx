@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Edit2, Check, X } from "lucide-react";
+import { Edit2, Check, X, Trash2 } from "lucide-react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -39,8 +42,9 @@ interface TransactionDetailSheetProps {
 export function TransactionDetailSheet({ transaction, open, onOpenChange }: TransactionDetailSheetProps) {
   const { categories, expenseCategories, incomeCategories } = useCategories();
   const { accounts } = useAccounts();
-  const { updateTransaction } = useTransactions();
+  const { updateTransaction, deleteTransaction } = useTransactions();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Edit state
   const [editAmount, setEditAmount] = useState("");
@@ -187,30 +191,60 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
 
   const canEdit = !["adjustment_income", "adjustment_expense", "transfer"].includes(transaction.type);
 
+  const handleDelete = async () => {
+    await deleteTransaction.mutateAsync(transaction.id);
+    setShowDeleteConfirm(false);
+    onOpenChange(false);
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
-        <SheetHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="font-heading text-lg">Detalle del movimiento</SheetTitle>
-            {canEdit && (
-              <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-                <Edit2 className="h-4 w-4 mr-1" /> Editar
-              </Button>
-            )}
-          </div>
-        </SheetHeader>
-        <div className="space-y-2">
-          {rows.map((row) => (
-            <div key={row.label} className="flex justify-between py-2 border-b border-border last:border-0">
-              <span className="text-sm text-muted-foreground">{row.label}</span>
-              <span className={cn("text-sm font-medium text-right max-w-[60%] break-words", row.className)}>
-                {row.value}
-              </span>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+          <SheetHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="font-heading text-lg">Detalle del movimiento</SheetTitle>
+              {canEdit && (
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+                    <Edit2 className="h-4 w-4 mr-1" /> Editar
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      </SheetContent>
-    </Sheet>
+          </SheetHeader>
+          <div className="space-y-2">
+            {rows.map((row) => (
+              <div key={row.label} className="flex justify-between py-2 border-b border-border last:border-0">
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className={cn("text-sm font-medium text-right max-w-[60%] break-words", row.className)}>
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar movimiento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El saldo de la cuenta se actualizará automáticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

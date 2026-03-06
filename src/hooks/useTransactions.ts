@@ -160,12 +160,11 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     (acc, tx) => {
       if (tx.type === 'income') acc.income += tx.amount;
       else if (tx.type === 'expense') acc.expense += tx.amount;
-      else if (tx.type === 'transfer') acc.transfer += tx.amount;
-      // adjustment_income and adjustment_expense are intentionally excluded
+      // transfers and adjustments are excluded from income/expense totals
       return acc;
     },
-    { income: 0, expense: 0, transfer: 0 }
-  ) ?? { income: 0, expense: 0, transfer: 0 };
+    { income: 0, expense: 0 }
+  ) ?? { income: 0, expense: 0 };
 
   return {
     transactions: transactionsQuery.data ?? [],

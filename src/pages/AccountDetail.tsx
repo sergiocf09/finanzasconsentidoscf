@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccounts, isLiability } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
-import { useTransfers } from "@/hooks/useTransfers";
+import { useTransfers, Transfer } from "@/hooks/useTransfers";
 import { useCategories } from "@/hooks/useCategories";
 import { useReconciliations } from "@/hooks/useReconciliations";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
+import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export default function AccountDetail() {
   const { categories } = useCategories();
   const { reconciliations, deleteReconciliation } = useReconciliations(id);
   const [selectedTx, setSelectedTx] = useState<any>(null);
+  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
 
   const account = accounts.find((a) => a.id === id);
 
@@ -76,6 +78,9 @@ export default function AccountDetail() {
     if (item.source === "tx") {
       const tx = accountTxs.find(t => t.id === item.id);
       if (tx) setSelectedTx(tx);
+    } else if (item.source === "transfer") {
+      const tr = transfers.find(t => t.id === item.id);
+      if (tr) setSelectedTransfer(tr);
     }
   };
 
@@ -84,7 +89,7 @@ export default function AccountDetail() {
     return (
       <div
         key={item.id}
-        className={cn("flex items-center gap-3 py-3 border-b border-border last:border-0", item.source === "tx" && "cursor-pointer hover:bg-muted/50 rounded-lg px-1 -mx-1")}
+        className={cn("flex items-center gap-3 py-3 border-b border-border last:border-0 cursor-pointer hover:bg-muted/50 rounded-lg px-1 -mx-1")}
         onClick={() => handleItemClick(item)}
       >
         <div className="flex-1 min-w-0">
@@ -198,6 +203,12 @@ export default function AccountDetail() {
         transaction={selectedTx}
         open={!!selectedTx}
         onOpenChange={(open) => { if (!open) setSelectedTx(null); }}
+      />
+
+      <TransferDetailSheet
+        transfer={selectedTransfer}
+        open={!!selectedTransfer}
+        onOpenChange={(open) => { if (!open) setSelectedTransfer(null); }}
       />
     </div>
   );

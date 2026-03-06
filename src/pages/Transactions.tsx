@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Trash2, Receipt, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useTransfers, Transfer } from "@/hooks/useTransfers";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
+import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
@@ -22,6 +24,18 @@ import {
 
 const PAGE_SIZE = 20;
 
+interface UnifiedItem {
+  id: string;
+  date: string;
+  type: string;
+  description: string;
+  amount: number;
+  currency: string;
+  source: "tx" | "transfer";
+  accountName: string;
+  secondaryInfo?: string;
+}
+
 export default function Transactions() {
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get("type") || "all";
@@ -32,8 +46,10 @@ export default function Transactions() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedTx, setSelectedTx] = useState<any>(null);
+  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
 
   const { transactions, isLoading, totals, deleteTransaction } = useTransactions();
+  const { transfers, isLoading: transfersLoading } = useTransfers();
   const { categories } = useCategories();
   const { accounts } = useAccounts();
 
@@ -55,14 +71,50 @@ export default function Transactions() {
     return format(date, "dd MMM yyyy", { locale: es });
   };
 
-  const filtered = transactions.filter((tx) => {
-    if (typeFilter !== "all" && tx.type !== typeFilter) return false;
+  // Build unified list
+  const txItems: UnifiedItem[] = transactions.map((tx) => {
+    const isAdjustment = tx.type === "adjustment_income" || tx.type === "adjustment_expense";
+    return {
+      id: tx.id,
+      date: tx.transaction_date,
+      type: tx.type,
+      description: isAdjustment ? "Ajuste de saldo" : (tx.description || getCategoryName(tx.category_id)),
+      amount: tx.amount,
+      currency: tx.currency,
+      source: "tx" as const,
+      accountName: getAccountName(tx.account_id),
+      secondaryInfo: isAdjustment
+        ? `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`
+        : `${getCategoryName(tx.category_id)} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`,
+    };
+  });
+
+  const transferItems: UnifiedItem[] = transfers.map((t) => ({
+    id: t.id,
+    date: t.transfer_date,
+    type: "transfer",
+    description: t.description || `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)}`,
+    amount: t.amount_from,
+    currency: t.currency_from,
+    source: "transfer" as const,
+    accountName: getAccountName(t.from_account_id),
+    secondaryInfo: `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)} · ${formatDate(t.transfer_date)}`,
+  }));
+
+  const allItems = [...txItems, ...transferItems].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const filtered = allItems.filter((item) => {
+    if (typeFilter === "income" && item.type !== "income") return false;
+    if (typeFilter === "expense" && item.type !== "expense") return false;
+    if (typeFilter === "transfer" && item.type !== "transfer") return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
-      (tx.description || "").toLowerCase().includes(q) ||
-      getCategoryName(tx.category_id).toLowerCase().includes(q) ||
-      getAccountName(tx.account_id).toLowerCase().includes(q)
+      item.description.toLowerCase().includes(q) ||
+      item.accountName.toLowerCase().includes(q) ||
+      (item.secondaryInfo || "").toLowerCase().includes(q)
     );
   });
 
@@ -75,11 +127,22 @@ export default function Transactions() {
     setDeleteId(null);
   };
 
+  const handleItemClick = (item: UnifiedItem) => {
+    if (item.source === "transfer") {
+      const t = transfers.find(tr => tr.id === item.id);
+      if (t) setSelectedTransfer(t);
+    } else {
+      const tx = transactions.find(t => t.id === item.id);
+      if (tx) setSelectedTx(tx);
+    }
+  };
+
   const defaultType = typeFilter === "income" ? "income" : "expense";
+  const loading = isLoading || transfersLoading;
 
   return (
     <div className="space-y-6">
-      {/* Header — sticky */}
+      {/* Header */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
@@ -121,12 +184,13 @@ export default function Transactions() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="expense">Gastos</SelectItem>
             <SelectItem value="income">Ingresos</SelectItem>
+            <SelectItem value="transfer">Transferencias</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* List */}
-      {isLoading ? (
+      {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
         </div>
@@ -138,53 +202,52 @@ export default function Transactions() {
         </div>
       ) : (
         <div className="space-y-2">
-          {displayed.map((tx) => {
-            const isAdjustment = tx.type === "adjustment_income" || tx.type === "adjustment_expense";
+          {displayed.map((item) => {
+            const isAdjustment = item.type === "adjustment_income" || item.type === "adjustment_expense";
+            const isTransfer = item.type === "transfer";
             return (
-            <div key={tx.id} className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border cursor-pointer card-interactive", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
-              onClick={() => setSelectedTx(tx)}>
+            <div key={`${item.source}-${item.id}`} className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border cursor-pointer card-interactive", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
+              onClick={() => handleItemClick(item)}>
               <div className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0",
-                tx.type === "income" && "bg-income/10",
-                tx.type === "expense" && "bg-muted",
-                tx.type === "transfer" && "bg-transfer/10",
+                item.type === "income" && "bg-income/10",
+                item.type === "expense" && "bg-muted",
+                isTransfer && "bg-primary/10",
                 isAdjustment && "bg-muted"
               )}>
                 {isAdjustment ? (
                   <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
+                ) : isTransfer ? (
+                  <ArrowLeftRight className="h-5 w-5 text-primary" />
                 ) : (
                   <Receipt className={cn(
                     "h-5 w-5",
-                    tx.type === "income" && "text-income",
-                    tx.type === "expense" && "text-muted-foreground",
-                    tx.type === "transfer" && "text-transfer"
+                    item.type === "income" && "text-income",
+                    item.type === "expense" && "text-muted-foreground",
                   )} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {isAdjustment ? "Ajuste de saldo" : (tx.description || getCategoryName(tx.category_id))}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {isAdjustment ? `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}` : `${getCategoryName(tx.category_id)} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`}
-                </p>
+                <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
+                <p className="text-xs text-muted-foreground truncate">{item.secondaryInfo}</p>
               </div>
               <p className={cn(
                 "text-sm font-semibold tabular-nums shrink-0",
-                tx.type === "income" && "text-income",
-                tx.type === "expense" && "text-foreground",
-                tx.type === "transfer" && "text-transfer",
+                item.type === "income" && "text-income",
+                item.type === "expense" && "text-foreground",
+                isTransfer && "text-primary",
                 isAdjustment && "text-muted-foreground"
               )}>
-                {tx.type === "expense" && "-"}{tx.type === "income" && "+"}{isAdjustment && (tx.type === "adjustment_expense" ? "-" : "+")}{formatAmount(tx.amount, tx.currency)}
+                {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
               </p>
-              <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(tx.id); }}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {item.source === "tx" && (
+                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             );
           })}
-
 
           {hasMore && (
             <div className="text-center pt-4">
@@ -215,6 +278,12 @@ export default function Transactions() {
         transaction={selectedTx}
         open={!!selectedTx}
         onOpenChange={(open) => { if (!open) setSelectedTx(null); }}
+      />
+
+      <TransferDetailSheet
+        transfer={selectedTransfer}
+        open={!!selectedTransfer}
+        onOpenChange={(open) => { if (!open) setSelectedTransfer(null); }}
       />
     </div>
   );

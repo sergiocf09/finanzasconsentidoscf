@@ -88,12 +88,41 @@ export function useTransfers(accountId?: string, options?: { startDate?: Date; e
     },
   });
 
+  const updateTransfer = useMutation({
+    mutationFn: async (data: {
+      id: string;
+      from_account_id: string;
+      to_account_id: string;
+      amount_from: number;
+      amount_to: number;
+      currency_from: string;
+      currency_to: string;
+      fx_rate?: number | null;
+      transfer_date: string;
+      description?: string | null;
+    }) => {
+      const { id, ...rest } = data;
+      const { error: delErr } = await supabase.from('transfers').delete().eq('id', id);
+      if (delErr) throw delErr;
+      const { error: insErr } = await supabase.from('transfers').insert({
+        ...rest,
+        user_id: user!.id,
+      });
+      if (insErr) throw insErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: "Transferencia actualizada" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const deleteTransfer = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('transfers')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('transfers').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -116,6 +145,7 @@ export function useTransfers(accountId?: string, options?: { startDate?: Date; e
     error: transfersQuery.error,
     totalTransferAmount,
     createTransfer,
+    updateTransfer,
     deleteTransfer,
   };
 }

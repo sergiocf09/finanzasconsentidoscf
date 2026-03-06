@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export interface Transfer {
   id: string;
@@ -33,13 +34,16 @@ export interface CreateTransferData {
   created_from?: string;
 }
 
-export function useTransfers(accountId?: string) {
+export function useTransfers(accountId?: string, options?: { startDate?: Date; endDate?: Date }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const startDate = options?.startDate;
+  const endDate = options?.endDate;
+
   const transfersQuery = useQuery({
-    queryKey: ['transfers', user?.id, accountId],
+    queryKey: ['transfers', user?.id, accountId, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       let query = supabase
         .from('transfers')
@@ -48,6 +52,13 @@ export function useTransfers(accountId?: string) {
 
       if (accountId) {
         query = query.or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`);
+      }
+
+      if (startDate) {
+        query = query.gte('transfer_date', format(startDate, 'yyyy-MM-dd'));
+      }
+      if (endDate) {
+        query = query.lte('transfer_date', format(endDate, 'yyyy-MM-dd'));
       }
 
       const { data, error } = await query;
@@ -95,10 +106,15 @@ export function useTransfers(accountId?: string) {
     },
   });
 
+  const totalTransferAmount = (transfersQuery.data ?? []).reduce(
+    (sum, t) => sum + t.amount_from, 0
+  );
+
   return {
     transfers: transfersQuery.data ?? [],
     isLoading: transfersQuery.isLoading,
     error: transfersQuery.error,
+    totalTransferAmount,
     createTransfer,
     deleteTransfer,
   };

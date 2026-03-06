@@ -43,12 +43,11 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 
 const transactionSchema = z.object({
-  type: z.enum(["income", "expense", "transfer"]),
+  type: z.enum(["income", "expense"]),
   amount: z.coerce.number().min(0.01, "Ingresa un monto válido"),
   currency: z.string().default("MXN"),
   account_id: z.string().min(1, "Selecciona una cuenta"),
   category_id: z.string().optional(),
-  related_account_id: z.string().optional(),
   description: z.string().optional(),
   transaction_date: z.date(),
 });
@@ -58,7 +57,7 @@ type TransactionFormValues = z.infer<typeof transactionSchema>;
 interface TransactionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultType?: "income" | "expense" | "transfer";
+  defaultType?: "income" | "expense";
   voiceData?: {
     amount?: number;
     currency?: string;
@@ -69,7 +68,7 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ open, onOpenChange, defaultType = "expense", voiceData }: TransactionFormProps) {
-  const [activeTab, setActiveTab] = useState<"income" | "expense" | "transfer">(defaultType);
+  const [activeTab, setActiveTab] = useState<"income" | "expense">(defaultType);
   
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
@@ -83,17 +82,12 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       currency: voiceData?.currency ?? "MXN",
       account_id: "",
       category_id: "",
-      related_account_id: "",
       description: voiceData?.description ?? "",
       transaction_date: voiceData?.date ?? new Date(),
     },
   });
 
-  const categories = activeTab === "income" 
-    ? incomeCategories 
-    : activeTab === "expense" 
-    ? expenseCategories 
-    : transferCategories;
+  const categories = activeTab === "income" ? incomeCategories : expenseCategories;
 
   const onSubmit = async (data: TransactionFormValues) => {
     await createTransaction.mutateAsync({
@@ -101,7 +95,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       amount: data.amount,
       currency: data.currency,
       category_id: data.category_id && data.category_id.length > 0 ? data.category_id : undefined,
-      related_account_id: data.related_account_id && data.related_account_id.length > 0 ? data.related_account_id : undefined,
       description: data.description,
       type: activeTab,
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
@@ -122,10 +115,9 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
         <div className="px-4 pb-6 overflow-y-auto">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-            <TabsList className="grid w-full grid-cols-3 h-9">
+            <TabsList className="grid w-full grid-cols-2 h-9">
               <TabsTrigger value="income" className="text-xs text-income">Ingreso</TabsTrigger>
               <TabsTrigger value="expense" className="text-xs text-expense">Gasto</TabsTrigger>
-              <TabsTrigger value="transfer" className="text-xs text-transfer">Transferencia</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -182,7 +174,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   name="account_id"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel className="text-xs">{activeTab === "transfer" ? "Origen" : "Cuenta"}</FormLabel>
+                      <FormLabel className="text-xs">Cuenta</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-9 text-xs">
@@ -202,58 +194,29 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   )}
                 />
 
-                {activeTab === "transfer" ? (
-                  <FormField
-                    control={form.control}
-                    name="related_account_id"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel className="text-xs">Destino</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-9 text-xs">
-                              <SelectValue placeholder="Cuenta" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {accounts
-                              .filter((a) => a.id !== form.watch("account_id"))
-                              .map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="category_id"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel className="text-xs">Categoría</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="h-9 text-xs">
-                              <SelectValue placeholder="Categoría" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                )}
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel className="text-xs">Categoría</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Categoría" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Date + Description side by side */}

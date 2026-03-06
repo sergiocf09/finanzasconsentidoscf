@@ -75,7 +75,7 @@ export default function Transactions() {
     setDeleteId(null);
   };
 
-  const defaultType = typeFilter === "income" ? "income" : typeFilter === "transfer" ? "transfer" : "expense";
+  const defaultType = typeFilter === "income" ? "income" : "expense";
 
   return (
     <div className="space-y-6">
@@ -91,7 +91,7 @@ export default function Transactions() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-card border border-border p-3 text-center">
           <p className="text-xs text-muted-foreground">Ingresos</p>
           <p className="text-lg font-bold text-income">{formatAmount(totals.income, "MXN")}</p>
@@ -99,10 +99,6 @@ export default function Transactions() {
         <div className="rounded-xl bg-card border border-border p-3 text-center">
           <p className="text-xs text-muted-foreground">Gastos</p>
           <p className="text-lg font-bold text-expense">{formatAmount(totals.expense, "MXN")}</p>
-        </div>
-        <div className="rounded-xl bg-card border border-border p-3 text-center">
-          <p className="text-xs text-muted-foreground">Transferencias</p>
-          <p className="text-lg font-bold text-transfer">{formatAmount(totals.transfer, "MXN")}</p>
         </div>
       </div>
 
@@ -125,7 +121,6 @@ export default function Transactions() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="expense">Gastos</SelectItem>
             <SelectItem value="income">Ingresos</SelectItem>
-            <SelectItem value="transfer">Transferencias</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -21,6 +21,8 @@ const schema = z.object({
   from_account_id: z.string().min(1, "Selecciona cuenta origen"),
   to_account_id: z.string().min(1, "Selecciona cuenta destino"),
   amount: z.coerce.number().positive("Monto debe ser mayor a 0"),
+  amount_to: z.coerce.number().optional(),
+  fx_rate: z.coerce.number().optional(),
   transfer_date: z.string(),
   description: z.string().optional(),
 }).refine((d) => d.from_account_id !== d.to_account_id, {
@@ -46,6 +48,8 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
       from_account_id: "",
       to_account_id: "",
       amount: 0,
+      amount_to: undefined,
+      fx_rate: undefined,
       transfer_date: format(new Date(), "yyyy-MM-dd"),
       description: "",
     },
@@ -57,18 +61,30 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const toAccount = activeAccounts.find((a) => a.id === toId);
   const needsFx = fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
 
+  // When fx_rate changes, auto-calculate amount_to
+  const watchedFxRate = form.watch("fx_rate");
+  const watchedAmount = form.watch("amount");
+
   const onSubmit = async (data: FormValues) => {
     const from = activeAccounts.find((a) => a.id === data.from_account_id)!;
     const to = activeAccounts.find((a) => a.id === data.to_account_id)!;
+    const isCrossCurrency = from.currency !== to.currency;
+
+    const amountTo = isCrossCurrency && data.amount_to
+      ? data.amount_to
+      : data.amount;
+    const fxRate = isCrossCurrency && data.fx_rate
+      ? data.fx_rate
+      : undefined;
 
     await createTransfer.mutateAsync({
       from_account_id: data.from_account_id,
       to_account_id: data.to_account_id,
       amount_from: data.amount,
       currency_from: from.currency,
-      amount_to: data.amount, // same if same currency
+      amount_to: amountTo,
       currency_to: to.currency,
-      fx_rate: from.currency !== to.currency ? 1 : undefined,
+      fx_rate: fxRate,
       transfer_date: data.transfer_date,
       description: data.description || undefined,
     });
@@ -125,9 +141,53 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
             )} />
 
             {needsFx && (
-              <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                Monedas diferentes ({fromAccount?.currency} → {toAccount?.currency}). El monto se registrará en ambas monedas con el mismo valor. Puedes ajustar después.
-              </p>
+              <div className="space-y-3 rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground font-medium">
+                  Monedas diferentes: {fromAccount?.currency} → {toAccount?.currency}
+                </p>
+                <FormField control={form.control} name="fx_rate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Tipo de cambio</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        placeholder="Ej: 17.50"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const rate = parseFloat(e.target.value);
+                          if (rate > 0 && watchedAmount > 0) {
+                            form.setValue("amount_to", Math.round(watchedAmount * rate * 100) / 100);
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="amount_to" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Monto destino ({toAccount?.currency})</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const amtTo = parseFloat(e.target.value);
+                          if (amtTo > 0 && watchedAmount > 0) {
+                            form.setValue("fx_rate", Math.round((amtTo / watchedAmount) * 10000) / 10000);
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
             )}
 
             <FormField control={form.control} name="transfer_date" render={({ field }) => (

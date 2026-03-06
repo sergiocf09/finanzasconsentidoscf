@@ -8,6 +8,7 @@ import { Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useTransfers } from "@/hooks/useTransfers";
 import { useBudgets } from "@/hooks/useBudgets";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -59,6 +60,7 @@ export default function Dashboard() {
 
   const { startDate, endDate } = getDateRange(period, customStart, customEnd);
   const { totals } = useTransactions({ startDate, endDate });
+  const { totalTransferAmount } = useTransfers(undefined, { startDate, endDate });
 
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: es });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
@@ -153,7 +155,7 @@ export default function Dashboard() {
             <BalanceCard title="Gastos" amount={totals.expense} type="expense" />
           </div>
           <div className="cursor-pointer" onClick={() => navigate("/transfers")}>
-            <BalanceCard title="Transferencias" amount={totals.transfer} type="transfer" />
+            <BalanceCard title="Transferencias" amount={totalTransferAmount} type="transfer" />
           </div>
         </div>
       </div>

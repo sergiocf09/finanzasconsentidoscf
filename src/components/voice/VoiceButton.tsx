@@ -747,14 +747,19 @@ export function VoiceButton() {
       if (editType === "transfer") {
         const from = accounts.find(a => a.id === editAccountId)!;
         const to = accounts.find(a => a.id === editToAccountId)!;
+        const fromCurrency = from.currency;
+        const toCurrency = to.currency;
+        const isCrossCurrency = fromCurrency !== toCurrency;
+        // For cross-currency via voice, use same amount (user can edit in transfers later)
         await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: editAccountId,
           to_account_id: editToAccountId,
           amount_from: amount,
-          currency_from: from.currency,
+          currency_from: fromCurrency,
           amount_to: amount,
-          currency_to: to.currency,
+          currency_to: toCurrency,
+          fx_rate: isCrossCurrency ? 1 : null,
           transfer_date: editDate,
           description: editDescription || cleanTranscript || committedText,
           created_from: "voice",

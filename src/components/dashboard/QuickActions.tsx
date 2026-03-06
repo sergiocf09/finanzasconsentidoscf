@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Plus, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { TransferForm } from "@/components/transfers/TransferForm";
 
 export function QuickActions() {
   const [formOpen, setFormOpen] = useState(false);
-  const [formType, setFormType] = useState<"income" | "expense" | "transfer">("expense");
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [formType, setFormType] = useState<"income" | "expense">("expense");
 
-  const openForm = (type: "income" | "expense" | "transfer") => {
+  const openForm = (type: "income" | "expense") => {
     setFormType(type);
     setFormOpen(true);
   };
@@ -28,7 +30,7 @@ export function QuickActions() {
     {
       label: "Transferir",
       icon: ArrowRightLeft,
-      onClick: () => openForm("transfer"),
+      onClick: () => setTransferOpen(true),
       color: "transfer" as const,
     },
   ];
@@ -70,6 +72,7 @@ export function QuickActions() {
       </div>
 
       <TransactionForm open={formOpen} onOpenChange={setFormOpen} defaultType={formType} />
+      <TransferForm open={transferOpen} onOpenChange={setTransferOpen} />
     </>
   );
 }

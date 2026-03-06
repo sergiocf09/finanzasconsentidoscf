@@ -4,7 +4,7 @@ import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
-import { Sparkles, ChevronDown } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -14,22 +14,33 @@ import { es } from "date-fns/locale";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 
-type PeriodKey = "current" | "previous" | "last3";
+type PeriodKey = "current" | "previous" | "last3" | "custom";
 
 const periodLabels: Record<PeriodKey, string> = {
   current: "Mes en curso",
   previous: "Mes anterior",
   last3: "Últimos 3 meses",
+  custom: "Rango personalizado",
 };
 
-function getDateRange(period: PeriodKey): { startDate: Date; endDate: Date } {
+function getDateRange(period: PeriodKey, customStart?: string, customEnd?: string): { startDate: Date; endDate: Date } {
   const now = new Date();
   switch (period) {
     case "previous":
       return { startDate: startOfMonth(subMonths(now, 1)), endDate: endOfMonth(subMonths(now, 1)) };
     case "last3":
       return { startDate: startOfMonth(subMonths(now, 2)), endDate: endOfMonth(now) };
+    case "custom":
+      return {
+        startDate: customStart ? new Date(customStart + "T00:00:00") : startOfMonth(now),
+        endDate: customEnd ? new Date(customEnd + "T23:59:59") : endOfMonth(now),
+      };
     default:
       return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
   }
@@ -42,13 +53,31 @@ export default function Dashboard() {
   const displayName = profile?.display_name || "bienvenido";
 
   const [period, setPeriod] = useState<PeriodKey>("current");
-  const { startDate, endDate } = getDateRange(period);
+  const [customStart, setCustomStart] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [customEnd, setCustomEnd] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+
+  const { startDate, endDate } = getDateRange(period, customStart, customEnd);
   const { totals } = useTransactions({ startDate, endDate });
 
   const currentMonth = format(new Date(), "MMMM yyyy", { locale: es });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
 
   const activeBudgets = budgets.filter((b) => b.is_active);
+
+  const handlePeriodChange = (v: string) => {
+    const key = v as PeriodKey;
+    setPeriod(key);
+    if (key === "custom") {
+      setShowCustomPicker(true);
+    } else {
+      setShowCustomPicker(false);
+    }
+  };
+
+  const customLabel = period === "custom"
+    ? `${format(new Date(customStart + "T12:00:00"), "d MMM", { locale: es })} – ${format(new Date(customEnd + "T12:00:00"), "d MMM", { locale: es })}`
+    : null;
 
   return (
     <div className="space-y-4 stagger-children">
@@ -57,23 +86,64 @@ export default function Dashboard() {
         <h1 className="text-lg font-heading font-semibold text-foreground">Hola, {displayName} 👋</h1>
       </div>
 
-      {/* Financial summary: two-column asset/liability cards */}
+      {/* Financial summary */}
       <FinancialSummaryCards />
 
       {/* Period selector + I/G/T block */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-heading font-semibold text-foreground">Actividad</h2>
-          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-            <SelectTrigger className="h-7 w-auto gap-1 text-xs border-none bg-muted/50 px-2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(periodLabels).map(([k, label]) => (
-                <SelectItem key={k} value={k}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-heading font-semibold text-foreground shrink-0">Actividad</h2>
+          <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
+            <div className="flex items-center gap-1">
+              <Select value={period} onValueChange={handlePeriodChange}>
+                <SelectTrigger className="h-7 w-auto gap-1 text-xs border-none bg-muted/50 px-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(periodLabels).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {period === "custom" && (
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 text-[10px] text-primary px-1.5">
+                    {customLabel}
+                  </Button>
+                </PopoverTrigger>
+              )}
+            </div>
+            <PopoverContent className="w-auto p-3 space-y-3" align="end">
+              <p className="text-xs font-medium text-foreground">Selecciona un rango</p>
+              <div className="flex items-center gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">Desde</label>
+                  <Input
+                    type="date"
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    className="h-8 text-xs w-[130px]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">Hasta</label>
+                  <Input
+                    type="date"
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    className="h-8 text-xs w-[130px]"
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="w-full h-7 text-xs"
+                onClick={() => setShowCustomPicker(false)}
+              >
+                Aplicar
+              </Button>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="grid gap-2 grid-cols-3">
           <div className="cursor-pointer" onClick={() => navigate("/transactions?type=income")}>

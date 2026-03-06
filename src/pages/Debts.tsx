@@ -54,7 +54,7 @@ export default function Debts() {
     return (
       <div
         key={debt.id}
-        className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-card border border-border card-interactive cursor-pointer group"
+        className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-card border border-border card-interactive cursor-pointer group"
         onClick={() => navigate(`/accounts/${debt.account_id || debt.id}`)}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-expense/10 shrink-0">
@@ -73,7 +73,7 @@ export default function Debts() {
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
           </div>
         </div>
-        <div className="text-right shrink-0 ml-auto">
+        <div className="text-right shrink-0">
           <p className="text-sm font-bold text-expense tabular-nums">
             {debt.current_balance !== 0 ? "-" : ""}{formatAmount(debt.current_balance, debt.currency)}
           </p>
@@ -84,18 +84,11 @@ export default function Debts() {
           )}
         </div>
         <Button
-          variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+          variant="ghost" size="icon" className="h-7 w-7 shrink-0 ml-1"
           onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
           title="Editar deuda"
         >
           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-        <Button
-          variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100"
-          onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
-          title="Eliminar deuda"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
         </Button>
       </div>
     );

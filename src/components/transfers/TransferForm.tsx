@@ -42,6 +42,9 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const { createTransfer } = useTransfers();
   const activeAccounts = accounts.filter((a) => a.is_active);
 
+  const fmtBalance = (acc: typeof accounts[0]) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: acc.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(acc.current_balance ?? 0);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -109,7 +112,12 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
                   <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {activeAccounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                      <SelectItem key={a.id} value={a.id}>
+                        <span className="flex items-center justify-between w-full gap-2">
+                          <span>{a.name} ({a.currency})</span>
+                          <span className="text-muted-foreground text-[10px]">{fmtBalance(a)}</span>
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -124,7 +132,12 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
                   <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {activeAccounts.filter((a) => a.id !== fromId).map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                      <SelectItem key={a.id} value={a.id}>
+                        <span className="flex items-center justify-between w-full gap-2">
+                          <span>{a.name} ({a.currency})</span>
+                          <span className="text-muted-foreground text-[10px]">{fmtBalance(a)}</span>
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

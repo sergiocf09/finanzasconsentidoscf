@@ -131,7 +131,17 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
                 <Select value={editAccountId} onValueChange={setEditAccountId}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {activeAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    {activeAccounts.map(a => {
+                      const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: a.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(a.current_balance ?? 0);
+                      return (
+                        <SelectItem key={a.id} value={a.id}>
+                          <span className="flex items-center justify-between w-full gap-2">
+                            <span>{a.name}</span>
+                            <span className="text-muted-foreground text-[10px]">{bal}</span>
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>

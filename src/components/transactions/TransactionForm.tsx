@@ -182,11 +182,17 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {accounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name}
-                            </SelectItem>
-                          ))}
+                          {accounts.map((account) => {
+                            const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: account.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(account.current_balance ?? 0);
+                            return (
+                              <SelectItem key={account.id} value={account.id}>
+                                <span className="flex items-center justify-between w-full gap-2">
+                                  <span>{account.name}</span>
+                                  <span className="text-muted-foreground text-[10px]">{bal}</span>
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -43,7 +43,7 @@ export function FinancialSummaryCards() {
         <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
         <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
-          {debt && account.current_balance > 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
+          {debt && account.current_balance !== 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
         </span>
       </div>
     );
@@ -115,7 +115,7 @@ export function FinancialSummaryCards() {
                       <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
                       <p className="text-[10px] text-expense opacity-80 truncate">Pasivos {currency}</p>
                     </div>
-                    <p className="text-lg font-bold font-heading text-expense leading-tight">{fmt(total, currency)}</p>
+                    <p className="text-lg font-bold font-heading text-expense leading-tight">-{fmt(total, currency)}</p>
                   </div>
                   <ChevronDown className={cn("h-4 w-4 text-expense opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>

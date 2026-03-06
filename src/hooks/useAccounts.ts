@@ -154,13 +154,13 @@ export function useAccounts() {
     if (isAssetType(acc.type)) {
       assetsByCurrency[acc.currency] = (assetsByCurrency[acc.currency] ?? 0) + acc.current_balance;
     } else if (isLiability(acc.type)) {
-      liabilitiesByCurrency[acc.currency] = (liabilitiesByCurrency[acc.currency] ?? 0) + acc.current_balance;
+      liabilitiesByCurrency[acc.currency] = (liabilitiesByCurrency[acc.currency] ?? 0) + Math.abs(acc.current_balance);
     }
   });
 
   const totalBalance = activeOnly.reduce((sum, acc) => {
     if (isLiability(acc.type)) {
-      return sum - acc.current_balance;
+      return sum - Math.abs(acc.current_balance);
     }
     return sum + acc.current_balance;
   }, 0);

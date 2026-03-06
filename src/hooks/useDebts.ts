@@ -229,10 +229,10 @@ export function useDebts() {
     },
   });
 
-  const totalDebt = debtsQuery.data?.reduce((sum, d) => sum + d.current_balance, 0) ?? 0;
+  const totalDebt = debtsQuery.data?.reduce((sum, d) => sum + Math.abs(d.current_balance), 0) ?? 0;
   const totalMinimumPayment = debtsQuery.data?.reduce((sum, d) => sum + d.minimum_payment, 0) ?? 0;
-  const snowballOrder = [...(debtsQuery.data ?? [])].sort((a, b) => a.current_balance - b.current_balance);
-  const avalancheOrder = [...(debtsQuery.data ?? [])].sort((a, b) => b.interest_rate - a.interest_rate);
+  const snowballOrder = [...(debtsQuery.data ?? [])].filter(d => Math.abs(d.current_balance) > 0).sort((a, b) => Math.abs(a.current_balance) - Math.abs(b.current_balance));
+  const avalancheOrder = [...(debtsQuery.data ?? [])].filter(d => Math.abs(d.current_balance) > 0).sort((a, b) => b.interest_rate - a.interest_rate);
 
   return {
     debts: debtsQuery.data ?? [],

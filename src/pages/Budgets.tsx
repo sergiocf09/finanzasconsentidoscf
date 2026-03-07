@@ -142,11 +142,11 @@ export default function Budgets() {
 
     return (
       <div key={block} className="space-y-3">
-        <div className="flex items-center gap-2">
-          <span>{config.emoji}</span>
-          <h3 className="font-heading font-semibold text-foreground">{config.label}</h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="shrink-0">{config.emoji}</span>
+          <h3 className="font-heading font-semibold text-foreground truncate">{config.label}</h3>
           {totals.planned > 0 && (
-            <span className={cn("text-xs px-2 py-0.5 rounded-full ml-auto", config.bgLightClass, config.textClass)}>
+            <span className={cn("text-xs px-2 py-0.5 rounded-full ml-auto whitespace-nowrap shrink-0", config.bgLightClass, config.textClass)}>
               {fmt(totals.spent)} / {fmt(totals.planned)}
             </span>
           )}

@@ -73,14 +73,14 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
               onClick={() => setSelectedTx(transaction)}
             >
               <div className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0",
+                "flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0",
                 transaction.type === "income" && "bg-income/10",
                 transaction.type === "expense" && "bg-muted",
                 transaction.type === "transfer" && "bg-transfer/10",
                 isAdjustment && "bg-muted"
               )}>
                 <Icon className={cn(
-                  "h-5 w-5",
+                  "h-4 w-4",
                   transaction.type === "income" && "text-income",
                   transaction.type === "expense" && "text-muted-foreground",
                   transaction.type === "transfer" && "text-transfer",

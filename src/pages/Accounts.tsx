@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Wallet, Building2, PiggyBank, CreditCard, TrendingUp, Trash2, HandCoins,
-  Home, Car, User, Landmark, ShieldCheck, Pencil,
+  Home, Car, User, Landmark, ShieldCheck, Pencil, Eye, EyeOff,
 } from "lucide-react";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +36,7 @@ const fmt = (value: number, currency: string) =>
 export default function Accounts() {
   const navigate = useNavigate();
   const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deactivateAccount, deleteAccount } = useAccounts();
+  const { hidden, toggle, mask } = useHideAmounts();
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
@@ -85,7 +87,7 @@ export default function Accounts() {
         </div>
         <div className="text-right mr-0.5">
           <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
-            {debt && account.current_balance !== 0 ? "-" : ""}{account.currency === "USD" ? "USD " : ""}{fmt(account.current_balance, account.currency)}
+            {debt && account.current_balance !== 0 ? "-" : ""}{mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
           </p>
         </div>
         <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
@@ -123,6 +125,11 @@ export default function Accounts() {
       ) : (
         <>
           {/* Summary cards: mirror of Dashboard — 2 columns */}
+          <div className="flex justify-end -mb-1">
+            <button onClick={toggle} className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors" title={hidden ? "Mostrar montos" : "Ocultar montos"}>
+              {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {/* Left: Assets */}
             <div className="space-y-2">
@@ -136,7 +143,7 @@ export default function Accounts() {
                     <ShieldCheck className="h-3.5 w-3.5 opacity-80" />
                     <p className="text-[10px] opacity-80">Activos {currency}</p>
                   </div>
-                  <p className="text-lg font-bold font-heading">{fmt(total, currency)}</p>
+                  <p className="text-lg font-bold font-heading">{mask(fmt(total, currency))}</p>
                 </div>
               ))}
             </div>
@@ -152,7 +159,7 @@ export default function Accounts() {
                     <CreditCard className="h-3.5 w-3.5 text-expense opacity-80" />
                     <p className="text-[10px] text-expense opacity-80">Pasivos {currency}</p>
                   </div>
-                  <p className="text-lg font-bold font-heading text-expense">-{fmt(total, currency)}</p>
+                  <p className="text-lg font-bold font-heading text-expense">{hidden ? "••••••" : `-${fmt(total, currency)}`}</p>
                 </div>
               ))}
             </div>

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown } from "lucide-react";
+import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useHideAmounts } from "@/hooks/useHideAmounts";
 
 const typeIcons: Record<string, typeof Wallet> = {
   cash: Wallet, bank: Building2, savings: PiggyBank, investment: TrendingUp,
@@ -17,6 +18,7 @@ const fmt = (v: number, currency: string) =>
 export function FinancialSummaryCards() {
   const navigate = useNavigate();
   const { accounts, assetsByCurrency, liabilitiesByCurrency } = useAccounts();
+  const { hidden, toggle, mask } = useHideAmounts();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const assetCurrencies = Object.entries(assetsByCurrency);
@@ -43,7 +45,7 @@ export function FinancialSummaryCards() {
         <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
         <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
-          {debt && account.current_balance !== 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
+          {debt && account.current_balance !== 0 ? "-" : ""}{mask(fmt(account.current_balance, account.currency))}
         </span>
       </div>
     );
@@ -66,6 +68,12 @@ export function FinancialSummaryCards() {
 
   return (
     <div className="space-y-2">
+      {/* Eye toggle */}
+      <div className="flex justify-end">
+        <button onClick={toggle} className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors" title={hidden ? "Mostrar montos" : "Ocultar montos"}>
+          {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
       {/* Summary cards: two columns */}
       <div className="grid grid-cols-2 gap-2">
         {/* Left: Assets */}
@@ -87,7 +95,7 @@ export function FinancialSummaryCards() {
                       <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />
                       <p className="text-[10px] opacity-80 truncate">Activos {currency}</p>
                     </div>
-                    <p className="text-lg font-bold font-heading leading-tight">{fmt(total, currency)}</p>
+                    <p className="text-lg font-bold font-heading leading-tight">{mask(fmt(total, currency))}</p>
                   </div>
                   <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>
@@ -115,7 +123,7 @@ export function FinancialSummaryCards() {
                       <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
                       <p className="text-[10px] text-expense opacity-80 truncate">Pasivos {currency}</p>
                     </div>
-                    <p className="text-lg font-bold font-heading text-expense leading-tight">-{fmt(total, currency)}</p>
+                    <p className="text-lg font-bold font-heading text-expense leading-tight">{hidden ? "••••••" : `-${fmt(total, currency)}`}</p>
                   </div>
                   <ChevronDown className={cn("h-4 w-4 text-expense opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>

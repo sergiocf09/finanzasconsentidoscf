@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal scroll globally */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 /* FINANZAS CON SENTIDO™ Design System
    Philosophy: Calm, clarity, friendly control
    "Tu dinero con calma. Tu vida con sentido."

@@ -89,10 +89,10 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{isAdjustment ? "Ajuste de saldo" : (transaction.description || catName)}</p>
-                <p className="text-xs text-muted-foreground">{isAdjustment ? formatDate(transaction.transaction_date) : `${catName} · ${formatDate(transaction.transaction_date)}`}</p>
+                <p className="text-xs text-muted-foreground truncate">{isAdjustment ? formatDate(transaction.transaction_date) : `${catName} · ${formatDate(transaction.transaction_date)}`}</p>
               </div>
               <p className={cn(
-                "text-sm font-semibold tabular-nums",
+                "text-sm font-semibold tabular-nums shrink-0 text-right",
                 transaction.type === "income" && "text-income",
                 transaction.type === "expense" && "text-foreground",
                 transaction.type === "transfer" && "text-transfer",

@@ -36,9 +36,9 @@ export function BudgetProgress({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{category}</span>
-        <span className="text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-foreground truncate">{category}</span>
+        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
           {formatAmount(spent)} / {formatAmount(budgeted)}
         </span>
       </div>

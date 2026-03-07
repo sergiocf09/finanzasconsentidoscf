@@ -3,10 +3,14 @@
 @tailwind utilities;
 
 /* Prevent horizontal scroll globally */
-html, body {
+html {
   overflow-x: hidden;
-  max-width: 100vw;
 }
+body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 
 /* FINANZAS CON SENTIDO™ Design System
    Philosophy: Calm, clarity, friendly control

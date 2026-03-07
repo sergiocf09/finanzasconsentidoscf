@@ -82,7 +82,7 @@ export default function Dashboard() {
     : null;
 
   return (
-    <div className="space-y-4 stagger-children">
+    <div className="space-y-4 stagger-children overflow-x-hidden">
       {/* Welcome — sticky */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <h1 className="text-lg font-heading font-semibold text-foreground">Hola, {displayName} 👋</h1>

@@ -173,7 +173,7 @@ export default function Budgets() {
   };
 
   return (
-    <div className="space-y-6 overflow-x-hidden">
+    <div className="space-y-5 overflow-x-hidden">
       {/* Header — sticky */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between gap-2">
@@ -277,7 +277,7 @@ export default function Budgets() {
       {isLoading ? (
         <Skeleton className="h-28 rounded-2xl" />
       ) : totalBudgeted > 0 ? (
-        <div className="rounded-2xl bg-primary p-4 text-primary-foreground card-elevated">
+        <div className="rounded-2xl bg-primary p-4 text-primary-foreground card-elevated scroll-mt-20">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="min-w-0">
               <p className="text-xs text-primary-foreground/80">Presupuesto del mes</p>

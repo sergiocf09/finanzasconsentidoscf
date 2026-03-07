@@ -68,6 +68,12 @@ export function FinancialSummaryCards() {
 
   return (
     <div className="space-y-2">
+      {/* Eye toggle */}
+      <div className="flex justify-end">
+        <button onClick={toggle} className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors" title={hidden ? "Mostrar montos" : "Ocultar montos"}>
+          {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
       {/* Summary cards: two columns */}
       <div className="grid grid-cols-2 gap-2">
         {/* Left: Assets */}
@@ -89,7 +95,7 @@ export function FinancialSummaryCards() {
                       <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />
                       <p className="text-[10px] opacity-80 truncate">Activos {currency}</p>
                     </div>
-                    <p className="text-lg font-bold font-heading leading-tight">{fmt(total, currency)}</p>
+                    <p className="text-lg font-bold font-heading leading-tight">{mask(fmt(total, currency))}</p>
                   </div>
                   <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>
@@ -117,7 +123,7 @@ export function FinancialSummaryCards() {
                       <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
                       <p className="text-[10px] text-expense opacity-80 truncate">Pasivos {currency}</p>
                     </div>
-                    <p className="text-lg font-bold font-heading text-expense leading-tight">-{fmt(total, currency)}</p>
+                    <p className="text-lg font-bold font-heading text-expense leading-tight">{hidden ? "••••••" : `-${fmt(total, currency)}`}</p>
                   </div>
                   <ChevronDown className={cn("h-4 w-4 text-expense opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>

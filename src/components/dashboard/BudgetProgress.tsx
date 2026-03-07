@@ -35,9 +35,9 @@ export function BudgetProgress({
   const status = getStatusColor(percentage);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 overflow-hidden">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-foreground truncate">{category}</span>
+        <span className="text-sm font-medium text-foreground truncate min-w-0">{category}</span>
         <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
           {formatAmount(spent)} / {formatAmount(budgeted)}
         </span>
@@ -66,7 +66,7 @@ export function BudgetProgress({
         >
           {percentage.toFixed(0)}% usado
         </span>
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground whitespace-nowrap">
           {remaining > 0 ? `Quedan ${formatAmount(remaining)}` : "Sin saldo"}
         </span>
       </div>

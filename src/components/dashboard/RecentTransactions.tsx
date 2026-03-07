@@ -69,7 +69,7 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
           return (
             <div
               key={transaction.id}
-              className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border card-interactive cursor-pointer", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
+              className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border card-interactive cursor-pointer overflow-hidden", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
               onClick={() => setSelectedTx(transaction)}
             >
               <div className={cn(

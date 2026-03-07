@@ -52,7 +52,7 @@ export function BalanceCard({
           </p>
           <p
             className={cn(
-              "text-base font-bold font-heading tracking-tight leading-tight",
+              "text-sm font-bold font-heading tracking-tight leading-tight truncate",
               type === "balance" && "text-primary-foreground",
               type === "income" && "text-income",
               type === "expense" && "text-expense",

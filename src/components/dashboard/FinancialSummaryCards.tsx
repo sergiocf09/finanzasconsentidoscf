@@ -18,6 +18,7 @@ const fmt = (v: number, currency: string) =>
 export function FinancialSummaryCards() {
   const navigate = useNavigate();
   const { accounts, assetsByCurrency, liabilitiesByCurrency } = useAccounts();
+  const { hidden, toggle, mask } = useHideAmounts();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const assetCurrencies = Object.entries(assetsByCurrency);
@@ -44,7 +45,7 @@ export function FinancialSummaryCards() {
         <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
         <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
-          {debt && account.current_balance !== 0 ? "-" : ""}{fmt(account.current_balance, account.currency)}
+          {debt && account.current_balance !== 0 ? "-" : ""}{mask(fmt(account.current_balance, account.currency))}
         </span>
       </div>
     );

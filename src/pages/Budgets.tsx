@@ -174,8 +174,8 @@ export default function Budgets() {
 
   return (
     <div className="space-y-5 overflow-x-hidden">
-      {/* Header — sticky */}
-      <div className="pb-2 pt-1">
+      {/* Header */}
+      <div className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">Presupuestos</h1>
           <div className="flex gap-1 shrink-0">

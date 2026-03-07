@@ -154,7 +154,7 @@ export default function Dashboard() {
           <div className="cursor-pointer" onClick={() => navigate("/transactions?type=expense")}>
             <BalanceCard title="Gastos" amount={totals.expense} type="expense" />
           </div>
-          <div className="cursor-pointer" onClick={() => navigate("/transfers")}>
+        <div className="cursor-pointer" onClick={() => navigate("/transactions?type=transfer")}>
             <BalanceCard title="Transferencias" amount={totalTransferAmount} type="transfer" />
           </div>
         </div>

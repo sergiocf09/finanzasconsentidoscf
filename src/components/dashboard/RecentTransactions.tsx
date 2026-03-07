@@ -60,27 +60,29 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {displayed.map((transaction) => {
           const catName = getCategoryName(transaction.category_id);
           const isAdjustment = transaction.type === "adjustment_income" || transaction.type === "adjustment_expense";
           const Icon = isAdjustment ? SlidersHorizontal : transaction.type === "transfer" ? ArrowRightLeft : categoryIcons[catName] || categoryIcons.default;
 
+          const amountText = `${transaction.type === "expense" ? "-" : ""}${transaction.type === "income" ? "+" : ""}${isAdjustment ? (transaction.type === "adjustment_expense" ? "-" : "+") : ""}${formatAmount(transaction.amount, transaction.currency)}`;
+
           return (
             <div
               key={transaction.id}
-              className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border card-interactive cursor-pointer overflow-hidden", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
+              className={cn("flex items-center gap-2 p-2.5 rounded-xl bg-card border card-interactive cursor-pointer", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
               onClick={() => setSelectedTx(transaction)}
             >
               <div className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-xl flex-shrink-0",
+                "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
                 transaction.type === "income" && "bg-income/10",
                 transaction.type === "expense" && "bg-muted",
                 transaction.type === "transfer" && "bg-transfer/10",
                 isAdjustment && "bg-muted"
               )}>
                 <Icon className={cn(
-                  "h-4 w-4",
+                  "h-3.5 w-3.5",
                   transaction.type === "income" && "text-income",
                   transaction.type === "expense" && "text-muted-foreground",
                   transaction.type === "transfer" && "text-transfer",
@@ -88,20 +90,17 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
                 )} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{isAdjustment ? "Ajuste de saldo" : (transaction.description || catName)}</p>
-                <p className="text-xs text-muted-foreground truncate">{isAdjustment ? formatDate(transaction.transaction_date) : `${catName} · ${formatDate(transaction.transaction_date)}`}</p>
+                <p className="text-xs font-medium text-foreground truncate">{isAdjustment ? "Ajuste de saldo" : (transaction.description || catName)}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{isAdjustment ? formatDate(transaction.transaction_date) : `${catName} · ${formatDate(transaction.transaction_date)}`}</p>
               </div>
               <p className={cn(
-                "text-sm font-semibold tabular-nums shrink-0 text-right",
+                "text-xs font-semibold tabular-nums shrink-0",
                 transaction.type === "income" && "text-income",
                 transaction.type === "expense" && "text-foreground",
                 transaction.type === "transfer" && "text-transfer",
                 isAdjustment && "text-muted-foreground"
               )}>
-                {transaction.type === "expense" && "-"}
-                {transaction.type === "income" && "+"}
-                {isAdjustment && (transaction.type === "adjustment_expense" ? "-" : "+")}
-                {formatAmount(transaction.amount, transaction.currency)}
+                {amountText}
               </p>
             </div>
           );

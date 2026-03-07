@@ -143,7 +143,7 @@ export default function Transactions() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+      <div className="pb-2">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setFormOpen(true)}>

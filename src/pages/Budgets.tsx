@@ -173,23 +173,23 @@ export default function Budgets() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Header — sticky */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-heading font-semibold text-foreground">Presupuestos</h1>
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setShowDiagnostic(!showDiagnostic)}>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">Presupuestos</h1>
+          <div className="flex gap-1 shrink-0">
+            <Button variant="outline" size="sm" className="gap-1 h-8 text-[11px] px-2" onClick={() => setShowDiagnostic(!showDiagnostic)}>
               <Activity className="h-3.5 w-3.5" />
-              Diagnóstico
+              <span className="hidden sm:inline">Diagnóstico</span>
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => handleGenerateSuggested(3)} disabled={generatingBudget}>
+            <Button variant="outline" size="sm" className="gap-1 h-8 text-[11px] px-2" onClick={() => handleGenerateSuggested(3)} disabled={generatingBudget}>
               {generatingBudget ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              Sugerido
+              <span className="hidden sm:inline">Sugerido</span>
             </Button>
-            <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setFormOpen(true)}>
+            <Button size="sm" className="gap-1 h-8 text-[11px] px-2" onClick={() => setFormOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
-              Manual
+              <span className="hidden sm:inline">Manual</span>
             </Button>
           </div>
         </div>

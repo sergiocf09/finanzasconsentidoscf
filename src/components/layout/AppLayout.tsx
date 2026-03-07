@@ -17,8 +17,8 @@ export function AppLayout() {
       <MobileNav open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
       {/* Main Content */}
-      <main className="lg:pl-72 min-h-screen">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 pb-24 lg:pb-8">
+      <main className="lg:pl-72 min-h-screen overflow-x-hidden">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 pb-24 lg:pb-8 overflow-x-hidden">
           <Outlet />
         </div>
       </main>

@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isLiability } from "@/hooks/useAccounts";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),

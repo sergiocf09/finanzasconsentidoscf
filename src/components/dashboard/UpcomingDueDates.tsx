@@ -87,7 +87,7 @@ export function UpcomingDueDates() {
             day: d.due_day!,
             nextDate: next,
             daysLeft: diff,
-            amount: d.minimum_payment || null,
+            amount: d.minimum_payment ?? 0,
             currency: d.currency,
             type: "debt",
             accountId: d.account_id,

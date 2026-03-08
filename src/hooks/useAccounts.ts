@@ -152,9 +152,9 @@ export function useAccounts() {
   
   activeOnly.forEach(acc => {
     if (isAssetType(acc.type)) {
-      assetsByCurrency[acc.currency] = (assetsByCurrency[acc.currency] ?? 0) + acc.current_balance;
+      assetsByCurrency[acc.currency] = (assetsByCurrency[acc.currency] ?? 0) + (acc.current_balance ?? 0);
     } else if (isLiability(acc.type)) {
-      liabilitiesByCurrency[acc.currency] = (liabilitiesByCurrency[acc.currency] ?? 0) + Math.abs(acc.current_balance);
+      liabilitiesByCurrency[acc.currency] = (liabilitiesByCurrency[acc.currency] ?? 0) + Math.abs(acc.current_balance ?? 0);
     }
   });
 

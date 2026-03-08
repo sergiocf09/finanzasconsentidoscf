@@ -10,7 +10,8 @@ export function formatCurrency(
   currency = "MXN",
   options?: { decimals?: number; abs?: boolean }
 ): string {
-  const v = options?.abs ? Math.abs(value) : value;
+  const raw = typeof value === "number" && !isNaN(value) ? value : 0;
+  const v = options?.abs ? Math.abs(raw) : raw;
   const minDec = options?.decimals ?? 0;
   const maxDec = options?.decimals ?? 0;
   return new Intl.NumberFormat("es-MX", {

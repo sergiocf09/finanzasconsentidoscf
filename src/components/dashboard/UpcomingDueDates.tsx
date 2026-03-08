@@ -23,7 +23,7 @@ interface DueItem {
   day: number;
   nextDate: Date;
   daysLeft: number;
-  amount: number | null;
+  amount: number;
   currency: string;
   type: "debt" | "goal";
   accountId: string | null;

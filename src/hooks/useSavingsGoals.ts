@@ -26,6 +26,7 @@ export interface CreateSavingsGoalData {
   target_date?: string;
   description?: string;
   contribution_day?: number;
+  monthly_contribution?: number;
   account_id?: string; // link existing account
   create_account?: boolean; // create new account
   account_type?: "savings" | "investment";

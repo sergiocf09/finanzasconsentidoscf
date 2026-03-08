@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -62,9 +62,8 @@ export function UpcomingDueDates() {
   const { mask } = useHideAmounts("balances");
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
-  // Editable amounts per item (session-only reminders)
   const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
-  // Transfer flow
+  const [paidItemIds, setPaidItemIds] = useState<Set<string>>(new Set());
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
@@ -124,6 +123,12 @@ export function UpcomingDueDates() {
 
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [debts, goals, timeFilter]);
+
+  // Filter out paid items
+  const visibleItems = useMemo(() =>
+    items.filter(item => !paidItemIds.has(item.id)),
+    [items, paidItemIds]
+  );
 
   const hasAnyDueItems = useMemo(() => {
     const hasDebts = (debts ?? []).some(d => d.is_active && d.due_day);
@@ -188,6 +193,7 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       toast.success("Transferencia registrada");
+      setPaidItemIds(prev => new Set(prev).add(item.id));
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");
@@ -224,13 +230,13 @@ export function UpcomingDueDates() {
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-3">
           Sin vencimientos en este periodo.
         </p>
       ) : (
         <div className="space-y-1.5">
-          {items.map(item => {
+          {visibleItems.map(item => {
             const isUrgent = item.daysLeft <= 3;
             const Icon = item.type === "debt" ? CreditCard : PiggyBank;
             const isTransferring = transferringItemId === item.id;
@@ -321,16 +327,23 @@ export function UpcomingDueDates() {
                       <SelectContent>
                         {sourceAccounts
                           .filter(a => a.id !== item.accountId)
-                          .map(a => (
-                            <SelectItem key={a.id} value={a.id} className="text-xs">
-                              <div className="flex items-center justify-between gap-3 w-full">
-                                <span className="truncate">{a.name}</span>
-                                <span className="text-muted-foreground tabular-nums shrink-0">
-                                  {formatCurrencyAbs(Math.abs(a.current_balance ?? 0), a.currency)}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
+                          .map(a => {
+                            const bal = a.current_balance ?? 0;
+                            const isNeg = bal < 0;
+                            return (
+                              <SelectItem key={a.id} value={a.id} className="text-xs">
+                                <div className="flex items-center justify-between gap-3 w-full">
+                                  <span className="truncate">{a.name}</span>
+                                  <span className={cn(
+                                    "tabular-nums shrink-0",
+                                    isNeg ? "text-expense" : "text-muted-foreground"
+                                  )}>
+                                    {isNeg ? "-" : ""}{formatCurrencyAbs(bal, a.currency)}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                     <div className="flex items-center gap-2 justify-end">

@@ -41,12 +41,12 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
     <div className="rounded-xl bg-card border border-border p-4 space-y-3">
       <h3 className="text-base font-heading font-semibold text-foreground">Flujo mensual</h3>
 
-      <div className="grid grid-cols-3 gap-2 text-center">
+      <div className="grid grid-cols-2 gap-2 text-center">
         <button
           onClick={() => toggleExpanded("income")}
           className="rounded-lg bg-income/8 p-2 transition-colors hover:bg-income/15"
         >
-          <p className="text-xs text-muted-foreground">Ingresos</p>
+          <p className="text-xs font-semibold text-foreground">Ingresos</p>
           <p className="text-sm font-bold text-income tabular-nums">{formatCurrency(income)}</p>
           {topIncome.length > 0 && (
             <div className="flex justify-center mt-0.5">
@@ -62,7 +62,7 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
           onClick={() => toggleExpanded("expense")}
           className="rounded-lg bg-expense/8 p-2 transition-colors hover:bg-expense/15"
         >
-          <p className="text-xs text-muted-foreground">Gastos</p>
+          <p className="text-xs font-semibold text-foreground">Gastos</p>
           <p className="text-sm font-bold text-expense tabular-nums">{formatCurrency(expense)}</p>
           {topExpense.length > 0 && (
             <div className="flex justify-center mt-0.5">
@@ -74,12 +74,6 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
             </div>
           )}
         </button>
-        <div className="rounded-lg bg-muted/50 p-2">
-          <p className="text-xs text-muted-foreground">Flujo neto</p>
-          <p className={cn("text-sm font-bold tabular-nums", netFlow >= 0 ? "text-income" : "text-expense")}>
-            {formatCurrency(Math.abs(netFlow))}
-          </p>
-        </div>
       </div>
 
       {/* Top 5 drill-down */}

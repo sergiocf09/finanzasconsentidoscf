@@ -119,7 +119,7 @@ export function FinancialSummaryCards() {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <CreditCard className="h-3.5 w-3.5 text-expense opacity-80 shrink-0" />
+                      <CreditCard className="h-3.5 w-3.5 text-expense shrink-0" />
                       <p className="text-[10px] font-semibold text-expense truncate">Pasivos {currency}</p>
                     </div>
                     <p className="text-lg font-bold font-heading text-expense leading-tight">{hidden ? "••••••" : `-${fmt(total, currency)}`}</p>

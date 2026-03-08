@@ -34,17 +34,17 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
     <div className="rounded-xl bg-card border border-border p-4 space-y-3">
       <h3 className="text-base font-heading font-semibold text-foreground">Distribución del gasto</h3>
 
-      <div className="flex items-center gap-3">
-        <div className="pointer-events-none">
-          <ResponsiveContainer width={110} height={110}>
+      <div className="flex items-center gap-4">
+        <div className="pointer-events-none shrink-0">
+          <ResponsiveContainer width={80} height={80}>
             <PieChart>
               <Pie
                 data={data}
                 dataKey="value"
                 cx="50%"
                 cy="50%"
-                innerRadius={30}
-                outerRadius={50}
+                innerRadius={20}
+                outerRadius={36}
                 strokeWidth={2}
                 stroke="hsl(var(--card))"
                 isAnimationActive={false}

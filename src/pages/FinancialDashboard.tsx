@@ -18,6 +18,7 @@ import { useBudgets } from "@/hooks/useBudgets";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { formatCurrency } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";

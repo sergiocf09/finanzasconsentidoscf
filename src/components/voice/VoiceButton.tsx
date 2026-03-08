@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
+import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════
@@ -32,6 +33,7 @@ export function VoiceButton() {
   const queryClient = useQueryClient();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+  const { checkAlerts } = useBudgetAlerts();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
@@ -180,6 +182,10 @@ export function VoiceButton() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      // Check budget alerts after expense
+      if (editType === "expense") {
+        setTimeout(() => checkAlerts(), 1000);
+      }
       toast.success("Registrado correctamente");
       handleReset();
       setIsOpen(false);

@@ -11,6 +11,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
+import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -54,6 +55,7 @@ export default function Dashboard() {
   const { profile } = useProfile();
   const { budgets } = useBudgets();
   const { signals } = useFinancialIntelligence();
+  useBudgetAlerts(); // Check budget alerts on Dashboard load
   const displayName = profile?.display_name || "bienvenido";
 
   const [period, setPeriod] = useState<PeriodKey>("current");

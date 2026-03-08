@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
+import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -74,6 +75,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
+  const { checkAlerts } = useBudgetAlerts();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -108,6 +110,10 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       type: activeTab,
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
+    // Check budget alerts after expense (with small delay for DB triggers to settle)
+    if (activeTab === "expense") {
+      setTimeout(() => checkAlerts(), 1000);
+    }
     form.reset();
     onOpenChange(false);
   };

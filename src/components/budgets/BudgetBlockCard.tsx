@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
+import { BudgetBlockInsights } from "./BudgetBlockInsights";
+import type { FinancialSignal, Recommendation } from "@/hooks/useFinancialIntelligence";
 
 interface BudgetItem {
   id: string;
@@ -21,6 +23,8 @@ interface BudgetBlockCardProps {
   onDeleteBudget: (id: string) => void;
   onCategoryClick?: (item: BudgetItem) => void;
   currency?: string;
+  signals?: FinancialSignal[];
+  recommendations?: Recommendation[];
 }
 
 const blockColorMap = {

@@ -73,7 +73,7 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
         .insert({
           ...data,
           user_id: user!.id,
-          amount_in_base: data.amount * (data.exchange_rate ?? 1),
+          amount_in_base: data.amount_in_base ?? data.amount * (data.exchange_rate ?? 1),
         })
         .select()
         .single();

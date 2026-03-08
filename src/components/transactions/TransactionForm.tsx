@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -72,7 +72,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
-  const { expenseCategories, incomeCategories, transferCategories } = useCategories();
+  const { expenseCategories, incomeCategories } = useCategories();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -86,6 +86,14 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       transaction_date: voiceData?.date ?? new Date(),
     },
   });
+
+  // Sync activeTab and form type when defaultType changes (e.g. opening from QuickActions)
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultType);
+      form.setValue("type", defaultType);
+    }
+  }, [open, defaultType]);
 
   const categories = activeTab === "income" ? incomeCategories : expenseCategories;
 
@@ -105,11 +113,11 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-base font-heading">Registrar movimiento</DialogTitle>
           <DialogDescription className="text-xs">
-            Agrega un ingreso, gasto o transferencia.
+            Agrega un ingreso o gasto.
           </DialogDescription>
         </DialogHeader>
 
@@ -123,7 +131,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 mt-3">
-              {/* Amount + Currency + Account in one row */}
+              {/* Amount + Currency */}
               <div className="flex gap-2">
                 <FormField
                   control={form.control}
@@ -167,63 +175,62 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 />
               </div>
 
-              {/* Account + Category side by side */}
-              <div className="flex gap-2">
-                <FormField
-                  control={form.control}
-                  name="account_id"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Cuenta</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue placeholder="Cuenta" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {accounts.map((account) => {
-                            const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: account.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(account.current_balance ?? 0);
-                            return (
-                              <SelectItem key={account.id} value={account.id}>
-                                <span className="flex items-center justify-between w-full gap-2">
-                                  <span>{account.name}</span>
-                                  <span className="text-muted-foreground text-[11px] font-semibold">{bal}</span>
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="category_id"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Categoría</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue placeholder="Categoría" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
+              {/* Account */}
+              <FormField
+                control={form.control}
+                name="account_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Cuenta</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Selecciona una cuenta" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {accounts.map((account) => {
+                          const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: account.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(account.current_balance ?? 0);
+                          return (
+                            <SelectItem key={account.id} value={account.id}>
+                              <span className="flex items-center gap-3 w-full">
+                                <span className="truncate">{account.name}</span>
+                                <span className="text-muted-foreground text-xs font-bold ml-auto">{bal}</span>
+                              </span>
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-              </div>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Category */}
+              <FormField
+                control={form.control}
+                name="category_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Categoría</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Selecciona una categoría" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
 
               {/* Date + Description side by side */}
               <div className="flex gap-2">
@@ -261,6 +268,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                               date > new Date() || date < new Date("1900-01-01")
                             }
                             initialFocus
+                            className={cn("p-3 pointer-events-auto")}
                           />
                         </PopoverContent>
                       </Popover>

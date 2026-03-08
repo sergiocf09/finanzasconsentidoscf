@@ -96,6 +96,7 @@ export function useSavingsGoals() {
         description: data.description || null,
         account_id: accountId,
         contribution_day: data.contribution_day || null,
+        monthly_contribution: data.monthly_contribution || 0,
       } as any);
       if (error) throw error;
     },

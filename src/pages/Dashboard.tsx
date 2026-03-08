@@ -10,6 +10,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useBudgets } from "@/hooks/useBudgets";
+import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
+import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import {

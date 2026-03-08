@@ -62,14 +62,14 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
             const value = block.key === "stability" ? stability : block.key === "lifestyle" ? lifestyle : build;
             const pct = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
             return (
-              <div key={block.key} className="flex items-center gap-1.5">
+              <div key={block.key} className="flex items-center">
                 <span
                   className="h-2.5 w-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: block.color }}
                 />
-                <span className="text-xs text-foreground w-[5.5rem] shrink-0 truncate">{block.label}</span>
-                <span className="text-xs font-semibold text-foreground tabular-nums w-7 text-right shrink-0">{pct}%</span>
-                <span className="text-xs text-muted-foreground tabular-nums ml-auto shrink-0">{formatCurrency(value)}</span>
+                <span className="text-xs text-foreground ml-1.5 w-[5.5rem] shrink-0 truncate">{block.label}</span>
+                <span className="text-xs font-semibold text-foreground tabular-nums w-9 text-right shrink-0">{pct}%</span>
+                <span className="text-xs text-muted-foreground tabular-nums w-[4.5rem] text-right shrink-0">{formatCurrency(value)}</span>
               </div>
             );
           })}

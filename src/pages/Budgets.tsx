@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
 import { useDiagnostic } from "@/hooks/useDiagnostic";
+import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { BudgetSummary } from "@/components/budgets/BudgetSummary";
 import { BudgetBlockCard } from "@/components/budgets/BudgetBlockCard";
 import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail";

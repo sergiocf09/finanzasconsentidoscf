@@ -125,6 +125,7 @@ export function BudgetBlockCard({
       {expanded && (
         <div className="px-4 pb-4 space-y-2 animate-fade-in-up">
           <div className="border-t border-border/50 pt-3" />
+          <BudgetBlockInsights block={block} signals={signals} recommendations={recommendations} />
           {items.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-2">
               Sin presupuestos en este bloque

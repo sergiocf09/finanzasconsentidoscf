@@ -70,12 +70,20 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
     },
   });
 
+  const selectedType = useWatch({ control: form.control, name: "type" });
+  const isLiab = isLiability(selectedType);
+
   const onSubmit = async (data: AccountFormValues) => {
+    // For liabilities, user enters the debt as positive → store as negative
+    const balance = isLiability(data.type) && data.initial_balance > 0
+      ? -Math.abs(data.initial_balance)
+      : data.initial_balance;
+
     await createAccount.mutateAsync({
       name: data.name,
       type: data.type,
       currency: data.currency,
-      initial_balance: data.initial_balance,
+      initial_balance: balance,
     });
     form.reset();
     onOpenChange(false);

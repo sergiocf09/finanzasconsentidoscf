@@ -20,18 +20,8 @@ export function FinancialSummaryCards() {
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
-  const { rate, convertToMXN } = useExchangeRate();
 
-  const assetCurrencies = Object.entries(assetsByCurrency);
-  const liabCurrencies = Object.entries(liabilitiesByCurrency);
 
-  // Consolidated totals in MXN
-  const hasMultipleCurrencies = assetCurrencies.length > 1 || liabCurrencies.length > 1 ||
-    (assetCurrencies.some(([c]) => c !== "MXN") || liabCurrencies.some(([c]) => c !== "MXN"));
-  
-  const consolidatedAssets = assetCurrencies.reduce((sum, [currency, total]) => sum + convertToMXN(total, currency), 0);
-  const consolidatedLiabilities = liabCurrencies.reduce((sum, [currency, total]) => sum + convertToMXN(total, currency), 0);
-  const consolidatedNet = consolidatedAssets - consolidatedLiabilities;
 
   const handleCardClick = (key: string) => {
     setExpandedKey(expandedKey === key ? null : key);

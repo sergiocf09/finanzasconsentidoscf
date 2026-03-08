@@ -258,7 +258,9 @@ export function VoiceButton() {
             <DialogHeader className="text-center pb-1 shrink-0">
               <DialogTitle className="font-heading text-base">Registra con tu voz</DialogTitle>
               <DialogDescription className="text-xs leading-tight">
-                Toca el tipo para empezar a grabar. Ej: "900 pesos gasolina HSBC"
+                Toca el tipo para empezar a grabar.
+                <br />
+                <span className="italic text-muted-foreground">Ej: "900 pesos gasolina HSBC"</span>
               </DialogDescription>
             </DialogHeader>
 

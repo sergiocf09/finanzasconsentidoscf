@@ -4,7 +4,7 @@ import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Brain, TrendingUp, AlertCircle, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useTransactions } from "@/hooks/useTransactions";

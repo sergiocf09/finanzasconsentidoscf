@@ -55,6 +55,7 @@ export default function Dashboard() {
   const { profile } = useProfile();
   const { budgets } = useBudgets();
   const { signals } = useFinancialIntelligence();
+  useBudgetAlerts(); // Check budget alerts on Dashboard load
   const displayName = profile?.display_name || "bienvenido";
 
   const [period, setPeriod] = useState<PeriodKey>("current");

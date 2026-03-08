@@ -68,6 +68,7 @@ export function UpcomingDueDates() {
   const [payingItemId, setPayingItemId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [overriddenAmounts, setOverriddenAmounts] = useState<Record<string, number>>({});
 
   const items = useMemo(() => {
     const today = new Date();
@@ -133,8 +134,9 @@ export function UpcomingDueDates() {
   const handleStartPay = useCallback((item: DueItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setPayingItemId(item.id);
-    setPayAmount(item.amount ? String(item.amount) : "");
-  }, []);
+    const displayAmount = overriddenAmounts[item.id] ?? item.amount;
+    setPayAmount(displayAmount ? String(displayAmount) : "");
+  }, [overriddenAmounts]);
 
   const handleCancelPay = useCallback(() => {
     setPayingItemId(null);
@@ -210,6 +212,7 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
+      setOverriddenAmounts(prev => ({ ...prev, [item.id]: amount }));
       toast.success("Pago registrado correctamente");
       handleCancelPay();
     } catch (err: any) {
@@ -288,9 +291,14 @@ export function UpcomingDueDates() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isUrgent && <AlertTriangle className="h-3 w-3 text-expense" />}
-                    <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
-                      {mask(formatCurrencyAbs(item.amount, item.currency))}
-                    </span>
+                    {(() => {
+                      const displayAmount = overriddenAmounts[item.id] ?? item.amount;
+                      return (
+                        <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
+                          {mask(formatCurrencyAbs(displayAmount, item.currency))}
+                        </span>
+                      );
+                    })()}
                     {item.accountId && !isPaying && (
                       <button
                         onClick={(e) => handleStartPay(item, e)}

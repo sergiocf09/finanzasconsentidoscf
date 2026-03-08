@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 
 const typeIcons: Record<string, typeof Wallet> = {
   cash: Wallet, bank: Building2, savings: PiggyBank, investment: TrendingUp,
@@ -21,8 +22,18 @@ export function FinancialSummaryCards() {
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
+  const { rate, convertToMXN } = useExchangeRate();
+
   const assetCurrencies = Object.entries(assetsByCurrency);
   const liabCurrencies = Object.entries(liabilitiesByCurrency);
+
+  // Consolidated totals in MXN
+  const hasMultipleCurrencies = assetCurrencies.length > 1 || liabCurrencies.length > 1 ||
+    (assetCurrencies.some(([c]) => c !== "MXN") || liabCurrencies.some(([c]) => c !== "MXN"));
+  
+  const consolidatedAssets = assetCurrencies.reduce((sum, [currency, total]) => sum + convertToMXN(total, currency), 0);
+  const consolidatedLiabilities = liabCurrencies.reduce((sum, [currency, total]) => sum + convertToMXN(total, currency), 0);
+  const consolidatedNet = consolidatedAssets - consolidatedLiabilities;
 
   const handleCardClick = (key: string) => {
     setExpandedKey(expandedKey === key ? null : key);
@@ -167,6 +178,31 @@ export function FinancialSummaryCards() {
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Consolidated totals in MXN when multi-currency */}
+      {hasMultipleCurrencies && rate > 0 && (
+        <div className="rounded-xl bg-card border border-border p-3 space-y-2">
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Total consolidado (MXN) · TC: ${rate.toFixed(2)}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <p className="text-[9px] text-muted-foreground">Activos</p>
+              <p className="text-sm font-bold text-income tabular-nums">{mask(fmt(consolidatedAssets, "MXN"))}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] text-muted-foreground">Pasivos</p>
+              <p className="text-sm font-bold text-expense tabular-nums">-{mask(fmt(consolidatedLiabilities, "MXN"))}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] text-muted-foreground">Neto</p>
+              <p className={cn("text-sm font-bold tabular-nums", consolidatedNet >= 0 ? "text-income" : "text-expense")}>
+                {consolidatedNet < 0 && "-"}{mask(fmt(Math.abs(consolidatedNet), "MXN"))}
+              </p>
+            </div>
           </div>
         </div>
       )}

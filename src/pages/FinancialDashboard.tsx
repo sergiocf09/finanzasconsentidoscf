@@ -18,6 +18,7 @@ import { useBudgets } from "@/hooks/useBudgets";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { formatCurrency } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -45,8 +46,10 @@ export default function FinancialDashboard() {
   const currentMonth = format(now, "MMMM yyyy", { locale: es });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
 
-  const totalAssets = Object.values(assetsByCurrency).reduce((s, v) => s + v, 0);
-  const totalLiabilities = Object.values(liabilitiesByCurrency).reduce((s, v) => s + v, 0);
+  const { convertToMXN } = useExchangeRate();
+
+  const totalAssets = Object.entries(assetsByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0);
+  const totalLiabilities = Object.entries(liabilitiesByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0);
 
   const topCategories = useMemo(() => {
     const total = currentBlocks.total;

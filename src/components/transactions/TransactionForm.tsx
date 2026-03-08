@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -76,6 +77,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
+  const { rate: fxRate } = useExchangeRate();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -100,13 +102,51 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   const categories = activeTab === "income" ? incomeCategories : expenseCategories;
 
+  // Cross-currency detection
+  const watchedAccountId = form.watch("account_id");
+  const watchedCurrency = form.watch("currency");
+  const watchedAmount = form.watch("amount");
+  const selectedAccount = accounts.find(a => a.id === watchedAccountId);
+  const isCrossCurrency = selectedAccount && watchedCurrency !== selectedAccount.currency;
+  const convertedAmount = isCrossCurrency && fxRate > 0 && watchedAmount > 0
+    ? (watchedCurrency === "USD" && selectedAccount.currency === "MXN"
+      ? watchedAmount * fxRate
+      : watchedCurrency === "MXN" && selectedAccount.currency === "USD"
+        ? watchedAmount / fxRate
+        : watchedAmount)
+    : null;
+
   const onSubmit = async (data: TransactionFormValues) => {
+    const account = accounts.find(a => a.id === data.account_id);
+    const crossCurrency = account && data.currency !== account.currency;
+    
+    let finalAmount = data.amount;
+    let finalCurrency = data.currency;
+    let exchangeRate = 1;
+    let description = data.description || "";
+
+    if (crossCurrency && fxRate > 0) {
+      // Convert to account's currency
+      if (data.currency === "USD" && account.currency === "MXN") {
+        finalAmount = data.amount * fxRate;
+        exchangeRate = fxRate;
+      } else if (data.currency === "MXN" && account.currency === "USD") {
+        finalAmount = data.amount / fxRate;
+        exchangeRate = 1 / fxRate;
+      }
+      finalCurrency = account.currency;
+      // Add original currency note
+      const originalNote = `[Originalmente ${data.amount.toFixed(2)} ${data.currency} · TC: ${fxRate.toFixed(2)}]`;
+      description = description ? `${description} ${originalNote}` : originalNote;
+    }
+
     await createTransaction.mutateAsync({
       account_id: data.account_id,
-      amount: data.amount,
-      currency: data.currency,
+      amount: Math.round(finalAmount * 100) / 100,
+      currency: finalCurrency,
+      exchange_rate: exchangeRate,
       category_id: data.category_id && data.category_id.length > 0 ? data.category_id : undefined,
-      description: data.description,
+      description,
       type: activeTab,
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
@@ -213,6 +253,24 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   </FormItem>
                 )}
               />
+
+              {/* Cross-currency info */}
+              {isCrossCurrency && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
+                  <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    <p className="font-medium text-foreground">Conversión automática</p>
+                    <p>
+                      La cuenta es en {selectedAccount?.currency}. Se convertirá usando TC: ${fxRate.toFixed(2)}.
+                    </p>
+                    {convertedAmount !== null && (
+                      <p className="font-semibold text-foreground">
+                        {watchedAmount.toFixed(2)} {watchedCurrency} → {convertedAmount.toFixed(2)} {selectedAccount?.currency}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Category */}
               <FormField

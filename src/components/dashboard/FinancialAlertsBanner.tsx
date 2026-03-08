@@ -12,10 +12,8 @@ export function FinancialAlertsBanner({ signals, recommendations, budgetsNearLim
   const attentionSignals = signals.filter(s => s.type === "attention");
   const topRecommendations = recommendations.slice(0, 2);
 
-  // Build alert items
   const alerts: { id: string; icon: "warning" | "attention" | "tip"; text: string }[] = [];
 
-  // Budget alerts
   budgetsNearLimit.forEach(b => {
     const pct = Math.round((b.spent / b.amount) * 100);
     alerts.push({
@@ -27,14 +25,12 @@ export function FinancialAlertsBanner({ signals, recommendations, budgetsNearLim
     });
   });
 
-  // Intelligence signals
   attentionSignals.forEach(s => {
     if (!alerts.some(a => a.text.includes(s.title))) {
       alerts.push({ id: s.id, icon: "attention", text: s.message });
     }
   });
 
-  // Recommendations
   topRecommendations.forEach(r => {
     alerts.push({ id: r.id, icon: "tip", text: r.message });
   });
@@ -42,22 +38,22 @@ export function FinancialAlertsBanner({ signals, recommendations, budgetsNearLim
   if (alerts.length === 0) return null;
 
   const iconMap = {
-    warning: <AlertTriangle className="h-3.5 w-3.5 text-[hsl(var(--status-danger))] shrink-0" />,
-    attention: <AlertCircle className="h-3.5 w-3.5 text-[hsl(var(--status-warning))] shrink-0" />,
-    tip: <TrendingUp className="h-3.5 w-3.5 text-primary shrink-0" />,
+    warning: <AlertTriangle className="h-4 w-4 text-[hsl(var(--status-danger))] shrink-0" />,
+    attention: <AlertCircle className="h-4 w-4 text-[hsl(var(--status-warning))] shrink-0" />,
+    tip: <TrendingUp className="h-4 w-4 text-primary shrink-0" />,
   };
 
   return (
-    <div className="rounded-xl border border-[hsl(var(--status-warning)/0.2)] bg-[hsl(var(--status-warning)/0.04)] p-3 space-y-2">
-      <div className="flex items-center gap-1.5">
-        <AlertCircle className="h-4 w-4 text-[hsl(var(--status-warning))]" />
-        <h3 className="text-xs font-heading font-semibold text-foreground">Alertas financieras</h3>
+    <div className="rounded-xl border border-[hsl(var(--status-warning)/0.2)] bg-[hsl(var(--status-warning)/0.04)] p-4 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <AlertCircle className="h-4.5 w-4.5 text-[hsl(var(--status-warning))]" />
+        <h3 className="text-sm font-heading font-semibold text-foreground">Resumen</h3>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {alerts.slice(0, 5).map(alert => (
           <div key={alert.id} className="flex items-start gap-2">
             <div className="mt-0.5">{iconMap[alert.icon]}</div>
-            <p className="text-[11px] leading-relaxed text-foreground/80">{alert.text}</p>
+            <p className="text-xs leading-relaxed text-foreground/80">{alert.text}</p>
           </div>
         ))}
       </div>

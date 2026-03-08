@@ -6,6 +6,7 @@ import { formatCurrencyAbs } from "@/lib/formatters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
+import { Eye, EyeOff } from "lucide-react";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransferForm } from "@/components/transfers/TransferForm";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,7 +44,7 @@ function getDateRange(period: PeriodKey, customStart?: Date, customEnd?: Date) {
 
 export function PeriodSummaryCards() {
   const navigate = useNavigate();
-  const { mask } = useHideAmounts();
+  const { hidden, toggle, mask } = useHideAmounts("period");
 
   // Period state
   const [period, setPeriod] = useState<PeriodKey>("current");
@@ -107,6 +108,7 @@ export function PeriodSummaryCards() {
         {/* Period selector */}
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={handlePeriodChange}>
+
             <SelectTrigger className="h-8 text-xs flex-1">
               <SelectValue />
             </SelectTrigger>
@@ -116,6 +118,9 @@ export function PeriodSummaryCards() {
               ))}
             </SelectContent>
           </Select>
+          <button onClick={toggle} className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors" title={hidden ? "Mostrar montos" : "Ocultar montos"}>
+            {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
         </div>
 
         {/* Custom date pickers */}

@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 
-const STORAGE_KEY = "lobobook-hide-amounts";
+const STORAGE_PREFIX = "lobobook-hide-";
 
-export function useHideAmounts() {
+export function useHideAmounts(section: string = "amounts") {
+  const key = `${STORAGE_PREFIX}${section}`;
+
   const [hidden, setHidden] = useState(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY) === "true";
+      return localStorage.getItem(key) === "true";
     } catch {
       return false;
     }
@@ -13,9 +15,9 @@ export function useHideAmounts() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, String(hidden));
+      localStorage.setItem(key, String(hidden));
     } catch { /* ignore */ }
-  }, [hidden]);
+  }, [hidden, key]);
 
   const toggle = useCallback(() => setHidden(prev => !prev), []);
 

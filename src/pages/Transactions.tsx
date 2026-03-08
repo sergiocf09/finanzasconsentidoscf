@@ -303,15 +303,26 @@ export default function Transactions() {
         })}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar movimientos..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search + Sort */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar movimientos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="shrink-0 h-10 w-10"
+          onClick={() => setSortAsc(prev => !prev)}
+          title={sortAsc ? "Más antiguo primero" : "Más reciente primero"}
+        >
+          <ArrowUpDown className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* List */}
@@ -330,44 +341,54 @@ export default function Transactions() {
           {displayed.map((item) => {
             const isAdjustment = item.type === "adjustment_income" || item.type === "adjustment_expense";
             const isTransfer = item.type === "transfer";
+            const itemDate = formatDate(item.date);
             return (
             <div key={`${item.source}-${item.id}`} className={cn("flex items-center gap-3 p-3 rounded-xl bg-card border cursor-pointer card-interactive", isAdjustment ? "border-dashed border-muted-foreground/30" : "border-border")}
               onClick={() => handleItemClick(item)}>
               <div className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0",
                 item.type === "income" && "bg-income/10",
-                item.type === "expense" && "bg-muted",
-                isTransfer && "bg-primary/10",
+                item.type === "expense" && "bg-expense/10",
+                isTransfer && "bg-transfer/10",
                 isAdjustment && "bg-muted"
               )}>
                 {isAdjustment ? (
                   <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
                 ) : isTransfer ? (
-                  <ArrowLeftRight className="h-5 w-5 text-primary" />
+                  <ArrowLeftRight className="h-5 w-5 text-transfer" />
                 ) : (
                   <Receipt className={cn(
                     "h-5 w-5",
                     item.type === "income" && "text-income",
-                    item.type === "expense" && "text-muted-foreground",
+                    item.type === "expense" && "text-expense",
                   )} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
-                <p className="text-xs text-muted-foreground truncate">{item.secondaryInfo}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-muted-foreground shrink-0">{itemDate}</span>
+                  <span className="text-[10px] text-muted-foreground">·</span>
+                  <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
+                </div>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {isTransfer
+                    ? `${getAccountName((transfers.find(t => t.id === item.id))?.from_account_id || "")} → ${getAccountName((transfers.find(t => t.id === item.id))?.to_account_id || "")}`
+                    : `${getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null)} · ${item.accountName}`
+                  }
+                </p>
               </div>
               <p className={cn(
                 "text-sm font-semibold tabular-nums shrink-0",
                 item.type === "income" && "text-income",
-                item.type === "expense" && "text-foreground",
-                isTransfer && "text-primary",
+                item.type === "expense" && "text-expense",
+                isTransfer && "text-transfer",
                 isAdjustment && "text-muted-foreground"
               )}>
                 {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
               </p>
               {item.source === "tx" && (
-                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
-                  <Trash2 className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>

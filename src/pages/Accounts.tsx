@@ -216,23 +216,19 @@ export default function Accounts() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Deseas eliminar esta cuenta?</AlertDialogTitle>
+            <AlertDialogTitle>¿Desactivar esta cuenta?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
                 Cuenta: <span className="font-medium text-foreground">"{deleteTarget?.name}"</span>
               </span>
               <span className="block">
-                La cuenta se desactivará y dejará de aparecer en las listas. El historial contable se mantiene intacto.
+                La cuenta se desactivará y dejará de aparecer en las listas. Todo el historial de transacciones, transferencias e ingresos/gastos se mantiene intacto para reportes.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={handleHardDelete}>
-              Eliminar permanentemente
-            </Button>
-            <AlertDialogAction onClick={handleSoftDelete}>
+            <AlertDialogAction onClick={handleDeactivate}>
               Desactivar cuenta
             </AlertDialogAction>
           </AlertDialogFooter>

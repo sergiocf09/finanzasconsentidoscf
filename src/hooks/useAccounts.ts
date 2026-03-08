@@ -102,7 +102,7 @@ export function useAccounts() {
     },
   });
 
-  // Soft delete — marks inactive, preserves ledger
+  // Soft delete — marks inactive, preserves ledger + syncs to debts
   const deactivateAccount = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -110,9 +110,12 @@ export function useAccounts() {
         .update({ is_active: false })
         .eq('id', id);
       if (error) throw error;
+      // Also deactivate any linked debt
+      await supabase.from('debts').update({ is_active: false }).eq('account_id', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: "Cuenta desactivada", description: "La cuenta ya no aparece en listas activas." });
     },
     onError: (error) => {

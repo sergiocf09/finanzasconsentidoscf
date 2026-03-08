@@ -18,6 +18,7 @@ import Library from "./pages/Library";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import FinancialDashboard from "./pages/FinancialDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

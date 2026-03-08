@@ -187,14 +187,14 @@ export default function Debts() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>¿Desactivar "{deleteTarget?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará la deuda y la cuenta pasiva asociada. Esta acción no se puede deshacer.
+              La deuda y su cuenta pasiva asociada se desactivarán. Todo el historial de transacciones y transferencias se mantiene intacto para reportes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>Desactivar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

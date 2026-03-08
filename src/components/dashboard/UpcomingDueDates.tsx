@@ -291,9 +291,14 @@ export function UpcomingDueDates() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isUrgent && <AlertTriangle className="h-3 w-3 text-expense" />}
-                    <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
-                      {mask(formatCurrencyAbs(item.amount, item.currency))}
-                    </span>
+                    {(() => {
+                      const displayAmount = overriddenAmounts[item.id] ?? item.amount;
+                      return (
+                        <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
+                          {mask(formatCurrencyAbs(displayAmount, item.currency))}
+                        </span>
+                      );
+                    })()}
                     {item.accountId && !isPaying && (
                       <button
                         onClick={(e) => handleStartPay(item, e)}

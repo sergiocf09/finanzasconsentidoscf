@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 
 interface BalanceCardProps {

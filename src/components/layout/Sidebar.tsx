@@ -7,7 +7,7 @@ import {
   Wallet,
   CreditCard,
   Target,
-  BarChart3,
+  
   BookOpen,
   Settings,
   Leaf,
@@ -23,7 +23,6 @@ const navigation = [
   { name: "Categorías", href: "/categories", icon: Tag },
   { name: "Deudas", href: "/debts", icon: CreditCard },
   { name: "Fondo de emergencia", href: "/emergency-fund", icon: Target },
-  { name: "Inteligencia", href: "/intelligence", icon: BarChart3 },
   { name: "Dashboard", href: "/financial-dashboard", icon: Gauge },
   { name: "Mi Biblioteca", href: "/library", icon: BookOpen },
 ];

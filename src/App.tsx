@@ -13,7 +13,7 @@ import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
 import Debts from "./pages/Debts";
 import EmergencyFund from "./pages/EmergencyFund";
-import FinancialIntelligence from "./pages/FinancialIntelligence";
+
 import Library from "./pages/Library";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
@@ -48,7 +48,6 @@ const App = () => (
               <Route path="/categories" element={<Categories />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/emergency-fund" element={<EmergencyFund />} />
-              <Route path="/intelligence" element={<FinancialIntelligence />} />
               <Route path="/financial-dashboard" element={<FinancialDashboard />} />
               <Route path="/library" element={<Library />} />
               <Route path="/settings" element={<Settings />} />

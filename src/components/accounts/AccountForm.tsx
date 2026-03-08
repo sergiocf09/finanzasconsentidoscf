@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isLiability } from "@/hooks/useAccounts";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
@@ -70,12 +70,20 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
     },
   });
 
+  const selectedType = useWatch({ control: form.control, name: "type" });
+  const isLiab = isLiability(selectedType);
+
   const onSubmit = async (data: AccountFormValues) => {
+    // For liabilities, user enters the debt as positive → store as negative
+    const balance = isLiability(data.type) && data.initial_balance > 0
+      ? -Math.abs(data.initial_balance)
+      : data.initial_balance;
+
     await createAccount.mutateAsync({
       name: data.name,
       type: data.type,
       currency: data.currency,
-      initial_balance: data.initial_balance,
+      initial_balance: balance,
     });
     form.reset();
     onOpenChange(false);
@@ -159,11 +167,12 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
               control={form.control}
               name="initial_balance"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Saldo inicial</FormLabel>
+             <FormItem>
+                  <FormLabel>{isLiab ? "Saldo adeudado" : "Saldo inicial"}</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} />
                   </FormControl>
+                  {isLiab && <p className="text-[10px] text-muted-foreground">Ingresa el monto que debes (ej: 50000)</p>}
                   <FormMessage />
                 </FormItem>
               )}

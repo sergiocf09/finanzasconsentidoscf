@@ -68,8 +68,14 @@ export function UpcomingDueDates() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
   const [payingItemId, setPayingItemId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
+  const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
-  const [overriddenAmounts, setOverriddenAmounts] = useState<Record<string, number>>({});
+
+  // Asset accounts that can be used as source for transfers
+  const sourceAccounts = useMemo(() =>
+    accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),
+    [accounts]
+  );
 
   const items = useMemo(() => {
     const today = new Date();

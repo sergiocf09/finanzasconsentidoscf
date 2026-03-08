@@ -32,6 +32,12 @@ export default function Dashboard() {
       {/* Financial Summary */}
       <FinancialSummaryCards />
 
+      {/* Period Summary */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-heading font-semibold text-foreground">Estado del mes</h2>
+        <PeriodSummaryCards />
+      </div>
+
       {/* Quick Actions */}
       <div className="space-y-2">
         <h2 className="text-sm font-heading font-semibold text-foreground">Acciones rápidas</h2>

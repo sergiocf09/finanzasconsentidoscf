@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 
 interface BudgetSummaryProps {
   totalBudgeted: number;

@@ -100,8 +100,10 @@ export function FinancialSummaryCards() {
                     {currency}
                   </span>
                   <span className={cn(
-                    "text-xs font-bold tabular-nums",
-                    isAsset ? "text-income" : "text-expense"
+                    "text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-full border",
+                    isAsset
+                      ? "text-income border-income/40 bg-income/10"
+                      : "text-expense border-expense/40 bg-expense/10"
                   )}>
                     {!isAsset && subtotal !== 0 ? "-" : ""}
                     {mask(fmt(Math.abs(subtotal), currency))}

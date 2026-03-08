@@ -148,6 +148,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       amount: Math.round(finalAmount * 100) / 100,
       currency: finalCurrency,
       exchange_rate: exchangeRate,
+      amount_in_base: amountInBase,
+      notes: notes || undefined,
       category_id: data.category_id && data.category_id.length > 0 ? data.category_id : undefined,
       description,
       type: activeTab,

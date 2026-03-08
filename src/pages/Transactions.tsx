@@ -359,15 +359,11 @@ export default function Transactions() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground shrink-0">{itemDate}</span>
-                  <span className="text-[10px] text-muted-foreground">·</span>
-                  <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
-                </div>
+                <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
                 <p className="text-[10px] text-muted-foreground truncate">
                   {isTransfer
-                    ? `${getAccountName((transfers.find(t => t.id === item.id))?.from_account_id || "")} → ${getAccountName((transfers.find(t => t.id === item.id))?.to_account_id || "")}`
-                    : `${getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null)} · ${item.accountName}`
+                    ? `${itemDate} · ${getAccountName((transfers.find(t => t.id === item.id))?.from_account_id || "")} → ${getAccountName((transfers.find(t => t.id === item.id))?.to_account_id || "")}`
+                    : `${itemDate} · ${getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null)} · ${item.accountName}`
                   }
                 </p>
               </div>

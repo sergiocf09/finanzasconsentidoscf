@@ -34,7 +34,7 @@ const accountSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
   type: z.enum(["cash", "bank", "savings", "investment", "credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"]),
   currency: z.string().default("MXN"),
-  initial_balance: z.coerce.number().default(0),
+  initial_balance: z.coerce.number().transform(v => (Number.isFinite(v) ? v : 0)).default(0),
 });
 
 type AccountFormValues = z.infer<typeof accountSchema>;

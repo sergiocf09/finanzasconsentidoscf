@@ -60,12 +60,14 @@ export function useAccounts() {
 
   const createAccount = useMutation({
     mutationFn: async (data: CreateAccountData) => {
+      const safeBalance = Number.isFinite(data.initial_balance) ? data.initial_balance : 0;
       const { data: newAccount, error } = await supabase
         .from('accounts')
         .insert({
           ...data,
           user_id: user!.id,
-          current_balance: data.initial_balance,
+          initial_balance: safeBalance,
+          current_balance: safeBalance,
         })
         .select()
         .single();

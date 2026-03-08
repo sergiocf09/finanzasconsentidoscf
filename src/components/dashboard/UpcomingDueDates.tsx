@@ -218,7 +218,7 @@ export function UpcomingDueDates() {
     }
   }, [user, payAmount, accounts, queryClient, handleCancelPay]);
 
-  if (items.length === 0 && timeFilter === "15") return null;
+  if (!hasAnyDueItems) return null;
 
   return (
     <div className="space-y-2">

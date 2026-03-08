@@ -77,6 +77,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       description: "",
       currency: "MXN",
       initial_amount: 0,
+      contribution_day: undefined,
       account_type: "savings",
       account_id: undefined,
     },

@@ -78,15 +78,15 @@ export default function Accounts() {
         className="flex items-center gap-2 rounded-lg bg-card border border-border p-2.5 card-interactive cursor-pointer"
         onClick={() => navigate(`/accounts/${account.id}`)}
       >
-        <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-muted")}>
-          <Icon className={cn("h-4 w-4", debt ? "text-expense" : "text-muted-foreground")} />
+        <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-income/10")}>
+          <Icon className={cn("h-4 w-4", debt ? "text-expense" : "text-income")} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
           <p className="text-[10px] text-muted-foreground">{typeLabels[account.type] || account.type}</p>
         </div>
         <div className="text-right mr-0.5">
-          <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
+          <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-income")}>
             {debt && account.current_balance !== 0 ? "-" : ""}{mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
           </p>
         </div>
@@ -136,14 +136,14 @@ export default function Accounts() {
               {Object.entries(assetsByCurrency).map(([currency, total]) => (
                 <div
                   key={`asset-${currency}`}
-                  className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
+                  className="rounded-xl bg-income/10 border border-income/20 p-3 cursor-pointer card-interactive"
                   onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <ShieldCheck className="h-3.5 w-3.5 opacity-80" />
-                    <p className="text-[10px] opacity-80">Activos {currency}</p>
+                    <ShieldCheck className="h-3.5 w-3.5 text-income opacity-80" />
+                    <p className="text-[10px] text-income opacity-80">Activos {currency}</p>
                   </div>
-                  <p className="text-lg font-bold font-heading">{mask(fmt(total, currency))}</p>
+                  <p className="text-lg font-bold font-heading text-income">{mask(fmt(total, currency))}</p>
                 </div>
               ))}
             </div>

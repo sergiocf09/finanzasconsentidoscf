@@ -16,16 +16,16 @@ export function QuickActions() {
 
   const actions = [
     {
-      label: "Nuevo gasto",
-      icon: Plus,
-      onClick: () => openForm("expense"),
-      color: "expense" as const,
-    },
-    {
       label: "Nuevo ingreso",
       icon: Plus,
       onClick: () => openForm("income"),
       color: "income" as const,
+    },
+    {
+      label: "Nuevo gasto",
+      icon: Plus,
+      onClick: () => openForm("expense"),
+      color: "expense" as const,
     },
     {
       label: "Transferir",

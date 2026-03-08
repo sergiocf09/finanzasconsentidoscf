@@ -10,12 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@/components/ui/drawer";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -104,16 +104,16 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[92vh]">
-        <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-base font-heading">Registrar movimiento</DrawerTitle>
-          <DrawerDescription className="text-xs">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-base font-heading">Registrar movimiento</DialogTitle>
+          <DialogDescription className="text-xs">
             Agrega un ingreso, gasto o transferencia.
-          </DrawerDescription>
-        </DrawerHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="px-4 pb-6 overflow-y-auto">
+        <div>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
             <TabsList className="grid w-full grid-cols-2 h-9">
               <TabsTrigger value="income" className="text-xs text-income">Ingreso</TabsTrigger>
@@ -188,7 +188,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                               <SelectItem key={account.id} value={account.id}>
                                 <span className="flex items-center justify-between w-full gap-2">
                                   <span>{account.name}</span>
-                                  <span className="text-muted-foreground text-[10px]">{bal}</span>
+                                  <span className="text-muted-foreground text-[11px] font-semibold">{bal}</span>
                                 </span>
                               </SelectItem>
                             );
@@ -310,7 +310,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             </form>
           </Form>
         </div>
-      </DrawerContent>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
   );
 }

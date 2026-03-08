@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -11,6 +11,7 @@ import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail"
 import { BudgetCreationWizard } from "@/components/budgets/BudgetCreationWizard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import {
   Select,
   SelectContent,

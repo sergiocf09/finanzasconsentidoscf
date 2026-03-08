@@ -32,6 +32,7 @@ export interface CreateTransactionData {
   amount: number;
   currency: string;
   exchange_rate?: number;
+  amount_in_base?: number;
   description?: string;
   notes?: string;
   transaction_date: string;

@@ -11,10 +11,9 @@ import Transactions from "./pages/Transactions";
 import Budgets from "./pages/Budgets";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
-// Transfers page removed — unified into Transactions
 import Debts from "./pages/Debts";
 import EmergencyFund from "./pages/EmergencyFund";
-import Reports from "./pages/Reports";
+import FinancialIntelligence from "./pages/FinancialIntelligence";
 import Library from "./pages/Library";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
@@ -48,7 +47,7 @@ const App = () => (
               <Route path="/categories" element={<Categories />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/emergency-fund" element={<EmergencyFund />} />
-              <Route path="/reports" element={<Reports />} />
+              <Route path="/intelligence" element={<FinancialIntelligence />} />
               <Route path="/library" element={<Library />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

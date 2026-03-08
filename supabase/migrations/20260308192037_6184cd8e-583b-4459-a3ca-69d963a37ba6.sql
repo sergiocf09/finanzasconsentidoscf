@@ -1,0 +1,1 @@
+DELETE FROM public.transfers WHERE created_from = 'due_dates';

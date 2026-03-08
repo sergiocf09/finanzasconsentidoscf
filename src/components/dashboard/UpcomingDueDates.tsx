@@ -143,13 +143,24 @@ export function UpcomingDueDates() {
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [debts, goals, timeFilter]);
 
-  // Filter out paid items
-  const visibleItems = useMemo(() =>
-    items.filter(item => !paidItemIds.has(item.id)),
-    [items, paidItemIds]
-  );
+  // Filter out items that already have a due_dates transfer this month
+  const paidKeys = useMemo(() => {
+    const set = new Set<string>();
+    (paidTransfers ?? []).forEach(t => {
+      // Match by description pattern "Pago: <name>" or "Aportación: <name>"
+      if (t.description) set.add(t.description);
+    });
+    return set;
+  }, [paidTransfers]);
 
-  const hasAnyDueItems = useMemo(() => {
+  const visibleItems = useMemo(() =>
+    items.filter(item => {
+      const descLabel = item.type === "debt" ? "Pago" : "Aportación";
+      const key = `${descLabel}: ${item.name}`;
+      return !paidKeys.has(key);
+    }),
+    [items, paidKeys]
+  );
     const hasDebts = (debts ?? []).some(d => d.is_active && d.due_day);
     const hasGoals = (goals ?? []).some(g => g.is_active && (g as any).contribution_day);
     return hasDebts || hasGoals;

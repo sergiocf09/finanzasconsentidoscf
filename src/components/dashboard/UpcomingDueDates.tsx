@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X,
@@ -11,7 +11,7 @@ import { useSavingsGoals } from "@/hooks/useSavingsGoals";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -63,11 +63,30 @@ export function UpcomingDueDates() {
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
   const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
-  const [paidItemIds, setPaidItemIds] = useState<Set<string>>(new Set());
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+
+  // Query transfers created from due_dates in the current month to filter out already-paid items
+  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
+  const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
+
+  const { data: paidTransfers } = useQuery({
+    queryKey: ["due_date_transfers", user?.id, monthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transfers")
+        .select("description, to_account_id")
+        .eq("created_from", "due_dates")
+        .gte("transfer_date", monthStart)
+        .lte("transfer_date", monthEnd);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
 
   const sourceAccounts = useMemo(() =>
     accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),
@@ -124,10 +143,23 @@ export function UpcomingDueDates() {
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [debts, goals, timeFilter]);
 
-  // Filter out paid items
+  // Filter out items that already have a due_dates transfer this month
+  const paidKeys = useMemo(() => {
+    const set = new Set<string>();
+    (paidTransfers ?? []).forEach(t => {
+      // Match by description pattern "Pago: <name>" or "Aportación: <name>"
+      if (t.description) set.add(t.description);
+    });
+    return set;
+  }, [paidTransfers]);
+
   const visibleItems = useMemo(() =>
-    items.filter(item => !paidItemIds.has(item.id)),
-    [items, paidItemIds]
+    items.filter(item => {
+      const descLabel = item.type === "debt" ? "Pago" : "Aportación";
+      const key = `${descLabel}: ${item.name}`;
+      return !paidKeys.has(key);
+    }),
+    [items, paidKeys]
   );
 
   const hasAnyDueItems = useMemo(() => {
@@ -193,7 +225,7 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       toast.success("Transferencia registrada");
-      setPaidItemIds(prev => new Set(prev).add(item.id));
+      queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");

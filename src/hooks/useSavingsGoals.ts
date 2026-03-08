@@ -94,7 +94,8 @@ export function useSavingsGoals() {
         target_date: data.target_date || null,
         description: data.description || null,
         account_id: accountId,
-      });
+        contribution_day: data.contribution_day || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {

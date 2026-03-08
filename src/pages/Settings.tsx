@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { validatePassword } from "@/lib/passwordValidation";
+import { PasswordRequirements } from "@/components/auth/PasswordRequirements";
 
 export default function Settings() {
   const { profile, isLoading } = useProfile();

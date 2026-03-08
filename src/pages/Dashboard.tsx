@@ -2,7 +2,8 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
@@ -35,11 +36,14 @@ export default function Dashboard() {
       {/* Financial Summary */}
       <FinancialSummaryCards />
 
-      {/* Period Summary + Quick Actions */}
+      {/* Period Summary */}
       <div className="space-y-2">
         <h2 className="text-sm font-heading font-semibold text-foreground">Estado del periodo</h2>
         <PeriodSummaryCards />
       </div>
+
+      {/* Upcoming Due Dates */}
+      <UpcomingDueDates />
 
       {/* Recent Transactions */}
       <div className="space-y-3">
@@ -50,21 +54,6 @@ export default function Dashboard() {
           </Link>
         </div>
         <RecentTransactions />
-      </div>
-
-      {/* Voice Tip */}
-      <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium text-foreground">Registra con tu voz</p>
-            <p className="text-xs text-muted-foreground break-words">
-              Toca el micrófono y di: "900 pesos gasolina HSBC".
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

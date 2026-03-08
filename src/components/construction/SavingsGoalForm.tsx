@@ -33,6 +33,7 @@ const goalSchema = z.object({
   target_amount: z.coerce.number().min(1, "Ingresa un monto objetivo"),
   description: z.string().optional(),
   target_date: z.date().optional(),
+  contribution_day: z.coerce.number().min(1).max(31).optional(),
   currency: z.string().default("MXN"),
   initial_amount: z.coerce.number().optional().default(0),
   account_type: z.enum(["savings", "investment"]).default("savings"),

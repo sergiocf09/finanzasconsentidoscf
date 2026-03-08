@@ -97,7 +97,7 @@ export function FinancialSummaryCards() {
                     </div>
                     <p className="text-lg font-bold font-heading text-income leading-tight">{mask(fmt(total, currency))}</p>
                   </div>
-                  <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
+                  <ChevronDown className={cn("h-4 w-4 text-income opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>
               </div>
             );

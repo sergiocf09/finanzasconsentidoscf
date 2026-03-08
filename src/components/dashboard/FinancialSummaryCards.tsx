@@ -16,7 +16,7 @@ const typeIcons: Record<string, typeof Wallet> = {
   personal_loan: User, caucion_bursatil: Landmark,
 };
 
-const fmt = (v: number, currency: string) => formatCurrencyAbs(v, currency);
+const fmt = (v: number, currency: string) => formatCurrency(v, currency);
 
 export function FinancialSummaryCards() {
   const navigate = useNavigate();

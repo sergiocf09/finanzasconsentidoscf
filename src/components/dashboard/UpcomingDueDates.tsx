@@ -63,11 +63,30 @@ export function UpcomingDueDates() {
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
   const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
-  const [paidItemIds, setPaidItemIds] = useState<Set<string>>(new Set());
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+
+  // Query transfers created from due_dates in the current month to filter out already-paid items
+  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
+  const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
+
+  const { data: paidTransfers } = useQuery({
+    queryKey: ["due_date_transfers", user?.id, monthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transfers")
+        .select("description, to_account_id")
+        .eq("created_from", "due_dates")
+        .gte("transfer_date", monthStart)
+        .lte("transfer_date", monthEnd);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
 
   const sourceAccounts = useMemo(() =>
     accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),

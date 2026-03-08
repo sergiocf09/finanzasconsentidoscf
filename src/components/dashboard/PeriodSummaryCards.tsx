@@ -192,7 +192,7 @@ export function PeriodSummaryCards() {
                     )}
                   />
                 </div>
-                <span className="text-[10px] text-muted-foreground">{card.label}</span>
+                <span className="text-[10px] font-semibold text-foreground">{card.label}</span>
                 <span
                   className={cn(
                     "text-sm font-bold font-heading tabular-nums tracking-tight leading-tight",

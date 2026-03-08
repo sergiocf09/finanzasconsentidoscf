@@ -140,8 +140,8 @@ export default function Accounts() {
                   onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-income opacity-80" />
-                    <p className="text-[10px] text-income opacity-80">Activos {currency}</p>
+                    <ShieldCheck className="h-3.5 w-3.5 text-income" />
+                    <p className="text-[10px] font-semibold text-income">Activos {currency}</p>
                   </div>
                   <p className="text-lg font-bold font-heading text-income">{mask(fmt(total, currency))}</p>
                 </div>
@@ -156,8 +156,8 @@ export default function Accounts() {
                   onClick={() => document.getElementById("section-liabilities")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <CreditCard className="h-3.5 w-3.5 text-expense opacity-80" />
-                    <p className="text-[10px] text-expense opacity-80">Pasivos {currency}</p>
+                    <CreditCard className="h-3.5 w-3.5 text-expense" />
+                    <p className="text-[10px] font-semibold text-expense">Pasivos {currency}</p>
                   </div>
                   <p className="text-lg font-bold font-heading text-expense">{hidden ? "••••••" : `-${fmt(total, currency)}`}</p>
                 </div>

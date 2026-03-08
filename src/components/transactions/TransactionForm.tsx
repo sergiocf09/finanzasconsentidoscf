@@ -123,9 +123,13 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     let finalAmount = data.amount;
     let finalCurrency = data.currency;
     let exchangeRate = 1;
+    let amountInBase: number | undefined;
     let description = data.description || "";
+    let notes = "";
 
     if (crossCurrency && fxRate > 0) {
+      // Store original amount in amount_in_base
+      amountInBase = data.amount;
       // Convert to account's currency
       if (data.currency === "USD" && account.currency === "MXN") {
         finalAmount = data.amount * fxRate;
@@ -135,9 +139,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         exchangeRate = 1 / fxRate;
       }
       finalCurrency = account.currency;
-      // Add original currency note
-      const originalNote = `[Originalmente ${data.amount.toFixed(2)} ${data.currency} · TC: ${fxRate.toFixed(2)}]`;
-      description = description ? `${description} ${originalNote}` : originalNote;
+      // Add conversion note to notes field
+      notes = `Originalmente ${data.amount.toFixed(2)} ${data.currency} · TC: ${fxRate.toFixed(2)}`;
     }
 
     await createTransaction.mutateAsync({
@@ -145,6 +148,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       amount: Math.round(finalAmount * 100) / 100,
       currency: finalCurrency,
       exchange_rate: exchangeRate,
+      amount_in_base: amountInBase,
+      notes: notes || undefined,
       category_id: data.category_id && data.category_id.length > 0 ? data.category_id : undefined,
       description,
       type: activeTab,

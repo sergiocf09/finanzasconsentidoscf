@@ -32,6 +32,7 @@ export interface CreateTransactionData {
   amount: number;
   currency: string;
   exchange_rate?: number;
+  amount_in_base?: number;
   description?: string;
   notes?: string;
   transaction_date: string;
@@ -72,7 +73,7 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
         .insert({
           ...data,
           user_id: user!.id,
-          amount_in_base: data.amount * (data.exchange_rate ?? 1),
+          amount_in_base: data.amount_in_base ?? data.amount * (data.exchange_rate ?? 1),
         })
         .select()
         .single();

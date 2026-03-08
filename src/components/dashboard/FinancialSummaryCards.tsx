@@ -4,9 +4,7 @@ import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useHideAmounts } from "@/hooks/useHideAmounts";
-import { useExchangeRate } from "@/hooks/useExchangeRate";
+  import { useHideAmounts } from "@/hooks/useHideAmounts";
 
 const typeIcons: Record<string, typeof Wallet> = {
   cash: Wallet, bank: Building2, savings: PiggyBank, investment: TrendingUp,

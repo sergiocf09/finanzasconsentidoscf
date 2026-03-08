@@ -1,4 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarClock, CreditCard, PiggyBank, AlertTriangle, DollarSign, Check, X,
@@ -15,7 +17,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 
 interface DueItem {
   id: string;
@@ -281,7 +282,7 @@ export function UpcomingDueDates() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      Día {item.day} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
+                      {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
                     </p>
                   </div>
 

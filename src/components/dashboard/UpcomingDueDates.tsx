@@ -283,7 +283,7 @@ export function UpcomingDueDates() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      Día {item.day} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
+                      {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
                     </p>
                   </div>
 

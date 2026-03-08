@@ -44,7 +44,7 @@ function getDateRange(period: PeriodKey, customStart?: Date, customEnd?: Date) {
 
 export function PeriodSummaryCards() {
   const navigate = useNavigate();
-  const { mask } = useHideAmounts();
+  const { hidden, toggle, mask } = useHideAmounts("period");
 
   // Period state
   const [period, setPeriod] = useState<PeriodKey>("current");

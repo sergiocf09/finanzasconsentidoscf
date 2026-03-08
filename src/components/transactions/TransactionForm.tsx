@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
+import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),

@@ -77,6 +77,7 @@ export default function Transactions() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+  const [sortAsc, setSortAsc] = useState(false);
 
   // Period selector state
   const [period, setPeriod] = useState<PeriodKey>("current");
@@ -146,7 +147,9 @@ export default function Transactions() {
   }));
 
   const allItems = [...txItems, ...transferItems].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    (a, b) => sortAsc
+      ? new Date(a.date).getTime() - new Date(b.date).getTime()
+      : new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   const filtered = allItems.filter((item) => {

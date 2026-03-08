@@ -91,7 +91,7 @@ export function FinancialSummaryCards() {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <ShieldCheck className="h-3.5 w-3.5 text-income opacity-80 shrink-0" />
+                      <ShieldCheck className="h-3.5 w-3.5 text-income shrink-0" />
                       <p className="text-[10px] font-semibold text-income truncate">Activos {currency}</p>
                     </div>
                     <p className="text-lg font-bold font-heading text-income leading-tight">{mask(fmt(total, currency))}</p>

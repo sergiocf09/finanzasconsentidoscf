@@ -1,7 +1,6 @@
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
-import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
-import { BalanceCard } from "@/components/dashboard/BalanceCard";
+import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
@@ -29,17 +28,14 @@ export default function Dashboard() {
         <p className="text-xs text-muted-foreground">{capitalizedMonth}</p>
       </div>
 
-      {/* Balance Card */}
-      <BalanceCard />
+      {/* Financial Summary */}
+      <FinancialSummaryCards />
 
       {/* Quick Actions */}
       <div className="space-y-2">
         <h2 className="text-sm font-heading font-semibold text-foreground">Acciones rápidas</h2>
         <QuickActions />
       </div>
-
-      {/* Budget Progress */}
-      <BudgetProgress />
 
       {/* Recent Transactions */}
       <div className="space-y-3">

@@ -46,8 +46,9 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      toast({ title: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" });
+    const validation = validatePassword(newPassword);
+    if (!validation.isValid) {
+      toast({ title: "Contraseña no válida", description: validation.errors.join(". "), variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {

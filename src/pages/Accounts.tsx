@@ -86,8 +86,12 @@ export default function Accounts() {
           <p className="text-[10px] text-muted-foreground">{typeLabels[account.type] || account.type}</p>
         </div>
         <div className="text-right mr-0.5">
-          <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-income")}>
-            {debt && account.current_balance !== 0 ? "-" : ""}{mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
+          <p className={cn("text-xs font-semibold tabular-nums",
+            debt
+              ? (account.current_balance > 0 ? "text-income" : "text-expense")
+              : (account.current_balance < 0 ? "text-expense" : "text-income")
+          )}>
+            {mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
           </p>
         </div>
         <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"

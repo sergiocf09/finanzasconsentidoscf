@@ -58,11 +58,11 @@ export function FinancialSummaryCards() {
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
         <span className={cn(
           "text-xs font-semibold tabular-nums",
-          debt ? "text-expense" : account.current_balance < 0 ? "text-expense" : "text-income"
+          debt
+            ? (account.current_balance > 0 ? "text-income" : "text-expense")
+            : (account.current_balance < 0 ? "text-expense" : "text-income")
         )}>
-          {debt && account.current_balance !== 0 ? "-" : ""}
-          {!debt && account.current_balance < 0 ? "-" : ""}
-          {mask(fmt(Math.abs(account.current_balance), account.currency))}
+          {mask(fmt(account.current_balance, account.currency))}
         </span>
       </div>
     );

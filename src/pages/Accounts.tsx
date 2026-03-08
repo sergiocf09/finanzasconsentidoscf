@@ -35,21 +35,15 @@ const fmt = (value: number, currency: string) => formatCurrency(value, currency)
 
 export default function Accounts() {
   const navigate = useNavigate();
-  const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deactivateAccount, deleteAccount } = useAccounts();
+  const { accounts, isLoading, assetsByCurrency, liabilitiesByCurrency, deactivateAccount } = useAccounts();
   const { hidden, toggle, mask } = useHideAmounts();
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
 
-  const handleSoftDelete = async () => {
+  const handleDeactivate = async () => {
     if (!deleteTarget) return;
     try { await deactivateAccount.mutateAsync(deleteTarget.id); } catch { /* handled */ }
-    setDeleteTarget(null);
-  };
-
-  const handleHardDelete = async () => {
-    if (!deleteTarget) return;
-    try { await deleteAccount.mutateAsync(deleteTarget.id); } catch { /* handled */ }
     setDeleteTarget(null);
   };
 

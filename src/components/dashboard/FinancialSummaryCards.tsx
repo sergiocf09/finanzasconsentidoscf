@@ -5,7 +5,7 @@ import {
   Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrencyAbs } from "@/lib/formatters";
+import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";

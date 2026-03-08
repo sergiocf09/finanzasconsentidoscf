@@ -2,8 +2,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription,
-} from "@/components/ui/drawer";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -850,15 +850,15 @@ export function VoiceButton() {
         <Mic className="h-6 w-6" />
       </button>
 
-      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); else setIsOpen(true); }}>
-        <DrawerContent className="max-h-[95vh]">
-          <div className="mx-auto w-full max-w-md flex flex-col" style={{ maxHeight: "calc(95vh - 1rem)" }}>
-            <DrawerHeader className="text-center pb-1 shrink-0">
-              <DrawerTitle className="font-heading text-base">Registrar por voz</DrawerTitle>
-              <DrawerDescription className="text-xs leading-tight">
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); else setIsOpen(true); }}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="mx-auto w-full max-w-md flex flex-col">
+            <DialogHeader className="text-center pb-1 shrink-0">
+              <DialogTitle className="font-heading text-base">Registrar por voz</DialogTitle>
+              <DialogDescription className="text-xs leading-tight">
                 Toca el tipo para empezar a grabar
-              </DrawerDescription>
-            </DrawerHeader>
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="flex flex-col items-center px-4 space-y-2 overflow-y-auto flex-1 min-h-0 pb-2">
 
@@ -1172,8 +1172,8 @@ export function VoiceButton() {
               </div>
             )}
           </div>
-        </DrawerContent>
-      </Drawer>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

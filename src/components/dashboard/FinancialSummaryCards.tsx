@@ -42,9 +42,9 @@ export function FinancialSummaryCards() {
         className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
         onClick={(e) => handleAccountClick(account.id, e)}
       >
-        <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-muted-foreground")} />
+        <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-income")} />
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
-        <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-foreground")}>
+        <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-income")}>
           {debt && account.current_balance !== 0 ? "-" : ""}{mask(fmt(account.current_balance, account.currency))}
         </span>
       </div>
@@ -86,16 +86,16 @@ export function FinancialSummaryCards() {
             return (
               <div
                 key={key}
-                className="rounded-xl bg-primary p-3 text-primary-foreground cursor-pointer card-interactive"
+                className="rounded-xl bg-income/10 border border-income/20 p-3 cursor-pointer card-interactive"
                 onClick={() => handleCardClick(key)}
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <ShieldCheck className="h-3.5 w-3.5 opacity-80 shrink-0" />
-                      <p className="text-[10px] opacity-80 truncate">Activos {currency}</p>
+                      <ShieldCheck className="h-3.5 w-3.5 text-income opacity-80 shrink-0" />
+                      <p className="text-[10px] text-income opacity-80 truncate">Activos {currency}</p>
                     </div>
-                    <p className="text-lg font-bold font-heading leading-tight">{mask(fmt(total, currency))}</p>
+                    <p className="text-lg font-bold font-heading text-income leading-tight">{mask(fmt(total, currency))}</p>
                   </div>
                   <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform shrink-0", isExpanded && "rotate-180")} />
                 </div>

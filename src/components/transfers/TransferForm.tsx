@@ -115,7 +115,7 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
                       <SelectItem key={a.id} value={a.id}>
                         <span className="flex items-center justify-between w-full gap-2">
                           <span>{a.name} ({a.currency})</span>
-                          <span className="text-muted-foreground text-[10px]">{fmtBalance(a)}</span>
+                          <span className="text-muted-foreground text-[11px] font-semibold">{fmtBalance(a)}</span>
                         </span>
                       </SelectItem>
                     ))}
@@ -135,7 +135,7 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
                       <SelectItem key={a.id} value={a.id}>
                         <span className="flex items-center justify-between w-full gap-2">
                           <span>{a.name} ({a.currency})</span>
-                          <span className="text-muted-foreground text-[10px]">{fmtBalance(a)}</span>
+                          <span className="text-muted-foreground text-[11px] font-semibold">{fmtBalance(a)}</span>
                         </span>
                       </SelectItem>
                     ))}

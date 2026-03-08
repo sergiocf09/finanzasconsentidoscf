@@ -1144,27 +1144,27 @@ export function VoiceButton() {
                     <AlertTriangle className="h-3 w-3" /> {validationMsg}
                   </p>
                 )}
-                <div className="flex gap-2">
-                  <Button variant="outline" size="default" className="flex-1" onClick={handleCancel}>
-                    <X className="h-4 w-4 mr-1" />Cancelar
+                <div className="grid grid-cols-3 gap-1.5 w-full">
+                  <Button variant="outline" size="sm" className="w-full text-xs px-1" onClick={handleCancel}>
+                    <X className="h-3.5 w-3.5 mr-0.5 shrink-0" />Cancelar
                   </Button>
                   {isEditing ? (
-                    <Button variant="secondary" size="default" className="flex-1" onClick={() => setIsEditing(false)}>
-                      <Check className="h-4 w-4 mr-1" />Listo
+                    <Button variant="secondary" size="sm" className="w-full text-xs px-1" onClick={() => setIsEditing(false)}>
+                      <Check className="h-3.5 w-3.5 mr-0.5 shrink-0" />Listo
                     </Button>
                   ) : (
-                    <Button variant="outline" size="default" className="flex-1" onClick={() => setIsEditing(true)}>
-                      <Edit2 className="h-4 w-4 mr-1" />Editar
+                    <Button variant="outline" size="sm" className="w-full text-xs px-1" onClick={() => setIsEditing(true)}>
+                      <Edit2 className="h-3.5 w-3.5 mr-0.5 shrink-0" />Editar
                     </Button>
                   )}
                   {!isEditing && (
                     <Button
-                      size="default"
-                      className="flex-1"
+                      size="sm"
+                      className="w-full text-xs px-1"
                       onClick={handleConfirm}
                       disabled={!canConfirm() || isSaving}
                     >
-                      {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                      {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-0.5 shrink-0 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-0.5 shrink-0" />}
                       Confirmar
                     </Button>
                   )}

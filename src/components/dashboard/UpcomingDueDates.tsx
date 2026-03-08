@@ -265,14 +265,9 @@ export function UpcomingDueDates() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isUrgent && <AlertTriangle className="h-3 w-3 text-expense" />}
-                    {(() => {
-                      const displayAmount = overriddenAmounts[item.id] ?? item.amount;
-                      return (
-                        <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
-                          {mask(formatCurrencyAbs(displayAmount, item.currency))}
-                        </span>
-                      );
-                    })()}
+                    <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
+                      {mask(formatCurrencyAbs(item.amount, item.currency))}
+                    </span>
                     {item.accountId && !isPaying && (
                       <button
                         onClick={(e) => handleStartPay(item, e)}
@@ -280,43 +275,60 @@ export function UpcomingDueDates() {
                           "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
                           "bg-primary/10 hover:bg-primary/20 text-primary"
                         )}
-                        title="Registrar pago"
+                        title="Transferir"
                       >
-                        <DollarSign className="h-3.5 w-3.5" />
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Inline pay form */}
+                {/* Inline transfer form */}
                 {isPaying && (
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={payAmount}
-                      onChange={(e) => setPayAmount(e.target.value)}
-                      placeholder="Monto"
-                      className="h-8 text-sm flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      onClick={handleCancelPay}
-                      disabled={isSaving}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleConfirmPay(item)}
-                      disabled={isSaving || !payAmount}
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2 mt-2 pt-2 border-t border-border">
+                    <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Cuenta de origen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sourceAccounts
+                          .filter(a => a.id !== item.accountId)
+                          .map(a => (
+                            <SelectItem key={a.id} value={a.id} className="text-xs">
+                              {a.name} ({a.currency})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                        placeholder="Monto"
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={handleCancelPay}
+                        disabled={isSaving}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1 px-2"
+                        onClick={() => handleConfirmPay(item)}
+                        disabled={isSaving || !payAmount || !sourceAccountId}
+                      >
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
+                        Transferir
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

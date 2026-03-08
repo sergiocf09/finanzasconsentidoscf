@@ -141,10 +141,11 @@ export default function Settings() {
                   <Input
                     id="new-password"
                     type="password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                   />
+                  <PasswordRequirements password={newPassword} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password" className="text-sm">Confirmar contraseña</Label>

@@ -56,8 +56,12 @@ export function FinancialSummaryCards() {
       >
         <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-income")} />
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
-        <span className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-income")}>
+        <span className={cn(
+          "text-xs font-semibold tabular-nums",
+          debt ? "text-expense" : account.current_balance < 0 ? "text-expense" : "text-income"
+        )}>
           {debt && account.current_balance !== 0 ? "-" : ""}
+          {!debt && account.current_balance < 0 ? "-" : ""}
           {mask(fmt(Math.abs(account.current_balance), account.currency))}
         </span>
       </div>

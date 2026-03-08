@@ -134,8 +134,9 @@ export function UpcomingDueDates() {
   const handleStartPay = useCallback((item: DueItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setPayingItemId(item.id);
-    setPayAmount(item.amount ? String(item.amount) : "");
-  }, []);
+    const displayAmount = overriddenAmounts[item.id] ?? item.amount;
+    setPayAmount(displayAmount ? String(displayAmount) : "");
+  }, [overriddenAmounts]);
 
   const handleCancelPay = useCallback(() => {
     setPayingItemId(null);

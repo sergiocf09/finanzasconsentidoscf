@@ -212,6 +212,7 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
+      setOverriddenAmounts(prev => ({ ...prev, [item.id]: amount }));
       toast.success("Pago registrado correctamente");
       handleCancelPay();
     } catch (err: any) {

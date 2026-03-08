@@ -59,6 +59,8 @@ export function BudgetBlockCard({
   onDeleteBudget,
   onCategoryClick,
   currency = "MXN",
+  signals = [],
+  recommendations = [],
 }: BudgetBlockCardProps) {
   const [expanded, setExpanded] = useState(false);
   const colors = blockColorMap[block];

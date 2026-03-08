@@ -161,6 +161,8 @@ export function UpcomingDueDates() {
     }),
     [items, paidKeys]
   );
+
+  const hasAnyDueItems = useMemo(() => {
     const hasDebts = (debts ?? []).some(d => d.is_active && d.due_day);
     const hasGoals = (goals ?? []).some(g => g.is_active && (g as any).contribution_day);
     return hasDebts || hasGoals;

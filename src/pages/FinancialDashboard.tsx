@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { Brain, Gauge, BarChart3 } from "lucide-react";
+import { Brain, Gauge, BarChart3, ChevronDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NetPositionCard } from "@/components/dashboard/NetPositionCard";
 import { MonthlyFlowChart } from "@/components/dashboard/MonthlyFlowChart";
@@ -84,22 +85,30 @@ export default function FinancialDashboard() {
   return (
     <div className="space-y-4 stagger-children overflow-x-hidden">
       {/* Header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-heading font-semibold text-foreground">
+      <div className="flex items-center gap-2">
+        <Brain className="h-5 w-5 text-primary" />
+        <div>
+          <h1 className="text-lg font-heading font-semibold text-foreground leading-tight">
             Dashboard Financiero
           </h1>
+          <p className="text-[11px] text-muted-foreground">{capitalizedMonth}</p>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{capitalizedMonth}</p>
       </div>
 
-      {/* Alertas financieras (siempre visibles) */}
-      <FinancialAlertsBanner
-        signals={signals}
-        recommendations={recommendations}
-        budgetsNearLimit={budgetsNearLimit.map(b => ({ name: b.name, spent: b.spent ?? 0, amount: b.amount }))}
-      />
+      {/* Resumen conceptual — colapsable */}
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+          <ChevronDown className="h-3.5 w-3.5 transition-transform [[data-state=open]>&]:rotate-180" />
+          Resumen conceptual
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <FinancialAlertsBanner
+            signals={signals}
+            recommendations={recommendations}
+            budgetsNearLimit={budgetsNearLimit.map(b => ({ name: b.name, spent: b.spent ?? 0, amount: b.amount }))}
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

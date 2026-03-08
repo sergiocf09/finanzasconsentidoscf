@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Brain, Gauge, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NetPositionCard } from "@/components/dashboard/NetPositionCard";
 import { MonthlyFlowChart } from "@/components/dashboard/MonthlyFlowChart";

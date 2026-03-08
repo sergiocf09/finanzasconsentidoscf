@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff, Scale } from "lucide-react";
+import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";

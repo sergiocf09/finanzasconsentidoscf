@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { Progress } from "@/components/ui/progress";
 
 interface BudgetProgressProps {

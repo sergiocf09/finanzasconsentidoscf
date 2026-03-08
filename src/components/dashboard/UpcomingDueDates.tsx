@@ -110,7 +110,7 @@ export function UpcomingDueDates() {
             day: cDay,
             nextDate: next,
             daysLeft: diff,
-            amount: null,
+            amount: (g as any).monthly_contribution ?? 0,
             currency: "MXN",
             type: "goal",
             accountId: g.account_id,

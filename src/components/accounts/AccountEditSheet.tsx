@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,8 +63,7 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
     }
   }, [account, open]);
 
-  const fmt = (v: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 2 }).format(v);
+  const fmt = (v: number, currency: string) => formatCurrency(v, currency, { decimals: 2 });
 
   const parsedBalance = parseFloat(newBalance);
   const balanceDiff = !isNaN(parsedBalance) && account ? parsedBalance - account.current_balance : 0;

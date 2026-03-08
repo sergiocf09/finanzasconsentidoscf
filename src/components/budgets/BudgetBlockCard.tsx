@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
@@ -70,13 +71,7 @@ export function BudgetBlockCard({
   const percentage = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
   const remaining = totalPlanned - totalSpent;
 
-  const fmt = (v: number) =>
-    new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(v);
+  const fmt = (v: number) => formatCurrency(v, currency);
 
   const getBarStatus = (pct: number) => {
     if (pct > 100) return "[&>div]:bg-[hsl(var(--status-danger))]";

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { Edit2, Check, X, Trash2 } from "lucide-react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -55,8 +56,7 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
 
   if (!transfer) return null;
 
-  const fmt = (v: number, c: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: c, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);
+  const fmt = (v: number, c: string) => formatCurrency(v, c, { decimals: 2 });
 
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";
   const getAccountCurrency = (id: string) => accounts.find(a => a.id === id)?.currency ?? "MXN";
@@ -97,8 +97,7 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
     onOpenChange(false);
   };
 
-  const fmtBalance = (acc: typeof accounts[0]) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: acc.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(acc.current_balance ?? 0);
+  const fmtBalance = (acc: typeof accounts[0]) => formatCurrency(acc.current_balance ?? 0, acc.currency);
 
   if (isEditing) {
     return (

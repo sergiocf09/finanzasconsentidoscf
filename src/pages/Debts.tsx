@@ -7,6 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { formatCurrencyAbs } from "@/lib/formatters";
 import { useDebts, Debt } from "@/hooks/useDebts";
 import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
@@ -34,8 +35,7 @@ export default function Debts() {
   const [sortAsc, setSortAsc] = useState(false);
   const navigate = useNavigate();
 
-  const formatAmount = (value: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
+  const formatAmount = (value: number, currency: string) => formatCurrencyAbs(value, currency);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatCurrency } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -105,13 +106,7 @@ export function BudgetCategoryDetail({
     over: "text-[hsl(var(--status-danger))]",
   }[status];
 
-  const fmt = (v: number) =>
-    new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(v);
+  const fmt = (v: number) => formatCurrency(v);
 
   const handleSaveAmount = () => {
     const val = parseFloat(editAmount);

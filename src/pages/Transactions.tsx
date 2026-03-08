@@ -12,7 +12,8 @@ import { TransactionDetailSheet } from "@/components/transactions/TransactionDet
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { format, isToday, isYesterday, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { formatCurrency, formatRelativeDate } from "@/lib/formatters";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -106,15 +107,8 @@ export default function Transactions() {
   const getAccountName = (id: string) =>
     accounts.find((a) => a.id === id)?.name || "";
 
-  const formatAmount = (value: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + "T12:00:00");
-    if (isToday(date)) return "Hoy";
-    if (isYesterday(date)) return "Ayer";
-    return format(date, "dd MMM yyyy", { locale: es });
-  };
+  const formatAmount = (value: number, currency: string) => formatCurrency(value, currency);
+  const formatDate = (dateStr: string) => formatRelativeDate(dateStr, true);
 
   // Build unified list
   const txItems: UnifiedItem[] = transactions.map((tx) => {

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { Progress } from "@/components/ui/progress";
 
 interface BudgetProgressProps {
@@ -20,14 +21,7 @@ export function BudgetProgress({
   const displayPercentage = Math.min(percentage, 100);
   const remaining = budgeted - spent;
 
-  const formatAmount = (value: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatAmount = (value: number) => formatCurrency(value, currency);
 
   const getStatus = (percent: number) => {
     if (percent > 100) return "over";

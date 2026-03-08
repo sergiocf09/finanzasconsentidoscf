@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp, Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCurrencyAbs } from "@/lib/formatters";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
@@ -12,8 +13,7 @@ const typeIcons: Record<string, typeof Wallet> = {
   personal_loan: User, caucion_bursatil: Landmark,
 };
 
-const fmt = (v: number, currency: string) =>
-  new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(v));
+const fmt = (v: number, currency: string) => formatCurrencyAbs(v, currency);
 
 export function FinancialSummaryCards() {
   const navigate = useNavigate();

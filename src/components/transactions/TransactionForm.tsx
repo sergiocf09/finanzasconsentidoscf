@@ -5,6 +5,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/formatters";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -190,7 +191,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                       </FormControl>
                       <SelectContent>
                         {accounts.map((account) => {
-                          const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: account.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(account.current_balance ?? 0);
+                          const bal = formatCurrency(account.current_balance ?? 0, account.currency);
                           return (
                             <SelectItem key={account.id} value={account.id}>
                               <span className="flex items-center gap-3 w-full">

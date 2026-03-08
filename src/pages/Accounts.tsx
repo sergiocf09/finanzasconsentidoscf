@@ -7,6 +7,7 @@ import {
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatCurrencyAbs } from "@/lib/formatters";
 import {
   useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability,
 } from "@/hooks/useAccounts";
@@ -30,8 +31,7 @@ const typeLabels: Record<string, string> = {
   auto_loan: "Crédito automotriz", personal_loan: "Crédito personal", caucion_bursatil: "Caución bursátil",
 };
 
-const fmt = (value: number, currency: string) =>
-  new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
+const fmt = (value: number, currency: string) => formatCurrencyAbs(value, currency);
 
 export default function Accounts() {
   const navigate = useNavigate();

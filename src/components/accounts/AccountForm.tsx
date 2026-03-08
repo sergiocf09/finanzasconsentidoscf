@@ -167,11 +167,12 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
               control={form.control}
               name="initial_balance"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Saldo inicial</FormLabel>
+             <FormItem>
+                  <FormLabel>{isLiab ? "Saldo adeudado" : "Saldo inicial"}</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="0.00" {...field} />
                   </FormControl>
+                  {isLiab && <p className="text-[10px] text-muted-foreground">Ingresa el monto que debes (ej: 50000)</p>}
                   <FormMessage />
                 </FormItem>
               )}

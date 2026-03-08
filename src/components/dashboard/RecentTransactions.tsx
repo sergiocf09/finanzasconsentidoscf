@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatRelativeDate } from "@/lib/formatters";
 import {
   ShoppingBag, Utensils, Car, Home, Briefcase, Gift, ArrowRightLeft, Receipt, SlidersHorizontal,
 } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format, isToday, isYesterday } from "date-fns";
-import { es } from "date-fns/locale";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {

@@ -225,7 +225,7 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       toast.success("Transferencia registrada");
-      setPaidItemIds(prev => new Set(prev).add(item.id));
+      queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");

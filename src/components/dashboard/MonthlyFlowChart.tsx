@@ -20,7 +20,6 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
   const data = [
     { name: "Ingresos", value: income, color: "hsl(var(--income))" },
     { name: "Gastos", value: expense, color: "hsl(var(--expense))" },
-    { name: "Flujo neto", value: Math.abs(netFlow), color: netFlow >= 0 ? "hsl(var(--income))" : "hsl(var(--expense))" },
   ];
 
   const topIncome = transactions

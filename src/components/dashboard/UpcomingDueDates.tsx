@@ -287,13 +287,9 @@ export function UpcomingDueDates() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isUrgent && <AlertTriangle className="h-3 w-3 text-expense" />}
-                    {item.amount ? (
-                      <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
-                        {mask(formatCurrencyAbs(item.amount, item.currency))}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">Aportación</span>
-                    )}
+                    <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
+                      {mask(formatCurrencyAbs(item.amount, item.currency))}
+                    </span>
                     {item.accountId && !isPaying && (
                       <button
                         onClick={(e) => handleStartPay(item, e)}

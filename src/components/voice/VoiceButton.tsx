@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
+import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════

@@ -56,8 +56,7 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
 
   if (!transfer) return null;
 
-  const fmt = (v: number, c: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: c, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);
+  const fmt = (v: number, c: string) => formatCurrency(v, c, { decimals: 2 });
 
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";
   const getAccountCurrency = (id: string) => accounts.find(a => a.id === id)?.currency ?? "MXN";

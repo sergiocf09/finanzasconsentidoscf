@@ -67,8 +67,8 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
                   className="h-2.5 w-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: block.color }}
                 />
-                <span className="text-xs text-foreground truncate">{block.label}</span>
-                <span className="text-xs font-semibold text-foreground tabular-nums ml-1 w-8 text-right shrink-0">{pct}%</span>
+                <span className="text-xs text-foreground w-[5.5rem] shrink-0 truncate">{block.label}</span>
+                <span className="text-xs font-semibold text-foreground tabular-nums w-7 text-right shrink-0">{pct}%</span>
                 <span className="text-xs text-muted-foreground tabular-nums ml-auto shrink-0">{formatCurrency(value)}</span>
               </div>
             );

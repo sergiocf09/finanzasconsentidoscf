@@ -190,7 +190,7 @@ export function PeriodSummaryCards() {
                 <span className="text-[10px] text-muted-foreground">{card.label}</span>
                 <span
                   className={cn(
-                    "text-xs font-bold font-heading tabular-nums leading-tight",
+                    "text-sm font-bold font-heading tabular-nums tracking-tight leading-tight",
                     card.color === "income" && "text-income",
                     card.color === "expense" && "text-expense",
                     card.color === "transfer" && "text-transfer"

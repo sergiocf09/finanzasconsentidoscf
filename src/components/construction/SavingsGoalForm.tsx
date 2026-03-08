@@ -34,6 +34,7 @@ const goalSchema = z.object({
   description: z.string().optional(),
   target_date: z.date().optional(),
   contribution_day: z.coerce.number().min(1).max(31).optional(),
+  monthly_contribution: z.coerce.number().optional().default(0),
   currency: z.string().default("MXN"),
   initial_amount: z.coerce.number().optional().default(0),
   account_type: z.enum(["savings", "investment"]).default("savings"),
@@ -78,6 +79,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       currency: "MXN",
       initial_amount: 0,
       contribution_day: undefined,
+      monthly_contribution: 0,
       account_type: "savings",
       account_id: undefined,
     },
@@ -91,6 +93,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       description: data.description,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : undefined,
       contribution_day: data.contribution_day,
+      monthly_contribution: data.monthly_contribution,
       currency: data.currency,
       initial_amount: data.initial_amount,
       account_id: linkExisting ? data.account_id : undefined,
@@ -264,29 +267,51 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="contribution_day"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Día de aportación mensual (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={31}
-                      placeholder="Ej: 15"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <p className="text-[10px] text-muted-foreground">
-                    Se mostrará como recordatorio en tu pantalla de inicio.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contribution_day"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Día de aportación</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={31}
+                        placeholder="Ej: 15"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="monthly_contribution"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Aportación mensual</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ej: 5,000"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground -mt-2">
+              Se mostrarán como recordatorio en tu pantalla de inicio.
+            </p>
 
             {/* Account linking */}
             <div className="rounded-lg border border-border p-3 space-y-3">

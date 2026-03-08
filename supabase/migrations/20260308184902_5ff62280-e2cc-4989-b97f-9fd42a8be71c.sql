@@ -1,0 +1,1 @@
+ALTER TABLE public.savings_goals ADD COLUMN monthly_contribution numeric DEFAULT 0;

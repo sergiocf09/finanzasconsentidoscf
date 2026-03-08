@@ -657,6 +657,7 @@ export type Database = {
           goal_type: string
           id: string
           is_active: boolean | null
+          monthly_contribution: number | null
           name: string
           priority: number | null
           target_amount: number
@@ -673,6 +674,7 @@ export type Database = {
           goal_type?: string
           id?: string
           is_active?: boolean | null
+          monthly_contribution?: number | null
           name: string
           priority?: number | null
           target_amount?: number
@@ -689,6 +691,7 @@ export type Database = {
           goal_type?: string
           id?: string
           is_active?: boolean | null
+          monthly_contribution?: number | null
           name?: string
           priority?: number | null
           target_amount?: number

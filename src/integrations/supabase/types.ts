@@ -650,6 +650,7 @@ export type Database = {
       savings_goals: {
         Row: {
           account_id: string | null
+          contribution_day: number | null
           created_at: string | null
           current_amount: number
           description: string | null
@@ -665,6 +666,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          contribution_day?: number | null
           created_at?: string | null
           current_amount?: number
           description?: string | null
@@ -680,6 +682,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          contribution_day?: number | null
           created_at?: string | null
           current_amount?: number
           description?: string | null

@@ -256,9 +256,9 @@ export function VoiceButton() {
         <DialogContent className="sm:max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden w-[calc(100vw-2rem)]">
           <div className="mx-auto w-full flex flex-col overflow-hidden">
             <DialogHeader className="text-center pb-1 shrink-0">
-              <DialogTitle className="font-heading text-base">Registrar por voz</DialogTitle>
+              <DialogTitle className="font-heading text-base">Registra con tu voz</DialogTitle>
               <DialogDescription className="text-xs leading-tight">
-                Toca el tipo para empezar a grabar
+                Toca el tipo para empezar a grabar. Ej: "900 pesos gasolina HSBC"
               </DialogDescription>
             </DialogHeader>
 

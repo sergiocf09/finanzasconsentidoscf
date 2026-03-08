@@ -25,6 +25,7 @@ export interface CreateSavingsGoalData {
   target_amount: number;
   target_date?: string;
   description?: string;
+  contribution_day?: number;
   account_id?: string; // link existing account
   create_account?: boolean; // create new account
   account_type?: "savings" | "investment";
@@ -93,7 +94,8 @@ export function useSavingsGoals() {
         target_date: data.target_date || null,
         description: data.description || null,
         account_id: accountId,
-      });
+        contribution_day: data.contribution_day || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {

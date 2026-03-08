@@ -33,6 +33,7 @@ const goalSchema = z.object({
   target_amount: z.coerce.number().min(1, "Ingresa un monto objetivo"),
   description: z.string().optional(),
   target_date: z.date().optional(),
+  contribution_day: z.coerce.number().min(1).max(31).optional(),
   currency: z.string().default("MXN"),
   initial_amount: z.coerce.number().optional().default(0),
   account_type: z.enum(["savings", "investment"]).default("savings"),
@@ -76,6 +77,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       description: "",
       currency: "MXN",
       initial_amount: 0,
+      contribution_day: undefined,
       account_type: "savings",
       account_id: undefined,
     },
@@ -88,6 +90,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       target_amount: data.target_amount,
       description: data.description,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : undefined,
+      contribution_day: data.contribution_day,
       currency: data.currency,
       initial_amount: data.initial_amount,
       account_id: linkExisting ? data.account_id : undefined,
@@ -256,6 +259,30 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="contribution_day"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Día de aportación mensual (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      placeholder="Ej: 15"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <p className="text-[10px] text-muted-foreground">
+                    Se mostrará como recordatorio en tu pantalla de inicio.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

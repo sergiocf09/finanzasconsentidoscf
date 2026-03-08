@@ -7,6 +7,7 @@ import {
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatCurrencyAbs } from "@/lib/formatters";
 import {
   useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability,
 } from "@/hooks/useAccounts";

@@ -20,8 +20,8 @@ export function FinancialSummaryCards() {
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
-
-
+  const assetCurrencies = Object.entries(assetsByCurrency);
+  const liabCurrencies = Object.entries(liabilitiesByCurrency);
 
   const handleCardClick = (key: string) => {
     setExpandedKey(expandedKey === key ? null : key);

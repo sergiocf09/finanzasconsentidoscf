@@ -23,7 +23,7 @@ const navigation = [
   { name: "Categorías", href: "/categories", icon: Tag },
   { name: "Deudas", href: "/debts", icon: CreditCard },
   { name: "Fondo de emergencia", href: "/emergency-fund", icon: Target },
-  { name: "Reportes", href: "/reports", icon: BarChart3 },
+  { name: "Inteligencia", href: "/intelligence", icon: BarChart3 },
   { name: "Mi Biblioteca", href: "/library", icon: BookOpen },
 ];
 

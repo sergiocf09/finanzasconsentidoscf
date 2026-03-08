@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -68,6 +68,7 @@ export function UpcomingDueDates() {
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
 
   const sourceAccounts = useMemo(() =>
     accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),
@@ -262,18 +263,38 @@ export function UpcomingDueDates() {
 
                   {isUrgent && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
 
-                  {/* Editable amount field */}
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={getDisplayAmount(item)}
-                    onChange={(e) => handleAmountChange(item.id, e.target.value)}
-                    placeholder="$0"
-                    className={cn(
-                      "h-7 w-24 text-xs text-right tabular-nums shrink-0 px-1.5",
-                      isUrgent ? "border-expense/30" : "border-border"
-                    )}
-                  />
+                  {/* Editable amount field — formatted when idle, raw input when focused */}
+                  {focusedItemId === item.id ? (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={getDisplayAmount(item)}
+                      onChange={(e) => handleAmountChange(item.id, e.target.value)}
+                      onBlur={() => setFocusedItemId(null)}
+                      onKeyDown={(e) => { if (e.key === "Enter") setFocusedItemId(null); }}
+                      placeholder="0"
+                      autoFocus
+                      className={cn(
+                        "h-7 w-24 text-xs text-right tabular-nums shrink-0 px-1.5",
+                        isUrgent ? "border-expense/30" : "border-border"
+                      )}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setFocusedItemId(item.id)}
+                      className={cn(
+                        "h-7 min-w-[5.5rem] rounded-md border px-1.5 text-xs text-right tabular-nums shrink-0 transition-colors",
+                        "hover:border-primary/40 hover:bg-muted/50",
+                        isUrgent ? "border-expense/30" : "border-border"
+                      )}
+                    >
+                      {(() => {
+                        const val = parseFloat(getDisplayAmount(item));
+                        if (!val && val !== 0) return <span className="text-muted-foreground">$0</span>;
+                        return <span className="text-foreground font-medium">{formatCurrencyAbs(val, item.currency)}</span>;
+                      })()}
+                    </button>
+                  )}
 
                   {/* Transfer button */}
                   {item.accountId && !isTransferring && (

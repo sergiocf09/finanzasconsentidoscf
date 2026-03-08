@@ -978,42 +978,42 @@ export function VoiceButton() {
                     </div>
                   )}
 
-                  <div className="text-xs space-y-0">
-                    <div className="flex justify-between py-0.5 border-b border-border">
+                  <div className="text-xs space-y-0 w-full overflow-hidden">
+                    <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">Tipo:</span>
-                      <span className={cn("font-medium", typeColors[editType])}>{typeLabels[editType] ?? "—"}</span>
+                      <span className={cn("font-medium text-right truncate", typeColors[editType])}>{typeLabels[editType] ?? "—"}</span>
                     </div>
-                    <div className="flex justify-between py-0.5 border-b border-border">
+                    <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">Categoría:</span>
-                      <span className="font-medium text-primary truncate ml-2">{editCategoryId ? getCategoryName(editCategoryId) : <span className="text-muted-foreground">Sin categoría</span>}</span>
+                      <span className="font-medium text-primary truncate text-right min-w-0">{editCategoryId ? getCategoryName(editCategoryId) : <span className="text-muted-foreground">Sin categoría</span>}</span>
                     </div>
-                    <div className="flex justify-between py-0.5 border-b border-border">
+                    <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">Monto:</span>
-                      <span className="font-medium">{editAmount ? fmt(parseFloat(editAmount)) : <span className="text-destructive">Sin monto</span>}</span>
+                      <span className="font-medium text-right">{editAmount ? fmt(parseFloat(editAmount)) : <span className="text-destructive">Sin monto</span>}</span>
                     </div>
-                    <div className="flex justify-between py-0.5 border-b border-border">
+                    <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
-                      <span className="font-medium truncate ml-2">
+                      <span className="font-medium truncate text-right min-w-0">
                         {editAccountId ? activeAccounts.find(a => a.id === editAccountId)?.name ?? "—" : <span className="text-destructive">Sin cuenta</span>}
                       </span>
                     </div>
                     {editType === "transfer" && (
-                      <div className="flex justify-between py-0.5 border-b border-border">
+                      <div className="flex justify-between py-0.5 border-b border-border gap-2">
                         <span className="text-muted-foreground shrink-0">Destino:</span>
-                        <span className="font-medium truncate ml-2">
+                        <span className="font-medium truncate text-right min-w-0">
                           {editToAccountId ? activeAccounts.find(a => a.id === editToAccountId)?.name ?? "—" : <span className="text-destructive">Sin cuenta destino</span>}
                         </span>
                       </div>
                     )}
                     {editDescription && (
-                      <div className="flex justify-between py-0.5 border-b border-border">
+                      <div className="flex justify-between py-0.5 border-b border-border gap-2">
                         <span className="text-muted-foreground shrink-0">Concepto:</span>
-                        <span className="font-medium truncate ml-2">{editDescription}</span>
+                        <span className="font-medium truncate text-right min-w-0">{editDescription}</span>
                       </div>
                     )}
-                    <div className="flex justify-between py-0.5">
+                    <div className="flex justify-between py-0.5 gap-2">
                       <span className="text-muted-foreground shrink-0">Fecha:</span>
-                      <span className="font-medium">{editDate === format(new Date(), "yyyy-MM-dd") ? "Hoy" : editDate}</span>
+                      <span className="font-medium text-right">{editDate === format(new Date(), "yyyy-MM-dd") ? "Hoy" : editDate}</span>
                     </div>
                   </div>
 

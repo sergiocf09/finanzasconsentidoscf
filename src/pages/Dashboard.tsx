@@ -4,12 +4,14 @@ import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Brain, TrendingUp, AlertCircle, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useBudgets } from "@/hooks/useBudgets";
+import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
+import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -51,6 +53,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { budgets } = useBudgets();
+  const { signals } = useFinancialIntelligence();
   const displayName = profile?.display_name || "bienvenido";
 
   const [period, setPeriod] = useState<PeriodKey>("current");
@@ -192,6 +195,55 @@ export default function Dashboard() {
           <RecentTransactions />
         </div>
       </div>
+
+      {/* Financial Signals */}
+      {signals.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Brain className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-heading font-semibold text-foreground">Señales del mes</h2>
+            </div>
+            <Link to="/intelligence" className="flex items-center gap-0.5 text-xs text-primary hover:underline">
+              Ver más <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {signals.slice(0, 3).map((s) => {
+              const isPositive = s.type === "positive";
+              const isAttention = s.type === "attention";
+              return (
+                <div
+                  key={s.id}
+                  className={cn(
+                    "flex gap-3 rounded-xl p-3 border",
+                    isPositive && "bg-[hsl(var(--income)/0.06)] border-[hsl(var(--income)/0.15)]",
+                    isAttention && "bg-[hsl(var(--status-warning)/0.06)] border-[hsl(var(--status-warning)/0.15)]",
+                    !isPositive && !isAttention && "bg-[hsl(var(--transfer)/0.06)] border-[hsl(var(--transfer)/0.15)]"
+                  )}
+                >
+                  <div className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                    isPositive && "bg-[hsl(var(--income)/0.12)]",
+                    isAttention && "bg-[hsl(var(--status-warning)/0.12)]",
+                    !isPositive && !isAttention && "bg-[hsl(var(--transfer)/0.12)]"
+                  )}>
+                    {isPositive ? (
+                      <TrendingUp className="h-4 w-4 text-[hsl(var(--income))]" />
+                    ) : (
+                      <AlertCircle className={cn("h-4 w-4", isAttention ? "text-[hsl(var(--status-warning))]" : "text-[hsl(var(--transfer))]")} />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{s.title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{s.message}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Voice Tip */}
       <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10 p-4">

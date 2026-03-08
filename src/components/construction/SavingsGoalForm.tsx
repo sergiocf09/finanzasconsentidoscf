@@ -93,6 +93,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       description: data.description,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : undefined,
       contribution_day: data.contribution_day,
+      monthly_contribution: data.monthly_contribution,
       currency: data.currency,
       initial_amount: data.initial_amount,
       account_id: linkExisting ? data.account_id : undefined,

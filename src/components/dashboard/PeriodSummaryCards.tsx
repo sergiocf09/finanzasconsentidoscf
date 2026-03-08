@@ -6,6 +6,7 @@ import { formatCurrencyAbs } from "@/lib/formatters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
+import { Eye, EyeOff } from "lucide-react";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransferForm } from "@/components/transfers/TransferForm";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -122,6 +122,13 @@ export function UpcomingDueDates() {
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [debts, goals, timeFilter]);
 
+  // Check if there are ANY items with due dates (regardless of filter)
+  const hasAnyDueItems = useMemo(() => {
+    const hasDebts = (debts ?? []).some(d => d.is_active && d.due_day);
+    const hasGoals = (goals ?? []).some(g => g.is_active && (g as any).contribution_day);
+    return hasDebts || hasGoals;
+  }, [debts, goals]);
+
   const handleStartPay = useCallback((item: DueItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setPayingItemId(item.id);
@@ -211,7 +218,7 @@ export function UpcomingDueDates() {
     }
   }, [user, payAmount, accounts, queryClient, handleCancelPay]);
 
-  if (items.length === 0 && timeFilter === "15") return null;
+  if (!hasAnyDueItems) return null;
 
   return (
     <div className="space-y-2">

@@ -105,7 +105,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   // Cross-currency detection
   const watchedAccountId = form.watch("account_id");
   const watchedCurrency = form.watch("currency");
-  const watchedAmount = form.watch("amount");
+  const watchedAmount = Number(form.watch("amount")) || 0;
   const selectedAccount = accounts.find(a => a.id === watchedAccountId);
   const isCrossCurrency = selectedAccount && watchedCurrency !== selectedAccount.currency;
   const convertedAmount = isCrossCurrency && fxRate > 0 && watchedAmount > 0

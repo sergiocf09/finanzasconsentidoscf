@@ -25,12 +25,12 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
   const topIncome = transactions
     .filter(t => t.type === "income")
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+    .slice(0, 10);
 
   const topExpense = transactions
     .filter(t => t.type === "expense")
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+    .slice(0, 10);
 
   const toggleExpanded = (type: "income" | "expense") => {
     setExpanded(prev => (prev === type ? null : type));

@@ -5,7 +5,7 @@ import {
   Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrencyAbs } from "@/lib/formatters";
+import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
 import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
@@ -16,7 +16,7 @@ const typeIcons: Record<string, typeof Wallet> = {
   personal_loan: User, caucion_bursatil: Landmark,
 };
 
-const fmt = (v: number, currency: string) => formatCurrencyAbs(v, currency);
+const fmt = (v: number, currency: string) => formatCurrency(v, currency);
 
 export function FinancialSummaryCards() {
   const navigate = useNavigate();
@@ -58,11 +58,11 @@ export function FinancialSummaryCards() {
         <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
         <span className={cn(
           "text-xs font-semibold tabular-nums",
-          debt ? "text-expense" : account.current_balance < 0 ? "text-expense" : "text-income"
+          debt
+            ? (account.current_balance > 0 ? "text-income" : "text-expense")
+            : (account.current_balance < 0 ? "text-expense" : "text-income")
         )}>
-          {debt && account.current_balance !== 0 ? "-" : ""}
-          {!debt && account.current_balance < 0 ? "-" : ""}
-          {mask(fmt(Math.abs(account.current_balance), account.currency))}
+          {mask(fmt(account.current_balance, account.currency))}
         </span>
       </div>
     );

@@ -7,7 +7,7 @@ import {
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { formatCurrencyAbs } from "@/lib/formatters";
+import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
 import {
   useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability,
 } from "@/hooks/useAccounts";
@@ -31,7 +31,7 @@ const typeLabels: Record<string, string> = {
   auto_loan: "Crédito automotriz", personal_loan: "Crédito personal", caucion_bursatil: "Caución bursátil",
 };
 
-const fmt = (value: number, currency: string) => formatCurrencyAbs(value, currency);
+const fmt = (value: number, currency: string) => formatCurrency(value, currency);
 
 export default function Accounts() {
   const navigate = useNavigate();
@@ -86,8 +86,12 @@ export default function Accounts() {
           <p className="text-[10px] text-muted-foreground">{typeLabels[account.type] || account.type}</p>
         </div>
         <div className="text-right mr-0.5">
-          <p className={cn("text-xs font-semibold tabular-nums", debt ? "text-expense" : "text-income")}>
-            {debt && account.current_balance !== 0 ? "-" : ""}{mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
+          <p className={cn("text-xs font-semibold tabular-nums",
+            debt
+              ? (account.current_balance > 0 ? "text-income" : "text-expense")
+              : (account.current_balance < 0 ? "text-expense" : "text-income")
+          )}>
+            {mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
           </p>
         </div>
         <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"

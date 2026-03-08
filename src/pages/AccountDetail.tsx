@@ -112,7 +112,7 @@ export default function AccountDetail() {
           </Link>
           <div>
             <h1 className="text-2xl font-heading font-bold text-foreground">{account.name}</h1>
-            <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {isLiab ? (account.current_balance !== 0 ? "-" : "") + fmt(Math.abs(account.current_balance), account.currency) : fmt(account.current_balance, account.currency)}</p>
+            <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
           </div>
         </div>
       </div>

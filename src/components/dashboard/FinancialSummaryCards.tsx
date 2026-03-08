@@ -181,6 +181,31 @@ export function FinancialSummaryCards() {
           </div>
         </div>
       )}
+
+      {/* Consolidated totals in MXN when multi-currency */}
+      {hasMultipleCurrencies && rate > 0 && (
+        <div className="rounded-xl bg-card border border-border p-3 space-y-2">
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Total consolidado (MXN) · TC: ${rate.toFixed(2)}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <p className="text-[9px] text-muted-foreground">Activos</p>
+              <p className="text-sm font-bold text-income tabular-nums">{mask(fmt(consolidatedAssets, "MXN"))}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] text-muted-foreground">Pasivos</p>
+              <p className="text-sm font-bold text-expense tabular-nums">-{mask(fmt(consolidatedLiabilities, "MXN"))}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[9px] text-muted-foreground">Neto</p>
+              <p className={cn("text-sm font-bold tabular-nums", consolidatedNet >= 0 ? "text-income" : "text-expense")}>
+                {consolidatedNet < 0 && "-"}{mask(fmt(Math.abs(consolidatedNet), "MXN"))}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

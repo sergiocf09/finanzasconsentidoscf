@@ -7,6 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { formatCurrencyAbs } from "@/lib/formatters";
 import { useDebts, Debt } from "@/hooks/useDebts";
 import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";

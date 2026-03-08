@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),

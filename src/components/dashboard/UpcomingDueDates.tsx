@@ -141,13 +141,14 @@ export function UpcomingDueDates() {
   const handleStartPay = useCallback((item: DueItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setPayingItemId(item.id);
-    const displayAmount = overriddenAmounts[item.id] ?? item.amount;
-    setPayAmount(displayAmount ? String(displayAmount) : "");
-  }, [overriddenAmounts]);
+    setPayAmount(item.amount ? String(item.amount) : "");
+    setSourceAccountId(sourceAccounts.length === 1 ? sourceAccounts[0].id : "");
+  }, [sourceAccounts]);
 
   const handleCancelPay = useCallback(() => {
     setPayingItemId(null);
     setPayAmount("");
+    setSourceAccountId("");
   }, []);
 
   const handleConfirmPay = useCallback(async (item: DueItem) => {
@@ -157,77 +158,43 @@ export function UpcomingDueDates() {
       toast.error("Ingresa un monto válido");
       return;
     }
+    if (!sourceAccountId) {
+      toast.error("Selecciona una cuenta de origen");
+      return;
+    }
+    if (!item.accountId) return;
+
+    const source = accounts.find(a => a.id === sourceAccountId);
+    if (!source) return;
 
     setIsSaving(true);
     try {
-      if (item.type === "debt" && item.accountId) {
-        // Find a source account (first active asset account in same currency)
-        const sourceAccount = accounts.find(
-          a => a.is_active && a.currency === item.currency && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)
-        );
-
-        if (sourceAccount) {
-          // Create transfer from source to debt account
-          await supabase.from("transfers").insert({
-            user_id: user.id,
-            from_account_id: sourceAccount.id,
-            to_account_id: item.accountId,
-            amount_from: amount,
-            amount_to: amount,
-            currency_from: sourceAccount.currency,
-            currency_to: item.currency,
-            transfer_date: format(new Date(), "yyyy-MM-dd"),
-            description: `Pago: ${item.name}`,
-            created_from: "due_dates",
-          });
-        } else {
-          // No source account, create expense transaction on the debt account
-          await supabase.from("transactions").insert({
-            user_id: user.id,
-            account_id: item.accountId,
-            type: "income",
-            amount,
-            currency: item.currency,
-            description: `Pago: ${item.name}`,
-            transaction_date: format(new Date(), "yyyy-MM-dd"),
-          });
-        }
-      } else if (item.type === "goal" && item.accountId) {
-        // Find source account
-        const sourceAccount = accounts.find(
-          a => a.is_active && a.id !== item.accountId && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)
-        );
-
-        if (sourceAccount) {
-          await supabase.from("transfers").insert({
-            user_id: user.id,
-            from_account_id: sourceAccount.id,
-            to_account_id: item.accountId,
-            amount_from: amount,
-            amount_to: amount,
-            currency_from: sourceAccount.currency,
-            currency_to: item.currency,
-            transfer_date: format(new Date(), "yyyy-MM-dd"),
-            description: `Aportación: ${item.name}`,
-            created_from: "due_dates",
-          });
-        }
-      }
+      const descLabel = item.type === "debt" ? "Pago" : "Aportación";
+      await supabase.from("transfers").insert({
+        user_id: user.id,
+        from_account_id: sourceAccountId,
+        to_account_id: item.accountId,
+        amount_from: amount,
+        amount_to: source.currency === item.currency ? amount : amount,
+        currency_from: source.currency,
+        currency_to: item.currency,
+        transfer_date: format(new Date(), "yyyy-MM-dd"),
+        description: `${descLabel}: ${item.name}`,
+        created_from: "due_dates",
+      });
 
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
-      setOverriddenAmounts(prev => ({ ...prev, [item.id]: amount }));
-      toast.success("Pago registrado correctamente");
+      toast.success("Transferencia registrada");
       handleCancelPay();
     } catch (err: any) {
-      toast.error(err.message || "Error al registrar pago");
+      toast.error(err.message || "Error al registrar transferencia");
     } finally {
       setIsSaving(false);
     }
-  }, [user, payAmount, accounts, queryClient, handleCancelPay]);
+  }, [user, payAmount, sourceAccountId, accounts, queryClient, handleCancelPay]);
 
   if (!hasAnyDueItems) return null;
 

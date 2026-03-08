@@ -24,6 +24,7 @@ const navigation = [
   { name: "Deudas", href: "/debts", icon: CreditCard },
   { name: "Fondo de emergencia", href: "/emergency-fund", icon: Target },
   { name: "Inteligencia", href: "/intelligence", icon: BarChart3 },
+  { name: "Dashboard", href: "/financial-dashboard", icon: Leaf },
   { name: "Mi Biblioteca", href: "/library", icon: BookOpen },
 ];
 

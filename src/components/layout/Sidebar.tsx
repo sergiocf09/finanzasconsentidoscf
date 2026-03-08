@@ -7,12 +7,12 @@ import {
   Wallet,
   CreditCard,
   Target,
-  
   BookOpen,
   Settings,
   Leaf,
   Tag,
   Gauge,
+  ArrowRightLeft,
 } from "lucide-react";
 
 const navigation = [

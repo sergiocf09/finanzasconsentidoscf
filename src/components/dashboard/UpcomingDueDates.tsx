@@ -68,6 +68,7 @@ export function UpcomingDueDates() {
   const [payingItemId, setPayingItemId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [overriddenAmounts, setOverriddenAmounts] = useState<Record<string, number>>({});
 
   const items = useMemo(() => {
     const today = new Date();

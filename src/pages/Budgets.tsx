@@ -38,6 +38,7 @@ export default function Budgets() {
   const { budgets, isLoading, totalBudgeted, totalSpent, deleteBudget, updateBudget } =
     useBudgets(currentYear, currentMonth);
   const { categories } = useCategories();
+  const { signals, recommendations } = useFinancialIntelligence();
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detailBudget, setDetailBudget] = useState<{

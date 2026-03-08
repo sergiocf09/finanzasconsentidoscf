@@ -7,7 +7,7 @@ import {
   Wallet,
   CreditCard,
   Target,
-  BarChart3,
+  
   BookOpen,
   Settings,
   Leaf,

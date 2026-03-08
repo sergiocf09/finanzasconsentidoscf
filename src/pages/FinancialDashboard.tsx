@@ -94,12 +94,20 @@ export default function FinancialDashboard() {
         <p className="text-xs text-muted-foreground mt-0.5">{capitalizedMonth}</p>
       </div>
 
-      {/* Alertas financieras (siempre visibles) */}
-      <FinancialAlertsBanner
-        signals={signals}
-        recommendations={recommendations}
-        budgetsNearLimit={budgetsNearLimit.map(b => ({ name: b.name, spent: b.spent ?? 0, amount: b.amount }))}
-      />
+      {/* Resumen conceptual — colapsable */}
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+          <ChevronDown className="h-3.5 w-3.5 transition-transform [[data-state=open]>&]:rotate-180" />
+          Resumen conceptual
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <FinancialAlertsBanner
+            signals={signals}
+            recommendations={recommendations}
+            budgetsNearLimit={budgetsNearLimit.map(b => ({ name: b.name, spent: b.spent ?? 0, amount: b.amount }))}
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

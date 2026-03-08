@@ -1,4 +1,3 @@
-import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
@@ -32,16 +31,10 @@ export default function Dashboard() {
       {/* Financial Summary */}
       <FinancialSummaryCards />
 
-      {/* Period Summary */}
+      {/* Period Summary + Quick Actions */}
       <div className="space-y-2">
-        <h2 className="text-sm font-heading font-semibold text-foreground">Estado del mes</h2>
+        <h2 className="text-sm font-heading font-semibold text-foreground">Estado del periodo</h2>
         <PeriodSummaryCards />
-      </div>
-
-      {/* Quick Actions */}
-      <div className="space-y-2">
-        <h2 className="text-sm font-heading font-semibold text-foreground">Acciones rápidas</h2>
-        <QuickActions />
       </div>
 
       {/* Recent Transactions */}

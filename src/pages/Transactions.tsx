@@ -359,28 +359,32 @@ export default function Transactions() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
-                <p className="text-[10px] text-muted-foreground truncate">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <p className={cn(
+                      "text-sm font-semibold tabular-nums",
+                      item.type === "income" && "text-income",
+                      item.type === "expense" && "text-expense",
+                      isTransfer && "text-transfer",
+                      isAdjustment && "text-muted-foreground"
+                    )}>
+                      {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
+                    </p>
+                    {item.source === "tx" && (
+                      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
                   {isTransfer
                     ? `${itemDate} · ${getAccountName((transfers.find(t => t.id === item.id))?.from_account_id || "")} → ${getAccountName((transfers.find(t => t.id === item.id))?.to_account_id || "")}`
                     : `${itemDate} · ${getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null)} · ${item.accountName}`
                   }
                 </p>
               </div>
-              <p className={cn(
-                "text-sm font-semibold tabular-nums shrink-0",
-                item.type === "income" && "text-income",
-                item.type === "expense" && "text-expense",
-                isTransfer && "text-transfer",
-                isAdjustment && "text-muted-foreground"
-              )}>
-                {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
-              </p>
-              {item.source === "tx" && (
-                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              )}
             </div>
             );
           })}

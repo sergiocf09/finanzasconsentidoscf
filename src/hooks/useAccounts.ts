@@ -123,39 +123,8 @@ export function useAccounts() {
     },
   });
 
-  // Hard delete — removes account and all related data + syncs to debts
-  const deleteAccount = useMutation({
-    mutationFn: async (id: string) => {
-      // Delete linked debt and its payments first
-      const { data: linkedDebts } = await supabase.from('debts').select('id').eq('account_id', id);
-      if (linkedDebts && linkedDebts.length > 0) {
-        for (const debt of linkedDebts) {
-          await supabase.from('debt_payments').delete().eq('debt_id', debt.id);
-        }
-        await supabase.from('debts').delete().eq('account_id', id);
-      }
-      const { error: errTrFrom } = await supabase.from('transfers').delete().eq('from_account_id', id);
-      if (errTrFrom) throw errTrFrom;
-      const { error: errTrTo } = await supabase.from('transfers').delete().eq('to_account_id', id);
-      if (errTrTo) throw errTrTo;
-      const { error: errTx } = await supabase.from('transactions').delete().eq('account_id', id);
-      if (errTx) throw errTx;
-      const { error: errTxRel } = await supabase.from('transactions').delete().eq('related_account_id', id);
-      if (errTxRel) throw errTxRel;
-      const { error: errRecon } = await supabase.from('account_reconciliations').delete().eq('account_id', id);
-      if (errRecon) throw errRecon;
-      const { error } = await supabase.from('accounts').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['debts'] });
-      toast({ title: "Cuenta eliminada permanentemente" });
-    },
-    onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  // deleteAccount is now an alias for deactivateAccount (soft delete only)
+  const deleteAccount = deactivateAccount;
 
   const allAccounts = accountsQuery.data ?? [];
   const activeOnly = allAccounts.filter(a => a.is_active);

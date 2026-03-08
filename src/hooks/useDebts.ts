@@ -187,27 +187,21 @@ export function useDebts() {
     },
   });
 
+  // Soft delete — deactivate debt + linked account, preserve all history
   const deleteDebt = useMutation({
     mutationFn: async (id: string) => {
-      // Get linked account
       const { data: debt } = await supabase.from('debts').select('account_id').eq('id', id).single();
-      // Delete payments first
-      await supabase.from('debt_payments').delete().eq('debt_id', id);
-      await supabase.from('debts').delete().eq('id', id);
-      // Hard-delete linked account + related data (full mirror of account delete)
+      const { error } = await supabase.from('debts').update({ is_active: false }).eq('id', id);
+      if (error) throw error;
+      // Also deactivate linked account
       if (debt?.account_id) {
-        await supabase.from('transfers').delete().eq('from_account_id', debt.account_id);
-        await supabase.from('transfers').delete().eq('to_account_id', debt.account_id);
-        await supabase.from('transactions').delete().eq('account_id', debt.account_id);
-        await supabase.from('transactions').delete().eq('related_account_id', debt.account_id);
-        await supabase.from('account_reconciliations').delete().eq('account_id', debt.account_id);
-        await supabase.from('accounts').delete().eq('id', debt.account_id);
+        await supabase.from('accounts').update({ is_active: false }).eq('id', debt.account_id);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast({ title: "Deuda eliminada permanentemente" });
+      toast({ title: "Deuda desactivada", description: "La deuda y su cuenta asociada ya no aparecen en listas activas. El historial se mantiene intacto." });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

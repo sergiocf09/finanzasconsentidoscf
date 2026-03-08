@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { BudgetProgress } from "@/components/dashboard/BudgetProgress";

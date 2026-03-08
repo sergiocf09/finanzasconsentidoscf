@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import {
-  CalendarClock, CreditCard, PiggyBank, AlertTriangle, DollarSign, Check, X,
+  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, Check, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DueItem {
   id: string;
@@ -67,8 +68,14 @@ export function UpcomingDueDates() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
   const [payingItemId, setPayingItemId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
+  const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
-  const [overriddenAmounts, setOverriddenAmounts] = useState<Record<string, number>>({});
+
+  // Asset accounts that can be used as source for transfers
+  const sourceAccounts = useMemo(() =>
+    accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),
+    [accounts]
+  );
 
   const items = useMemo(() => {
     const today = new Date();
@@ -134,13 +141,14 @@ export function UpcomingDueDates() {
   const handleStartPay = useCallback((item: DueItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setPayingItemId(item.id);
-    const displayAmount = overriddenAmounts[item.id] ?? item.amount;
-    setPayAmount(displayAmount ? String(displayAmount) : "");
-  }, [overriddenAmounts]);
+    setPayAmount(item.amount ? String(item.amount) : "");
+    setSourceAccountId(sourceAccounts.length === 1 ? sourceAccounts[0].id : "");
+  }, [sourceAccounts]);
 
   const handleCancelPay = useCallback(() => {
     setPayingItemId(null);
     setPayAmount("");
+    setSourceAccountId("");
   }, []);
 
   const handleConfirmPay = useCallback(async (item: DueItem) => {
@@ -150,77 +158,43 @@ export function UpcomingDueDates() {
       toast.error("Ingresa un monto válido");
       return;
     }
+    if (!sourceAccountId) {
+      toast.error("Selecciona una cuenta de origen");
+      return;
+    }
+    if (!item.accountId) return;
+
+    const source = accounts.find(a => a.id === sourceAccountId);
+    if (!source) return;
 
     setIsSaving(true);
     try {
-      if (item.type === "debt" && item.accountId) {
-        // Find a source account (first active asset account in same currency)
-        const sourceAccount = accounts.find(
-          a => a.is_active && a.currency === item.currency && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)
-        );
-
-        if (sourceAccount) {
-          // Create transfer from source to debt account
-          await supabase.from("transfers").insert({
-            user_id: user.id,
-            from_account_id: sourceAccount.id,
-            to_account_id: item.accountId,
-            amount_from: amount,
-            amount_to: amount,
-            currency_from: sourceAccount.currency,
-            currency_to: item.currency,
-            transfer_date: format(new Date(), "yyyy-MM-dd"),
-            description: `Pago: ${item.name}`,
-            created_from: "due_dates",
-          });
-        } else {
-          // No source account, create expense transaction on the debt account
-          await supabase.from("transactions").insert({
-            user_id: user.id,
-            account_id: item.accountId,
-            type: "income",
-            amount,
-            currency: item.currency,
-            description: `Pago: ${item.name}`,
-            transaction_date: format(new Date(), "yyyy-MM-dd"),
-          });
-        }
-      } else if (item.type === "goal" && item.accountId) {
-        // Find source account
-        const sourceAccount = accounts.find(
-          a => a.is_active && a.id !== item.accountId && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)
-        );
-
-        if (sourceAccount) {
-          await supabase.from("transfers").insert({
-            user_id: user.id,
-            from_account_id: sourceAccount.id,
-            to_account_id: item.accountId,
-            amount_from: amount,
-            amount_to: amount,
-            currency_from: sourceAccount.currency,
-            currency_to: item.currency,
-            transfer_date: format(new Date(), "yyyy-MM-dd"),
-            description: `Aportación: ${item.name}`,
-            created_from: "due_dates",
-          });
-        }
-      }
+      const descLabel = item.type === "debt" ? "Pago" : "Aportación";
+      await supabase.from("transfers").insert({
+        user_id: user.id,
+        from_account_id: sourceAccountId,
+        to_account_id: item.accountId,
+        amount_from: amount,
+        amount_to: source.currency === item.currency ? amount : amount,
+        currency_from: source.currency,
+        currency_to: item.currency,
+        transfer_date: format(new Date(), "yyyy-MM-dd"),
+        description: `${descLabel}: ${item.name}`,
+        created_from: "due_dates",
+      });
 
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
-      setOverriddenAmounts(prev => ({ ...prev, [item.id]: amount }));
-      toast.success("Pago registrado correctamente");
+      toast.success("Transferencia registrada");
       handleCancelPay();
     } catch (err: any) {
-      toast.error(err.message || "Error al registrar pago");
+      toast.error(err.message || "Error al registrar transferencia");
     } finally {
       setIsSaving(false);
     }
-  }, [user, payAmount, accounts, queryClient, handleCancelPay]);
+  }, [user, payAmount, sourceAccountId, accounts, queryClient, handleCancelPay]);
 
   if (!hasAnyDueItems) return null;
 
@@ -291,14 +265,9 @@ export function UpcomingDueDates() {
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isUrgent && <AlertTriangle className="h-3 w-3 text-expense" />}
-                    {(() => {
-                      const displayAmount = overriddenAmounts[item.id] ?? item.amount;
-                      return (
-                        <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
-                          {mask(formatCurrencyAbs(displayAmount, item.currency))}
-                        </span>
-                      );
-                    })()}
+                    <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
+                      {mask(formatCurrencyAbs(item.amount, item.currency))}
+                    </span>
                     {item.accountId && !isPaying && (
                       <button
                         onClick={(e) => handleStartPay(item, e)}
@@ -306,43 +275,60 @@ export function UpcomingDueDates() {
                           "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
                           "bg-primary/10 hover:bg-primary/20 text-primary"
                         )}
-                        title="Registrar pago"
+                        title="Transferir"
                       >
-                        <DollarSign className="h-3.5 w-3.5" />
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Inline pay form */}
+                {/* Inline transfer form */}
                 {isPaying && (
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={payAmount}
-                      onChange={(e) => setPayAmount(e.target.value)}
-                      placeholder="Monto"
-                      className="h-8 text-sm flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                      onClick={handleCancelPay}
-                      disabled={isSaving}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleConfirmPay(item)}
-                      disabled={isSaving || !payAmount}
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2 mt-2 pt-2 border-t border-border">
+                    <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Cuenta de origen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sourceAccounts
+                          .filter(a => a.id !== item.accountId)
+                          .map(a => (
+                            <SelectItem key={a.id} value={a.id} className="text-xs">
+                              {a.name} ({a.currency})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                        placeholder="Monto"
+                        className="h-8 text-sm flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={handleCancelPay}
+                        disabled={isSaving}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1 px-2"
+                        onClick={() => handleConfirmPay(item)}
+                        disabled={isSaving || !payAmount || !sourceAccountId}
+                      >
+                        <ArrowRightLeft className="h-3.5 w-3.5" />
+                        Transferir
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

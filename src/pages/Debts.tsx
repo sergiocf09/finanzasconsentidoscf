@@ -90,6 +90,13 @@ export default function Debts() {
         >
           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
+        <Button
+          variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+          onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
+          title="Eliminar deuda"
+        >
+          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+        </Button>
       </div>
     );
   };

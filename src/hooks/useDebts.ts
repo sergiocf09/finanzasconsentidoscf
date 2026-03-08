@@ -194,15 +194,20 @@ export function useDebts() {
       // Delete payments first
       await supabase.from('debt_payments').delete().eq('debt_id', id);
       await supabase.from('debts').delete().eq('id', id);
-      // Deactivate linked account
+      // Hard-delete linked account + related data (full mirror of account delete)
       if (debt?.account_id) {
-        await supabase.from('accounts').update({ is_active: false }).eq('id', debt.account_id);
+        await supabase.from('transfers').delete().eq('from_account_id', debt.account_id);
+        await supabase.from('transfers').delete().eq('to_account_id', debt.account_id);
+        await supabase.from('transactions').delete().eq('account_id', debt.account_id);
+        await supabase.from('transactions').delete().eq('related_account_id', debt.account_id);
+        await supabase.from('account_reconciliations').delete().eq('account_id', debt.account_id);
+        await supabase.from('accounts').delete().eq('id', debt.account_id);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      toast({ title: "Deuda eliminada" });
+      toast({ title: "Deuda eliminada permanentemente" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

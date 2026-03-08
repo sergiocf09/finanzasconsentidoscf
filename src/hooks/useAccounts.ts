@@ -102,7 +102,7 @@ export function useAccounts() {
     },
   });
 
-  // Soft delete — marks inactive, preserves ledger
+  // Soft delete — marks inactive, preserves ledger + syncs to debts
   const deactivateAccount = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -110,9 +110,12 @@ export function useAccounts() {
         .update({ is_active: false })
         .eq('id', id);
       if (error) throw error;
+      // Also deactivate any linked debt
+      await supabase.from('debts').update({ is_active: false }).eq('account_id', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: "Cuenta desactivada", description: "La cuenta ya no aparece en listas activas." });
     },
     onError: (error) => {
@@ -120,9 +123,17 @@ export function useAccounts() {
     },
   });
 
-  // Hard delete — removes account and all related data
+  // Hard delete — removes account and all related data + syncs to debts
   const deleteAccount = useMutation({
     mutationFn: async (id: string) => {
+      // Delete linked debt and its payments first
+      const { data: linkedDebts } = await supabase.from('debts').select('id').eq('account_id', id);
+      if (linkedDebts && linkedDebts.length > 0) {
+        for (const debt of linkedDebts) {
+          await supabase.from('debt_payments').delete().eq('debt_id', debt.id);
+        }
+        await supabase.from('debts').delete().eq('account_id', id);
+      }
       const { error: errTrFrom } = await supabase.from('transfers').delete().eq('from_account_id', id);
       if (errTrFrom) throw errTrFrom;
       const { error: errTrTo } = await supabase.from('transfers').delete().eq('to_account_id', id);
@@ -138,6 +149,7 @@ export function useAccounts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: "Cuenta eliminada permanentemente" });
     },
     onError: (error) => {

@@ -33,6 +33,7 @@ export function VoiceButton() {
   const queryClient = useQueryClient();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+  const { checkAlerts } = useBudgetAlerts();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");

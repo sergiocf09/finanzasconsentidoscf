@@ -137,6 +137,56 @@ export default function Budgets() {
         <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={totalSpent} />
       )}
 
+      {/* Alert Banner for budgets over threshold */}
+      {!isLoading && budgets.filter(b => b.amount > 0 && (b.spent / b.amount) >= b.alert_threshold).length > 0 && (
+        <div className="rounded-xl border border-[hsl(var(--status-warning)/0.3)] bg-[hsl(var(--status-warning)/0.06)] p-4 space-y-2 animate-fade-in-up">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-[hsl(var(--status-warning))] shrink-0" />
+            <h3 className="text-sm font-heading font-semibold text-foreground">Presupuestos en alerta</h3>
+          </div>
+          <div className="space-y-1.5">
+            {budgets
+              .filter(b => b.amount > 0 && (b.spent / b.amount) >= b.alert_threshold)
+              .sort((a, b) => (b.spent / b.amount) - (a.spent / a.amount))
+              .map(b => {
+                const pct = Math.round((b.spent / b.amount) * 100);
+                const isOver = pct >= 100;
+                return (
+                  <div
+                    key={b.id}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors",
+                      isOver
+                        ? "bg-destructive/10 hover:bg-destructive/15"
+                        : "bg-[hsl(var(--status-warning)/0.08)] hover:bg-[hsl(var(--status-warning)/0.14)]"
+                    )}
+                    onClick={() => setDetailBudget({ id: b.id, name: b.name, amount: b.amount, spent: b.spent, category_id: b.category_id })}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn(
+                        "inline-block h-2 w-2 rounded-full shrink-0",
+                        isOver ? "bg-destructive" : "bg-[hsl(var(--status-warning))]"
+                      )} />
+                      <span className="font-medium truncate">{b.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-muted-foreground">
+                        {formatCurrency(b.spent)} / {formatCurrency(b.amount)}
+                      </span>
+                      <span className={cn(
+                        "font-semibold tabular-nums",
+                        isOver ? "text-destructive" : "text-[hsl(var(--status-warning))]"
+                      )}>
+                        {pct}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {/* Blocks */}
       {isLoading ? (
         <div className="space-y-3">

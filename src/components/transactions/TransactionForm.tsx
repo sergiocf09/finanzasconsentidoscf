@@ -254,6 +254,24 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 )}
               />
 
+              {/* Cross-currency info */}
+              {isCrossCurrency && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
+                  <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    <p className="font-medium text-foreground">Conversión automática</p>
+                    <p>
+                      La cuenta es en {selectedAccount?.currency}. Se convertirá usando TC: ${fxRate.toFixed(2)}.
+                    </p>
+                    {convertedAmount !== null && (
+                      <p className="font-semibold text-foreground">
+                        {watchedAmount.toFixed(2)} {watchedCurrency} → {convertedAmount.toFixed(2)} {selectedAccount?.currency}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Category */}
               <FormField
                 control={form.control}

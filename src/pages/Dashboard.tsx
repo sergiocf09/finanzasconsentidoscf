@@ -53,6 +53,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { profile } = useProfile();
   const { budgets } = useBudgets();
+  const { signals } = useFinancialIntelligence();
   const displayName = profile?.display_name || "bienvenido";
 
   const [period, setPeriod] = useState<PeriodKey>("current");

@@ -5,7 +5,6 @@ import {
   Receipt,
   PiggyBank,
   Wallet,
-  
   CreditCard,
   Target,
   BarChart3,
@@ -13,6 +12,7 @@ import {
   Settings,
   Leaf,
   Tag,
+  Gauge,
 } from "lucide-react";
 
 const navigation = [

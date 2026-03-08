@@ -36,7 +36,7 @@ export function useBudgetAlerts() {
     // Fetch active budgets for the current period that haven't sent an alert yet
     const { data: budgets, error } = await supabase
       .from("budgets")
-      .select("id, name, amount, spent, alert_threshold, alert_sent, currency")
+      .select("id, name, amount, spent, alert_threshold, alert_sent")
       .eq("is_active", true)
       .eq("year", currentYear)
       .or(`month.eq.${currentMonth},period.eq.yearly`);

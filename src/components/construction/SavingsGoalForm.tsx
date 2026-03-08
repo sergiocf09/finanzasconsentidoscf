@@ -264,6 +264,30 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="contribution_day"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Día de aportación mensual (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      placeholder="Ej: 15"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <p className="text-[10px] text-muted-foreground">
+                    Se mostrará como recordatorio en tu pantalla de inicio.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Account linking */}
             <div className="rounded-lg border border-border p-3 space-y-3">
               <div className="flex items-center justify-between">

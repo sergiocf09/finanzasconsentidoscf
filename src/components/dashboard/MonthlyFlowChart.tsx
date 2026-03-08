@@ -38,7 +38,15 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
 
   return (
     <div className="rounded-xl bg-card border border-border p-4 space-y-3">
-      <h3 className="text-base font-heading font-semibold text-foreground">Flujo mensual</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-heading font-semibold text-foreground">Flujo mensual</h3>
+        <span className={cn(
+          "text-sm font-bold tabular-nums",
+          netFlow >= 0 ? "text-primary" : "text-expense"
+        )}>
+          {netFlow >= 0 ? "+" : "-"}{formatCurrency(Math.abs(netFlow))}
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 gap-2 text-center">
         <button

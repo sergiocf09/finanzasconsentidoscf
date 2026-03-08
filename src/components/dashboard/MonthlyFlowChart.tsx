@@ -25,12 +25,12 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
   const topIncome = transactions
     .filter(t => t.type === "income")
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+    .slice(0, 10);
 
   const topExpense = transactions
     .filter(t => t.type === "expense")
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+    .slice(0, 10);
 
   const toggleExpanded = (type: "income" | "expense") => {
     setExpanded(prev => (prev === type ? null : type));
@@ -38,7 +38,15 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
 
   return (
     <div className="rounded-xl bg-card border border-border p-4 space-y-3">
-      <h3 className="text-base font-heading font-semibold text-foreground">Flujo mensual</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-heading font-semibold text-foreground">Flujo mensual</h3>
+        <span className={cn(
+          "text-sm font-bold tabular-nums",
+          netFlow >= 0 ? "text-primary" : "text-expense"
+        )}>
+          {netFlow >= 0 ? "+" : "-"}{formatCurrency(Math.abs(netFlow))}
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 gap-2 text-center">
         <button
@@ -79,7 +87,7 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
       {expanded && (
         <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
           <h4 className="text-xs font-heading font-semibold text-foreground">
-            Top 5 {expanded === "income" ? "Ingresos" : "Gastos"}
+            Top 10 {expanded === "income" ? "Ingresos" : "Gastos"}
           </h4>
           {(expanded === "income" ? topIncome : topExpense).length === 0 ? (
             <p className="text-xs text-muted-foreground">Sin movimientos este mes.</p>

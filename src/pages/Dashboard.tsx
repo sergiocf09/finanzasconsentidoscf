@@ -1,6 +1,7 @@
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
+import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
@@ -30,6 +31,12 @@ export default function Dashboard() {
 
       {/* Financial Summary */}
       <FinancialSummaryCards />
+
+      {/* Period Summary */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-heading font-semibold text-foreground">Estado del mes</h2>
+        <PeriodSummaryCards />
+      </div>
 
       {/* Quick Actions */}
       <div className="space-y-2">

@@ -182,6 +182,10 @@ export function VoiceButton() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      // Check budget alerts after expense
+      if (editType === "expense") {
+        setTimeout(() => checkAlerts(), 1000);
+      }
       toast.success("Registrado correctamente");
       handleReset();
       setIsOpen(false);

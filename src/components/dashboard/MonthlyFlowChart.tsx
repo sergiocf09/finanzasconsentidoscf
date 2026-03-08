@@ -87,7 +87,7 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
       {expanded && (
         <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
           <h4 className="text-xs font-heading font-semibold text-foreground">
-            Top 5 {expanded === "income" ? "Ingresos" : "Gastos"}
+            Top 10 {expanded === "income" ? "Ingresos" : "Gastos"}
           </h4>
           {(expanded === "income" ? topIncome : topExpense).length === 0 ? (
             <p className="text-xs text-muted-foreground">Sin movimientos este mes.</p>

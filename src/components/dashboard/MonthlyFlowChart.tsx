@@ -50,10 +50,6 @@ export function MonthlyFlowChart({ income, expense, netFlow }: MonthlyFlowChartP
         <BarChart data={data} barCategoryGap="20%">
           <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
           <YAxis hide />
-          <Tooltip
-            formatter={(value: number) => formatCurrency(value)}
-            contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-          />
           <Bar dataKey="value" radius={[6, 6, 0, 0]}>
             {data.map((entry, i) => (
               <Cell key={i} fill={entry.color} />

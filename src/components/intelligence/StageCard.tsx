@@ -20,11 +20,11 @@ export function StageCard({ stage, stageName, stageMessage }: StageCardProps) {
       <div className="flex items-center gap-3 mb-2">
         <span className="text-2xl">{config.emoji}</span>
         <div>
-          <p className="text-xs text-muted-foreground">Hoy estás en etapa de</p>
-          <p className={cn("text-lg font-heading font-bold", config.color)}>{stageName}</p>
+          <p className="text-sm text-muted-foreground">Hoy estás en etapa de</p>
+          <p className={cn("text-xl font-heading font-bold", config.color)}>{stageName}</p>
         </div>
       </div>
-      <p className="text-sm text-muted-foreground leading-relaxed">{stageMessage}</p>
+      <p className="text-base text-muted-foreground leading-relaxed">{stageMessage}</p>
     </div>
   );
 }

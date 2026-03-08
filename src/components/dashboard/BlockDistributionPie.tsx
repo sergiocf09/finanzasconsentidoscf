@@ -51,10 +51,6 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
                 <Cell key={i} fill={BLOCKS.find(b => b.label === data[i].name)?.color || "#ccc"} />
               ))}
             </Pie>
-            <Tooltip
-              formatter={(value: number) => formatCurrency(value)}
-              contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-            />
           </PieChart>
         </ResponsiveContainer>
 

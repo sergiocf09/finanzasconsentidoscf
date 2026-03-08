@@ -91,7 +91,7 @@ export default function Accounts() {
               ? (account.current_balance > 0 ? "text-income" : "text-expense")
               : (account.current_balance < 0 ? "text-expense" : "text-income")
           )}>
-            {mask(account.currency === "USD" ? `USD ${fmt(account.current_balance, account.currency)}` : fmt(account.current_balance, account.currency))}
+            {mask(fmt(account.current_balance, account.currency))}
           </p>
         </div>
         <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"

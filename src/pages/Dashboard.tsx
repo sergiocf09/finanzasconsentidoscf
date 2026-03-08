@@ -1,6 +1,7 @@
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
+import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
@@ -22,9 +23,12 @@ export default function Dashboard() {
     <div className="space-y-4 stagger-children overflow-x-hidden">
       {/* Welcome */}
       <div className="pb-1">
-        <h1 className="text-lg font-heading font-semibold text-foreground">
-          Hola, {displayName} 👋
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-heading font-semibold text-foreground">
+            Hola, {displayName} 👋
+          </h1>
+          <FxRateWidget />
+        </div>
         <p className="text-xs text-muted-foreground">{capitalizedMonth}</p>
       </div>
 

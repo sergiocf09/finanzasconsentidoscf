@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Brain, Gauge, BarChart3, Lightbulb, Zap } from "lucide-react";
+import { Brain, Gauge, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NetPositionCard } from "@/components/dashboard/NetPositionCard";
@@ -30,7 +30,7 @@ export default function FinancialDashboard() {
   const now = new Date();
   const currentStart = startOfMonth(now);
   const currentEnd = endOfMonth(now);
-  const { totals } = useTransactions({ startDate: currentStart, endDate: currentEnd });
+  const { totals, transactions } = useTransactions({ startDate: currentStart, endDate: currentEnd });
   const { totalBudgeted, totalSpent, budgetsNearLimit } = useBudgets();
   const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
   const {
@@ -113,51 +113,34 @@ export default function FinancialDashboard() {
 
         {/* ── Zone 1: Mi Panorama ── */}
         <TabsContent value="panorama" className="space-y-4 mt-0">
-          {/* Etapa financiera */}
           <StageCard stage={stage} stageName={stageName} stageMessage={stageMessage} />
-
-          {/* Posición neta */}
           <NetPositionCard totalAssets={totalAssets} totalLiabilities={totalLiabilities} />
-
-          {/* Flujo mensual */}
-          <MonthlyFlowChart income={totals.income} expense={totals.expense} netFlow={netFlow} />
-
-          {/* Distribución del gasto */}
+          <MonthlyFlowChart
+            income={totals.income}
+            expense={totals.expense}
+            netFlow={netFlow}
+            transactions={transactions}
+          />
           <BlockDistributionPie
             stability={currentBlocks.stability}
             lifestyle={currentBlocks.lifestyle}
             build={currentBlocks.build}
           />
-
-          {/* Avance del presupuesto */}
           <BudgetBlockProgress
             blockSummaries={blockSummaries}
             totalBudgeted={totalBudgeted}
             totalSpent={totalSpent}
           />
-
-          {/* Top categorías */}
           <TopCategoriesCard categories={topCategories} />
         </TabsContent>
 
         {/* ── Zone 2: Análisis ── */}
         <TabsContent value="analisis" className="space-y-4 mt-0">
-          {/* Señales positivas */}
           <SignalsList signals={signals.filter(s => s.type === "positive")} title="Lo que va bien ✓" />
-
-          {/* Señales de atención */}
           <SignalsList signals={signals.filter(s => s.type === "attention")} title="Puntos de atención" />
-
-          {/* Oportunidades */}
           <SignalsList signals={opportunities} title="Oportunidades detectadas" />
-
-          {/* Tendencia histórica por bloques */}
           <HistoricalChart data={periodComparisons} formatAmount={formatAmount} />
-
-          {/* Comparativo de categorías */}
           <CategoryComparisonList comparisons={categoryComparisons} formatAmount={formatAmount} />
-
-          {/* Recomendaciones */}
           <RecommendationsList recommendations={recommendations} />
         </TabsContent>
       </Tabs>

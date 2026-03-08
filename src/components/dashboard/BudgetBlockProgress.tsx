@@ -28,20 +28,18 @@ export function BudgetBlockProgress({ blockSummaries, totalBudgeted, totalSpent 
   return (
     <div className="rounded-xl bg-card border border-border p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-heading font-semibold text-foreground">Avance del presupuesto</h3>
-        <span className="text-xs font-semibold text-foreground tabular-nums">{totalPct.toFixed(0)}%</span>
+        <h3 className="text-base font-heading font-semibold text-foreground">Avance del presupuesto</h3>
+        <span className="text-sm font-semibold text-foreground tabular-nums">{totalPct.toFixed(0)}%</span>
       </div>
 
-      {/* Global bar */}
       <div className="space-y-1">
         <Progress value={totalPct} className={cn("h-2.5 rounded-full", getBarStatus(totalPct))} />
-        <div className="flex justify-between text-[10px] text-muted-foreground">
+        <div className="flex justify-between text-xs text-muted-foreground">
           <span>{formatCurrency(totalSpent)} gastado</span>
           <span>{formatCurrency(totalBudgeted)} presupuestado</span>
         </div>
       </div>
 
-      {/* Per-block bars */}
       <div className="space-y-2.5 pt-1">
         {BLOCK_CONFIG.map(({ key, emoji, barColor, textColor }) => {
           const block = blockSummaries[key];
@@ -53,15 +51,15 @@ export function BudgetBlockProgress({ blockSummaries, totalBudgeted, totalSpent 
           return (
             <div key={key} className="space-y-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-sm font-medium text-foreground">
                   {emoji} {block.label}
                 </span>
-                <span className={cn("text-[10px] font-semibold tabular-nums", isOver ? "text-[hsl(var(--status-danger))]" : textColor)}>
+                <span className={cn("text-xs font-semibold tabular-nums", isOver ? "text-[hsl(var(--status-danger))]" : textColor)}>
                   {pct.toFixed(0)}%
                 </span>
               </div>
               <Progress value={displayPct} className={cn("h-1.5", isOver ? "[&>div]:bg-[hsl(var(--status-danger))]" : barColor)} />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{formatCurrency(block.amount)}</span>
                 <span>{formatCurrency(block.budgeted)}</span>
               </div>

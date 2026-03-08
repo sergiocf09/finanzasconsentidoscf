@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/lib/formatters";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 interface BlockDistributionPieProps {
   stability: number;
@@ -24,7 +24,7 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
   if (total === 0) {
     return (
       <div className="rounded-xl bg-card border border-border p-4">
-        <h3 className="text-sm font-heading font-semibold text-foreground mb-2">Distribución del gasto</h3>
+        <h3 className="text-base font-heading font-semibold text-foreground mb-2">Distribución del gasto</h3>
         <p className="text-xs text-muted-foreground text-center py-6">Sin gastos registrados este mes.</p>
       </div>
     );
@@ -32,27 +32,30 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
 
   return (
     <div className="rounded-xl bg-card border border-border p-4 space-y-3">
-      <h3 className="text-sm font-heading font-semibold text-foreground">Distribución del gasto</h3>
+      <h3 className="text-base font-heading font-semibold text-foreground">Distribución del gasto</h3>
 
       <div className="flex items-center gap-3">
-        <ResponsiveContainer width={110} height={110}>
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              cx="50%"
-              cy="50%"
-              innerRadius={30}
-              outerRadius={50}
-              strokeWidth={2}
-              stroke="hsl(var(--card))"
-            >
-              {data.map((_, i) => (
-                <Cell key={i} fill={BLOCKS.find(b => b.label === data[i].name)?.color || "#ccc"} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="pointer-events-none">
+          <ResponsiveContainer width={110} height={110}>
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                innerRadius={30}
+                outerRadius={50}
+                strokeWidth={2}
+                stroke="hsl(var(--card))"
+                isAnimationActive={false}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={BLOCKS.find(b => b.label === data[i].name)?.color || "#ccc"} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
 
         <div className="flex-1 space-y-2">
           {BLOCKS.map(block => {
@@ -65,10 +68,10 @@ export function BlockDistributionPie({ stability, lifestyle, build }: BlockDistr
                   style={{ backgroundColor: block.color }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-muted-foreground truncate">{block.label}</p>
+                  <p className="text-xs text-muted-foreground truncate">{block.label}</p>
                 </div>
-                <span className="text-[10px] font-semibold text-foreground tabular-nums">{pct}%</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(value)}</span>
+                <span className="text-xs font-semibold text-foreground tabular-nums">{pct}%</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{formatCurrency(value)}</span>
               </div>
             );
           })}

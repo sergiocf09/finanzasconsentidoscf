@@ -21,6 +21,7 @@ import FinancialDashboard from "./pages/FinancialDashboard";
 import ExchangeRate from "./pages/ExchangeRate";
 import NotFound from "./pages/NotFound";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (

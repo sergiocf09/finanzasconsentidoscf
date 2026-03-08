@@ -18,7 +18,7 @@ const fmt = (v: number, currency: string) => formatCurrencyAbs(v, currency);
 export function FinancialSummaryCards() {
   const navigate = useNavigate();
   const { accounts, assetsByCurrency, liabilitiesByCurrency } = useAccounts();
-  const { hidden, toggle, mask } = useHideAmounts();
+  const { hidden, toggle, mask } = useHideAmounts("balances");
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const assetCurrencies = Object.entries(assetsByCurrency);

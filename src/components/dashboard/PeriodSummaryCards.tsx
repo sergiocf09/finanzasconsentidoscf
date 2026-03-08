@@ -108,6 +108,7 @@ export function PeriodSummaryCards() {
         {/* Period selector */}
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={handlePeriodChange}>
+
             <SelectTrigger className="h-8 text-xs flex-1">
               <SelectValue />
             </SelectTrigger>

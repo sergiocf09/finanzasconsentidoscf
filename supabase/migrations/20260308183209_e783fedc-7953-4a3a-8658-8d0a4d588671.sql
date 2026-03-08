@@ -1,0 +1,1 @@
+ALTER TABLE public.savings_goals ADD COLUMN contribution_day integer DEFAULT NULL;

@@ -80,11 +80,12 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
       if (error) throw error;
       return newTx;
     },
-    onSuccess: () => {
+    onSuccess: (_data, _vars, _ctx) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast({ title: "Movimiento registrado", description: "Se ha guardado correctamente." });
+      // Budget alert check will be triggered by the caller via onTransactionCreated callback
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

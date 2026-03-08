@@ -166,6 +166,8 @@ export default function Budgets() {
               items={mapBudgetItems(budgetsByBlock[block])}
               onDeleteBudget={(id) => deleteBudget.mutate(id)}
               onCategoryClick={(item) => setDetailBudget(item)}
+              signals={signals}
+              recommendations={recommendations}
             />
           ))}
 

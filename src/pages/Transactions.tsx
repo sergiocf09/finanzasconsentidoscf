@@ -12,6 +12,7 @@ import { TransactionDetailSheet } from "@/components/transactions/TransactionDet
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatRelativeDate } from "@/lib/formatters";
 import { format, isToday, isYesterday, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import {

@@ -8,6 +8,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers, Transfer } from "@/hooks/useTransfers";
 import { useCategories } from "@/hooks/useCategories";
 import { useReconciliations } from "@/hooks/useReconciliations";
+import { formatCurrency } from "@/lib/formatters";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
 import { format } from "date-fns";

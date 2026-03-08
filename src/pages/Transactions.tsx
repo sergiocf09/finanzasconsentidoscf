@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight } from "lucide-react";
+import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -12,7 +12,7 @@ import { TransactionDetailSheet } from "@/components/transactions/TransactionDet
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { format, isToday, isYesterday } from "date-fns";
+import { format, isToday, isYesterday, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -21,8 +21,37 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 
 const PAGE_SIZE = 20;
+
+type PeriodKey = "current" | "previous" | "last3" | "custom";
+
+const periodLabels: Record<PeriodKey, string> = {
+  current: "Mes en curso",
+  previous: "Mes anterior",
+  last3: "Últimos 3 meses",
+  custom: "Rango personalizado",
+};
+
+function getDateRange(period: PeriodKey, customStart?: string, customEnd?: string) {
+  const now = new Date();
+  switch (period) {
+    case "previous":
+      return { startDate: startOfMonth(subMonths(now, 1)), endDate: endOfMonth(subMonths(now, 1)) };
+    case "last3":
+      return { startDate: startOfMonth(subMonths(now, 2)), endDate: endOfMonth(now) };
+    case "custom":
+      return {
+        startDate: customStart ? new Date(customStart + "T00:00:00") : startOfMonth(now),
+        endDate: customEnd ? new Date(customEnd + "T23:59:59") : endOfMonth(now),
+      };
+    default:
+      return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+  }
+}
 
 interface UnifiedItem {
   id: string;
@@ -43,15 +72,30 @@ export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState(initialType);
   const [formOpen, setFormOpen] = useState(false);
+  const [defaultType, setDefaultType] = useState<"income" | "expense">("expense");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
 
-  const { transactions, isLoading, totals, deleteTransaction } = useTransactions();
-  const { transfers, isLoading: transfersLoading } = useTransfers();
+  // Period selector state
+  const [period, setPeriod] = useState<PeriodKey>("current");
+  const [customStart, setCustomStart] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [customEnd, setCustomEnd] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+
+  const { startDate, endDate } = getDateRange(period, customStart, customEnd);
+
+  const { transactions, isLoading, totals, deleteTransaction } = useTransactions({ startDate, endDate });
+  const { transfers, isLoading: transfersLoading, totalTransferAmount } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();
   const { accounts } = useAccounts();
+
+  // Sync type filter from URL params
+  useEffect(() => {
+    const urlType = searchParams.get("type");
+    if (urlType) setTypeFilter(urlType);
+  }, [searchParams]);
 
   const getCategoryName = (id: string | null) => {
     if (!id) return "Sin categoría";
@@ -137,56 +181,134 @@ export default function Transactions() {
     }
   };
 
-  const defaultType = typeFilter === "income" ? "income" : "expense";
+  const handlePeriodChange = (v: string) => {
+    const key = v as PeriodKey;
+    setPeriod(key);
+    if (key === "custom") {
+      setShowCustomPicker(true);
+    } else {
+      setShowCustomPicker(false);
+    }
+  };
+
+  const customLabel = period === "custom"
+    ? `${format(new Date(customStart + "T12:00:00"), "d MMM", { locale: es })} – ${format(new Date(customEnd + "T12:00:00"), "d MMM", { locale: es })}`
+    : null;
+
   const loading = isLoading || transfersLoading;
 
+  const filterCards = [
+    { key: "income", label: "Ingresos", amount: totals.income, icon: TrendingUp, colorText: "text-income", colorBg: "bg-income/10" },
+    { key: "expense", label: "Gastos", amount: totals.expense, icon: TrendingDown, colorText: "text-expense", colorBg: "bg-expense/10" },
+    { key: "transfer", label: "Transferencias", amount: totalTransferAmount, icon: ArrowLeftRight, colorText: "text-transfer", colorBg: "bg-transfer/10" },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="pb-2">
+      <div className="pb-1">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
-          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setFormOpen(true)}>
+          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => { setDefaultType("expense"); setFormOpen(true); }}>
             <Plus className="h-3.5 w-3.5" />
-            Nuevo movimiento
+            Registrar
           </Button>
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-card border border-border p-3 text-center">
-          <p className="text-xs text-muted-foreground">Ingresos</p>
-          <p className="text-lg font-bold text-income">{formatAmount(totals.income, "MXN")}</p>
-        </div>
-        <div className="rounded-xl bg-card border border-border p-3 text-center">
-          <p className="text-xs text-muted-foreground">Gastos</p>
-          <p className="text-lg font-bold text-expense">{formatAmount(totals.expense, "MXN")}</p>
-        </div>
+      {/* Period selector */}
+      <div className="flex items-center justify-between gap-2">
+        <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
+          <div className="flex items-center gap-1">
+            <Select value={period} onValueChange={handlePeriodChange}>
+              <SelectTrigger className="h-7 w-auto gap-1 text-xs border-none bg-muted/50 px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(periodLabels).map(([k, label]) => (
+                  <SelectItem key={k} value={k}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {period === "custom" && (
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 text-[10px] text-primary px-1.5">
+                  {customLabel}
+                </Button>
+              </PopoverTrigger>
+            )}
+          </div>
+          <PopoverContent className="w-auto p-3 space-y-3" align="start">
+            <p className="text-xs font-medium text-foreground">Selecciona un rango</p>
+            <div className="flex items-center gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] text-muted-foreground">Desde</label>
+                <Input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="h-8 text-xs w-[130px]"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-muted-foreground">Hasta</label>
+                <Input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="h-8 text-xs w-[130px]"
+                />
+              </div>
+            </div>
+            <Button size="sm" className="w-full h-7 text-xs" onClick={() => setShowCustomPicker(false)}>
+              Aplicar
+            </Button>
+          </PopoverContent>
+        </Popover>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar movimientos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setVisibleCount(PAGE_SIZE); }}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="expense">Gastos</SelectItem>
-            <SelectItem value="income">Ingresos</SelectItem>
-            <SelectItem value="transfer">Transferencias</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Clickable filter cards: Ingresos / Gastos / Transferencias */}
+      <div className="grid grid-cols-3 gap-2">
+        {filterCards.map((card) => {
+          const isActive = typeFilter === card.key;
+          const CardIcon = card.icon;
+          return (
+            <button
+              key={card.key}
+              onClick={() => {
+                setTypeFilter(isActive ? "all" : card.key);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              className={cn(
+                "rounded-xl p-2.5 text-left transition-all border",
+                isActive
+                  ? "border-primary ring-1 ring-primary/30 bg-card shadow-sm"
+                  : "border-border bg-card card-interactive"
+              )}
+            >
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <p className="text-[10px] font-medium text-muted-foreground truncate">{card.label}</p>
+                <div className={cn("flex h-5 w-5 items-center justify-center rounded-md shrink-0", card.colorBg)}>
+                  <CardIcon className={cn("h-3 w-3", card.colorText)} />
+                </div>
+              </div>
+              <p className={cn("text-sm font-bold font-heading tracking-tight leading-tight", card.colorText)}>
+                {card.key === "expense" && "-"}{formatAmount(card.amount, "MXN")}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar movimientos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* List */}
@@ -259,7 +381,7 @@ export default function Transactions() {
         </div>
       )}
 
-      <TransactionForm open={formOpen} onOpenChange={setFormOpen} defaultType={defaultType as any} />
+      <TransactionForm open={formOpen} onOpenChange={setFormOpen} defaultType={defaultType} />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>

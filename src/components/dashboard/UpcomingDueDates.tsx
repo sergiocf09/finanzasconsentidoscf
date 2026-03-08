@@ -68,6 +68,7 @@ export function UpcomingDueDates() {
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
 
   const sourceAccounts = useMemo(() =>
     accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),

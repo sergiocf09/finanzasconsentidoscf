@@ -110,6 +110,10 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       type: activeTab,
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
+    // Check budget alerts after expense (with small delay for DB triggers to settle)
+    if (activeTab === "expense") {
+      setTimeout(() => checkAlerts(), 1000);
+    }
     form.reset();
     onOpenChange(false);
   };

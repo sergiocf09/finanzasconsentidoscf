@@ -1,21 +1,32 @@
-import { useMemo } from "react";
-import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
+import { useMemo, useState } from "react";
+import { Brain, Gauge, BarChart3, Lightbulb, Zap } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NetPositionCard } from "@/components/dashboard/NetPositionCard";
 import { MonthlyFlowChart } from "@/components/dashboard/MonthlyFlowChart";
 import { BlockDistributionPie } from "@/components/dashboard/BlockDistributionPie";
 import { BudgetBlockProgress } from "@/components/dashboard/BudgetBlockProgress";
 import { TopCategoriesCard } from "@/components/dashboard/TopCategoriesCard";
-import { SpendingTrendChart } from "@/components/dashboard/SpendingTrendChart";
 import { FinancialAlertsBanner } from "@/components/dashboard/FinancialAlertsBanner";
+import { StageCard } from "@/components/intelligence/StageCard";
+import { SignalsList } from "@/components/intelligence/SignalsList";
+import { RecommendationsList } from "@/components/intelligence/RecommendationsList";
+import { CategoryComparisonList } from "@/components/intelligence/CategoryComparisonList";
+import { HistoricalChart } from "@/components/intelligence/HistoricalChart";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { formatCurrency } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 
+const formatAmount = (value: number) => formatCurrency(value);
+
 export default function FinancialDashboard() {
+  const [activeTab, setActiveTab] = useState("panorama");
+
   const now = new Date();
   const currentStart = startOfMonth(now);
   const currentEnd = endOfMonth(now);
@@ -23,8 +34,10 @@ export default function FinancialDashboard() {
   const { totalBudgeted, totalSpent, budgetsNearLimit } = useBudgets();
   const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
   const {
+    isLoading,
+    stage, stageName, stageMessage,
     signals, recommendations, blockSummaries, currentBlocks,
-    periodComparisons,
+    periodComparisons, categoryComparisons, opportunities,
   } = useFinancialIntelligence();
 
   useBudgetAlerts();
@@ -50,51 +63,104 @@ export default function FinancialDashboard() {
 
   const netFlow = totals.income - totals.expense;
 
+  if (isLoading) {
+    return (
+      <div className="space-y-5">
+        <div className="pb-1">
+          <h1 className="text-lg font-heading font-semibold text-foreground">Dashboard Financiero</h1>
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 stagger-children overflow-x-hidden">
       {/* Header */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
-        <h1 className="text-lg font-heading font-semibold text-foreground">
-          Dashboard Financiero
-        </h1>
-        <p className="text-xs text-muted-foreground">{capitalizedMonth}</p>
+        <div className="flex items-center gap-2">
+          <Brain className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-heading font-semibold text-foreground">
+            Dashboard Financiero
+          </h1>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">{capitalizedMonth}</p>
       </div>
 
-      {/* Alertas financieras */}
+      {/* Alertas financieras (siempre visibles) */}
       <FinancialAlertsBanner
         signals={signals}
         recommendations={recommendations}
         budgetsNearLimit={budgetsNearLimit.map(b => ({ name: b.name, spent: b.spent ?? 0, amount: b.amount }))}
       />
 
-      {/* Resumen financiero */}
-      <FinancialSummaryCards />
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="panorama" className="text-xs gap-1.5">
+            <Gauge className="h-3.5 w-3.5" />
+            Mi Panorama
+          </TabsTrigger>
+          <TabsTrigger value="analisis" className="text-xs gap-1.5">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Análisis
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Posición neta */}
-      <NetPositionCard totalAssets={totalAssets} totalLiabilities={totalLiabilities} />
+        {/* ── Zone 1: Mi Panorama ── */}
+        <TabsContent value="panorama" className="space-y-4 mt-0">
+          {/* Etapa financiera */}
+          <StageCard stage={stage} stageName={stageName} stageMessage={stageMessage} />
 
-      {/* Flujo mensual */}
-      <MonthlyFlowChart income={totals.income} expense={totals.expense} netFlow={netFlow} />
+          {/* Posición neta */}
+          <NetPositionCard totalAssets={totalAssets} totalLiabilities={totalLiabilities} />
 
-      {/* Distribución del gasto */}
-      <BlockDistributionPie
-        stability={currentBlocks.stability}
-        lifestyle={currentBlocks.lifestyle}
-        build={currentBlocks.build}
-      />
+          {/* Flujo mensual */}
+          <MonthlyFlowChart income={totals.income} expense={totals.expense} netFlow={netFlow} />
 
-      {/* Avance del presupuesto */}
-      <BudgetBlockProgress
-        blockSummaries={blockSummaries}
-        totalBudgeted={totalBudgeted}
-        totalSpent={totalSpent}
-      />
+          {/* Distribución del gasto */}
+          <BlockDistributionPie
+            stability={currentBlocks.stability}
+            lifestyle={currentBlocks.lifestyle}
+            build={currentBlocks.build}
+          />
 
-      {/* Top categorías */}
-      <TopCategoriesCard categories={topCategories} />
+          {/* Avance del presupuesto */}
+          <BudgetBlockProgress
+            blockSummaries={blockSummaries}
+            totalBudgeted={totalBudgeted}
+            totalSpent={totalSpent}
+          />
 
-      {/* Tendencia de gasto */}
-      <SpendingTrendChart data={periodComparisons} />
+          {/* Top categorías */}
+          <TopCategoriesCard categories={topCategories} />
+        </TabsContent>
+
+        {/* ── Zone 2: Análisis ── */}
+        <TabsContent value="analisis" className="space-y-4 mt-0">
+          {/* Señales positivas */}
+          <SignalsList signals={signals.filter(s => s.type === "positive")} title="Lo que va bien ✓" />
+
+          {/* Señales de atención */}
+          <SignalsList signals={signals.filter(s => s.type === "attention")} title="Puntos de atención" />
+
+          {/* Oportunidades */}
+          <SignalsList signals={opportunities} title="Oportunidades detectadas" />
+
+          {/* Tendencia histórica por bloques */}
+          <HistoricalChart data={periodComparisons} formatAmount={formatAmount} />
+
+          {/* Comparativo de categorías */}
+          <CategoryComparisonList comparisons={categoryComparisons} formatAmount={formatAmount} />
+
+          {/* Recomendaciones */}
+          <RecommendationsList recommendations={recommendations} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

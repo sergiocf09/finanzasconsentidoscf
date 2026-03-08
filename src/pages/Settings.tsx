@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { validatePassword } from "@/lib/passwordValidation";
+import { PasswordRequirements } from "@/components/auth/PasswordRequirements";
 
 export default function Settings() {
   const { profile, isLoading } = useProfile();
@@ -44,8 +46,9 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      toast({ title: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" });
+    const validation = validatePassword(newPassword);
+    if (!validation.isValid) {
+      toast({ title: "Contraseña no válida", description: validation.errors.join(". "), variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -138,10 +141,11 @@ export default function Settings() {
                   <Input
                     id="new-password"
                     type="password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                   />
+                  <PasswordRequirements password={newPassword} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password" className="text-sm">Confirmar contraseña</Label>

@@ -1,9 +1,8 @@
 import { useMemo, useState, useCallback } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
 import {
-  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, Check, X,
+  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
@@ -29,7 +28,6 @@ interface DueItem {
   currency: string;
   type: "debt" | "goal";
   accountId: string | null;
-  route: string;
 }
 
 type TimeFilter = "15" | "30" | "next_month";
@@ -51,13 +49,11 @@ function getNextOccurrence(day: number, today: Date): Date {
 function getMaxDays(filter: TimeFilter, today: Date): number {
   if (filter === "15") return 15;
   if (filter === "30") return 30;
-  // next_month: days until end of next month
   const nextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
   return Math.ceil((nextMonth.getTime() - today.getTime()) / 86400000);
 }
 
 export function UpcomingDueDates() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { debts } = useDebts();
@@ -66,12 +62,13 @@ export function UpcomingDueDates() {
   const { mask } = useHideAmounts("balances");
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
-  const [payingItemId, setPayingItemId] = useState<string | null>(null);
-  const [payAmount, setPayAmount] = useState("");
+  // Editable amounts per item (session-only reminders)
+  const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
+  // Transfer flow
+  const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Asset accounts that can be used as source for transfers
   const sourceAccounts = useMemo(() =>
     accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),
     [accounts]
@@ -83,7 +80,6 @@ export function UpcomingDueDates() {
     const maxDays = getMaxDays(timeFilter, today);
     const result: DueItem[] = [];
 
-    // Debts with due_day
     (debts ?? [])
       .filter(d => d.is_active && d.due_day)
       .forEach(d => {
@@ -100,12 +96,10 @@ export function UpcomingDueDates() {
             currency: d.currency,
             type: "debt",
             accountId: d.account_id,
-            route: d.account_id ? `/accounts/${d.account_id}` : "/debts",
           });
         }
       });
 
-    // Savings goals with contribution_day
     (goals ?? [])
       .filter(g => g.is_active && (g as any).contribution_day)
       .forEach(g => {
@@ -123,7 +117,6 @@ export function UpcomingDueDates() {
             currency: "MXN",
             type: "goal",
             accountId: g.account_id,
-            route: "/construction",
           });
         }
       });
@@ -131,29 +124,35 @@ export function UpcomingDueDates() {
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [debts, goals, timeFilter]);
 
-  // Check if there are ANY items with due dates (regardless of filter)
   const hasAnyDueItems = useMemo(() => {
     const hasDebts = (debts ?? []).some(d => d.is_active && d.due_day);
     const hasGoals = (goals ?? []).some(g => g.is_active && (g as any).contribution_day);
     return hasDebts || hasGoals;
   }, [debts, goals]);
 
-  const handleStartPay = useCallback((item: DueItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPayingItemId(item.id);
-    setPayAmount(item.amount ? String(item.amount) : "");
-    setSourceAccountId(sourceAccounts.length === 1 ? sourceAccounts[0].id : "");
-  }, [sourceAccounts]);
+  const handleAmountChange = useCallback((itemId: string, value: string) => {
+    setEditedAmounts(prev => ({ ...prev, [itemId]: value }));
+  }, []);
 
-  const handleCancelPay = useCallback(() => {
-    setPayingItemId(null);
-    setPayAmount("");
+  const getDisplayAmount = useCallback((item: DueItem): string => {
+    if (editedAmounts[item.id] !== undefined) return editedAmounts[item.id];
+    return item.amount ? String(item.amount) : "";
+  }, [editedAmounts]);
+
+  const handleStartTransfer = useCallback((itemId: string) => {
+    setTransferringItemId(itemId);
     setSourceAccountId("");
   }, []);
 
-  const handleConfirmPay = useCallback(async (item: DueItem) => {
+  const handleCancelTransfer = useCallback(() => {
+    setTransferringItemId(null);
+    setSourceAccountId("");
+  }, []);
+
+  const handleConfirmTransfer = useCallback(async (item: DueItem) => {
     if (!user) return;
-    const amount = parseFloat(payAmount);
+    const amountStr = getDisplayAmount(item);
+    const amount = parseFloat(amountStr);
     if (!amount || amount <= 0) {
       toast.error("Ingresa un monto válido");
       return;
@@ -188,13 +187,13 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       toast.success("Transferencia registrada");
-      handleCancelPay();
+      handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");
     } finally {
       setIsSaving(false);
     }
-  }, [user, payAmount, sourceAccountId, accounts, queryClient, handleCancelPay]);
+  }, [user, getDisplayAmount, sourceAccountId, accounts, queryClient, handleCancelTransfer]);
 
   if (!hasAnyDueItems) return null;
 
@@ -233,7 +232,7 @@ export function UpcomingDueDates() {
           {items.map(item => {
             const isUrgent = item.daysLeft <= 3;
             const Icon = item.type === "debt" ? CreditCard : PiggyBank;
-            const isPaying = payingItemId === item.id;
+            const isTransferring = transferringItemId === item.id;
 
             return (
               <div
@@ -245,10 +244,8 @@ export function UpcomingDueDates() {
                     : "border-border bg-card"
                 )}
               >
-                <div
-                  className="flex items-center gap-2.5 cursor-pointer"
-                  onClick={() => !isPaying && navigate(item.route)}
-                >
+                {/* Main row: icon + info + editable amount + transfer button */}
+                <div className="flex items-center gap-2">
                   <div className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
                     isUrgent ? "bg-expense/10" : "bg-primary/10"
@@ -263,67 +260,74 @@ export function UpcomingDueDates() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {isUrgent && <AlertTriangle className="h-3 w-3 text-expense" />}
-                    <span className={cn("text-xs font-semibold tabular-nums", isUrgent ? "text-expense" : "text-foreground")}>
-                      {mask(formatCurrencyAbs(item.amount, item.currency))}
-                    </span>
-                    {item.accountId && !isPaying && (
-                      <button
-                        onClick={(e) => handleStartPay(item, e)}
-                        className={cn(
-                          "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
-                          "bg-primary/10 hover:bg-primary/20 text-primary"
-                        )}
-                        title="Transferir"
-                      >
-                        <ArrowRightLeft className="h-3.5 w-3.5" />
-                      </button>
+                  {isUrgent && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
+
+                  {/* Editable amount field */}
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={getDisplayAmount(item)}
+                    onChange={(e) => handleAmountChange(item.id, e.target.value)}
+                    placeholder="$0"
+                    className={cn(
+                      "h-7 w-24 text-xs text-right tabular-nums shrink-0 px-1.5",
+                      isUrgent ? "border-expense/30" : "border-border"
                     )}
-                  </div>
+                  />
+
+                  {/* Transfer button */}
+                  {item.accountId && !isTransferring && (
+                    <button
+                      onClick={() => handleStartTransfer(item.id)}
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-md transition-colors shrink-0",
+                        "bg-primary/10 hover:bg-primary/20 text-primary"
+                      )}
+                      title="Transferir"
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
 
-                {/* Inline transfer form */}
-                {isPaying && (
+                {/* Transfer flow: select source account + confirm */}
+                {isTransferring && (
                   <div className="space-y-2 mt-2 pt-2 border-t border-border">
                     <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Cuenta de origen" />
+                        <SelectValue placeholder="Selecciona cuenta de origen" />
                       </SelectTrigger>
                       <SelectContent>
                         {sourceAccounts
                           .filter(a => a.id !== item.accountId)
                           .map(a => (
                             <SelectItem key={a.id} value={a.id} className="text-xs">
-                              {a.name} ({a.currency})
+                              <div className="flex items-center justify-between gap-3 w-full">
+                                <span className="truncate">{a.name}</span>
+                                <span className="text-muted-foreground tabular-nums shrink-0">
+                                  {formatCurrencyAbs(Math.abs(a.current_balance ?? 0), a.currency)}
+                                </span>
+                              </div>
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={payAmount}
-                        onChange={(e) => setPayAmount(e.target.value)}
-                        placeholder="Monto"
-                        className="h-8 text-sm flex-1"
-                        autoFocus
-                      />
+                    <div className="flex items-center gap-2 justify-end">
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={handleCancelPay}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={handleCancelTransfer}
                         disabled={isSaving}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Cancelar
                       </Button>
                       <Button
                         size="sm"
-                        className="h-8 gap-1 px-2"
-                        onClick={() => handleConfirmPay(item)}
-                        disabled={isSaving || !payAmount || !sourceAccountId}
+                        className="h-7 gap-1 px-3 text-xs"
+                        onClick={() => handleConfirmTransfer(item)}
+                        disabled={isSaving || !getDisplayAmount(item) || !sourceAccountId}
                       >
                         <ArrowRightLeft className="h-3.5 w-3.5" />
                         Transferir

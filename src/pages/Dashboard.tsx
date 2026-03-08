@@ -1,6 +1,7 @@
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
+import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";

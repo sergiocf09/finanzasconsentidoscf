@@ -12,7 +12,7 @@ import Budgets from "./pages/Budgets";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
 import Debts from "./pages/Debts";
-import EmergencyFund from "./pages/EmergencyFund";
+import Construction from "./pages/Construction";
 import Library from "./pages/Library";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";

@@ -75,6 +75,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
+  const { checkAlerts } = useBudgetAlerts();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),

@@ -20,14 +20,7 @@ export function BalanceCard({
   type,
   trend,
 }: BalanceCardProps) {
-  const formatAmount = (value: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatAmount = (value: number) => formatCurrency(value, currency);
 
   const Icon = type === "income" ? TrendingUp : type === "expense" ? TrendingDown : ArrowRightLeft;
 

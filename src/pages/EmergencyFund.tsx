@@ -2,18 +2,12 @@ import { Plus, Target, TrendingUp, Calendar, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useEmergencyFund } from "@/hooks/useEmergencyFund";
+import { formatCurrency } from "@/lib/formatters";
 
 export default function EmergencyFund() {
   const { fund, contributions, isLoading, progress } = useEmergencyFund();
 
-  const formatAmount = (value: number, currency = "MXN") => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatAmount = (value: number, currency = "MXN") => formatCurrency(value, currency);
 
   if (isLoading) {
     return (

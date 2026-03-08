@@ -97,8 +97,7 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
     onOpenChange(false);
   };
 
-  const fmtBalance = (acc: typeof accounts[0]) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: acc.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(acc.current_balance ?? 0);
+  const fmtBalance = (acc: typeof accounts[0]) => formatCurrency(acc.current_balance ?? 0, acc.currency);
 
   if (isEditing) {
     return (

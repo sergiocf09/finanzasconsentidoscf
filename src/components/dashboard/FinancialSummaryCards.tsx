@@ -13,8 +13,7 @@ const typeIcons: Record<string, typeof Wallet> = {
   personal_loan: User, caucion_bursatil: Landmark,
 };
 
-const fmt = (v: number, currency: string) =>
-  new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(v));
+const fmt = (v: number, currency: string) => formatCurrencyAbs(v, currency);
 
 export function FinancialSummaryCards() {
   const navigate = useNavigate();

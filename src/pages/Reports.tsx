@@ -1,15 +1,9 @@
 import { BarChart3, TrendingUp, TrendingDown, PieChart } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCurrency } from "@/lib/formatters";
 
 export default function Reports() {
-  const formatAmount = (value: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const formatAmount = (value: number) => formatCurrency(value);
 
   const categoryBreakdown = [
     { category: "Vivienda", amount: 12000, percentage: 40, color: "bg-primary" },

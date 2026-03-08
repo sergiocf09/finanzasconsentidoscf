@@ -10,14 +10,9 @@ import { SignalsList } from "@/components/intelligence/SignalsList";
 import { RecommendationsList } from "@/components/intelligence/RecommendationsList";
 import { CategoryComparisonList } from "@/components/intelligence/CategoryComparisonList";
 import { HistoricalChart } from "@/components/intelligence/HistoricalChart";
+import { formatCurrency } from "@/lib/formatters";
 
-const formatAmount = (value: number) =>
-  new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+const formatAmount = (value: number) => formatCurrency(value);
 
 export default function FinancialIntelligence() {
   const {

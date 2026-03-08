@@ -23,15 +23,8 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
   const { categories } = useCategories();
   const [selectedTx, setSelectedTx] = useState<typeof transactions[0] | null>(null);
 
-  const formatAmount = (value: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + "T12:00:00");
-    if (isToday(date)) return "Hoy";
-    if (isYesterday(date)) return "Ayer";
-    return format(date, "dd MMM", { locale: es });
-  };
+  const formatAmount = (value: number, currency: string) => formatCurrency(value, currency);
+  const formatDate = (dateStr: string) => formatRelativeDate(dateStr);
 
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return "Sin categoría";

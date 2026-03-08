@@ -18,8 +18,7 @@ export default function Transfers() {
   const getAccountName = (id: string) =>
     accounts.find((a) => a.id === id)?.name ?? "—";
 
-  const formatAmount = (amount: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
+  const formatAmount = (amount: number, currency: string) => formatCurrency(amount, currency);
 
   return (
     <div className="space-y-6">

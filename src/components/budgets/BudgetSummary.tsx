@@ -11,13 +11,7 @@ export function BudgetSummary({ totalBudgeted, totalSpent, currency = "MXN" }: B
   const percentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
   const remaining = totalBudgeted - totalSpent;
 
-  const fmt = (v: number) =>
-    new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(v);
+  const fmt = (v: number) => formatCurrency(v, currency);
 
   const getStatus = (pct: number) => {
     if (pct > 100) return "over";

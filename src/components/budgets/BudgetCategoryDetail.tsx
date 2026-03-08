@@ -106,13 +106,7 @@ export function BudgetCategoryDetail({
     over: "text-[hsl(var(--status-danger))]",
   }[status];
 
-  const fmt = (v: number) =>
-    new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(v);
+  const fmt = (v: number) => formatCurrency(v);
 
   const handleSaveAmount = () => {
     const val = parseFloat(editAmount);

@@ -71,13 +71,7 @@ export function BudgetBlockCard({
   const percentage = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
   const remaining = totalPlanned - totalSpent;
 
-  const fmt = (v: number) =>
-    new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(v);
+  const fmt = (v: number) => formatCurrency(v, currency);
 
   const getBarStatus = (pct: number) => {
     if (pct > 100) return "[&>div]:bg-[hsl(var(--status-danger))]";

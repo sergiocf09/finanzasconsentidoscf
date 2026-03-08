@@ -63,8 +63,7 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
     }
   }, [account, open]);
 
-  const fmt = (v: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 2 }).format(v);
+  const fmt = (v: number, currency: string) => formatCurrency(v, currency, { decimals: 2 });
 
   const parsedBalance = parseFloat(newBalance);
   const balanceDiff = !isNaN(parsedBalance) && account ? parsedBalance - account.current_balance : 0;

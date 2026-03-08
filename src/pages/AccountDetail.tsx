@@ -40,8 +40,7 @@ export default function AccountDetail() {
   const getAccountName = (accId: string) => accounts.find((a) => a.id === accId)?.name ?? "—";
   const getCategoryName = (catId: string | null) => categories.find((c) => c.id === catId)?.name ?? "";
 
-  const fmt = (amount: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
+  const fmt = (amount: number, currency: string) => formatCurrency(amount, currency);
 
   const allItems = [
     ...accountTxs.map((t) => ({

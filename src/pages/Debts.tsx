@@ -35,8 +35,7 @@ export default function Debts() {
   const [sortAsc, setSortAsc] = useState(false);
   const navigate = useNavigate();
 
-  const formatAmount = (value: number, currency: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.abs(value));
+  const formatAmount = (value: number, currency: string) => formatCurrencyAbs(value, currency);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;

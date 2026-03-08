@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
 import { Edit2, Check, X, Trash2 } from "lucide-react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
 import { useDiagnostic } from "@/hooks/useDiagnostic";
+import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { BudgetSummary } from "@/components/budgets/BudgetSummary";
 import { BudgetBlockCard } from "@/components/budgets/BudgetBlockCard";
 import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail";
@@ -37,6 +38,7 @@ export default function Budgets() {
   const { budgets, isLoading, totalBudgeted, totalSpent, deleteBudget, updateBudget } =
     useBudgets(currentYear, currentMonth);
   const { categories } = useCategories();
+  const { signals, recommendations } = useFinancialIntelligence();
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detailBudget, setDetailBudget] = useState<{
@@ -164,6 +166,8 @@ export default function Budgets() {
               items={mapBudgetItems(budgetsByBlock[block])}
               onDeleteBudget={(id) => deleteBudget.mutate(id)}
               onCategoryClick={(item) => setDetailBudget(item)}
+              signals={signals}
+              recommendations={recommendations}
             />
           ))}
 

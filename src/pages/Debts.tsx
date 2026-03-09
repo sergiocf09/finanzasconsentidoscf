@@ -77,8 +77,14 @@ export default function Debts() {
           <p className="text-sm font-bold text-expense tabular-nums">
             {debt.current_balance !== 0 ? "-" : ""}{formatAmount(debt.current_balance, debt.currency)}
           </p>
+          {debt.due_day && (
+            <p className="text-[10px] font-bold text-expense tabular-nums flex items-center justify-end gap-0.5">
+              <Calendar className="h-2.5 w-2.5" />
+              Día {debt.due_day}
+            </p>
+          )}
           {debt.minimum_payment > 0 && (
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground tabular-nums">
               Mín: {formatAmount(debt.minimum_payment, debt.currency)}
             </p>
           )}

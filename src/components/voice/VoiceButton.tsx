@@ -37,6 +37,7 @@ export function VoiceButton() {
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
+  const { createPayment: createRecurring } = useRecurringPayments();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");

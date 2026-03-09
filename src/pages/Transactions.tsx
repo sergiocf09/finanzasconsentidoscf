@@ -289,7 +289,6 @@ export default function Transactions() {
               key={card.key}
               onClick={() => {
                 setTypeFilter(isActive ? "all" : card.key);
-                setVisibleCount(PAGE_SIZE);
               }}
               className={cn(
                 "rounded-xl p-2.5 text-left transition-all border",

@@ -71,7 +71,7 @@ export default function ExchangeRate() {
       </div>
 
       {/* Currency rate cards */}
-      <div className="space-y-3">
+      <div className="space-y-3 mt-3">
         {SUPPORTED_CURRENCIES.map((currency) => {
           const r = rates[currency.code] || 0;
           const isEditing = editingCurrency === currency.code;

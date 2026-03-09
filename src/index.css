@@ -32,7 +32,7 @@ body {
     --popover-foreground: 220 20% 20%;
 
     /* Sage Green - Primary (calm, growth, trust) */
-    --primary: 150 25% 45%;
+    --primary: 150 28% 38%;
     --primary-foreground: 40 30% 98%;
 
     /* Warm Sand - Secondary */
@@ -53,37 +53,37 @@ body {
 
     --border: 40 20% 90%;
     --input: 40 20% 92%;
-    --ring: 150 25% 45%;
+    --ring: 150 28% 38%;
 
     --radius: 1rem;
 
     /* Semantic Finance Colors */
-    --income: 150 45% 45%;
+    --income: 150 45% 36%;
     --income-foreground: 40 30% 98%;
-    --expense: 0 55% 55%;
+    --expense: 0 55% 45%;
     --expense-foreground: 40 30% 98%;
     --transfer: 210 45% 55%;
     --transfer-foreground: 40 30% 98%;
 
     /* Budget Status - gentle, no alarm */
-    --status-safe: 150 45% 50%;
-    --status-warning: 40 70% 50%;
-    --status-danger: 15 50% 55%;
+    --status-safe: 150 45% 38%;
+    --status-warning: 40 70% 46%;
+    --status-danger: 15 50% 45%;
 
     /* Budget Blocks - Finanzas con Sentido */
     --block-stability: 210 40% 55%;
     --block-lifestyle: 35 65% 55%;
-    --block-build: 150 40% 48%;
+    --block-build: 150 40% 38%;
 
     /* Sidebar */
     --sidebar-background: 40 25% 97%;
     --sidebar-foreground: 220 15% 30%;
-    --sidebar-primary: 150 25% 45%;
+    --sidebar-primary: 150 28% 38%;
     --sidebar-primary-foreground: 40 30% 98%;
     --sidebar-accent: 35 25% 92%;
     --sidebar-accent-foreground: 220 20% 25%;
     --sidebar-border: 40 15% 88%;
-    --sidebar-ring: 150 25% 45%;
+    --sidebar-ring: 150 28% 38%;
 
     /* Custom shadows */
     --shadow-soft: 0 2px 8px -2px hsl(220 20% 20% / 0.06);
@@ -91,7 +91,7 @@ body {
     --shadow-elevated: 0 8px 32px -8px hsl(220 20% 20% / 0.12);
 
     /* Gradients */
-    --gradient-calm: linear-gradient(135deg, hsl(150 25% 45%) 0%, hsl(160 30% 50%) 100%);
+    --gradient-calm: linear-gradient(135deg, hsl(150 28% 38%) 0%, hsl(160 30% 42%) 100%);
     --gradient-warm: linear-gradient(135deg, hsl(35 30% 94%) 0%, hsl(40 35% 96%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(40 30% 98%) 0%, hsl(35 25% 95%) 100%);
   }

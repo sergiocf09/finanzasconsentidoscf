@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,6 +5,7 @@ import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,14 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -57,6 +49,16 @@ const accountTypes = [
   { value: "caucion_bursatil", label: "Caución Bursátil" },
 ];
 
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
+
 export function AccountForm({ open, onOpenChange }: AccountFormProps) {
   const { createAccount } = useAccounts();
 
@@ -74,7 +76,6 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
   const isLiab = isLiability(selectedType);
 
   const onSubmit = async (data: AccountFormValues) => {
-    // For liabilities, user enters the debt as positive → store as negative
     const balance = isLiability(data.type) && data.initial_balance > 0
       ? -Math.abs(data.initial_balance)
       : data.initial_balance;
@@ -91,7 +92,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nueva cuenta</DialogTitle>
           <DialogDescription>
@@ -99,111 +100,53 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre de la cuenta</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: BBVA Nómina" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-2">
+          <FieldRow label="Nombre">
+            <Input className="h-8 text-sm" placeholder="Ej: BBVA Nómina" {...form.register("name")} />
+          </FieldRow>
+          {form.formState.errors.name && (
+            <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.name.message}</p>
+          )}
 
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de cuenta</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accountTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label="Tipo de cuenta">
+            <Select value={selectedType} onValueChange={(v) => form.setValue("type", v as any)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {accountTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
 
-            <FormField
-              control={form.control}
-              name="currency"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Moneda</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="MXN">Peso Mexicano (MXN)</SelectItem>
-                      <SelectItem value="USD">Dólar Estadounidense (USD)</SelectItem>
-                      <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label="Moneda">
+            <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MXN">Peso Mexicano (MXN)</SelectItem>
+                <SelectItem value="USD">Dólar Estadounidense (USD)</SelectItem>
+                <SelectItem value="EUR">Euro (EUR)</SelectItem>
+              </SelectContent>
+            </Select>
+          </FieldRow>
 
-            <FormField
-              control={form.control}
-              name="initial_balance"
-              render={({ field }) => (
-             <FormItem>
-                  <FormLabel>{isLiab ? "Saldo adeudado" : "Saldo inicial"}</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  {isLiab && <p className="text-[10px] text-muted-foreground">Ingresa el monto que debes (ej: 50000)</p>}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label={isLiab ? "Saldo adeudado" : "Saldo inicial"} hint={isLiab ? "Ingresa el monto que debes" : undefined}>
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("initial_balance")} />
+          </FieldRow>
 
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={createAccount.isPending}
-              >
-                {createAccount.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Crear cuenta"
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <div className="flex gap-3 pt-3 border-t border-border mt-3">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1" disabled={createAccount.isPending}>
+              {createAccount.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+              ) : "Crear cuenta"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

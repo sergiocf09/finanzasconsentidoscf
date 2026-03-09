@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,16 @@ interface BudgetCreationWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
+
 export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizardProps) {
   const { user } = useAuth();
   const { expenseCategories } = useCategories();
@@ -82,7 +93,6 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [smartAnalysis, setSmartAnalysis] = useState<{ stabilityPct: number; lifestylePct: number; buildPct: number; message: string } | null>(null);
 
-  // Reset on close
   useEffect(() => {
     if (!open) {
       setStep("method");
@@ -106,32 +116,23 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const fetchHistoricalData = async () => {
     if (!user) return;
     setLoadingHistory(true);
-
     const end = endOfMonth(new Date());
     const start = startOfMonth(subMonths(new Date(), historyMonths));
-
     const { data: txs } = await supabase
       .from("transactions")
       .select("category_id, amount")
       .eq("type", "expense")
       .gte("transaction_date", format(start, "yyyy-MM-dd"))
       .lte("transaction_date", format(end, "yyyy-MM-dd"));
-
     const catTotals: Record<string, number> = {};
     (txs ?? []).forEach((tx) => {
-      if (tx.category_id) {
-        catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount);
-      }
+      if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount);
     });
-
     const budgets = expenseCategories.map((c) => ({
-      category_id: c.id,
-      name: c.name,
-      bucket: (c as any).bucket || "lifestyle",
+      category_id: c.id, name: c.name, bucket: (c as any).bucket || "lifestyle",
       amount: Math.round((catTotals[c.id] || 0) / historyMonths),
       average: Math.round((catTotals[c.id] || 0) / historyMonths),
     }));
-
     setCategoryBudgets(budgets);
     setLoadingHistory(false);
   };
@@ -139,69 +140,38 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const applyTemplate = (templateId: string) => {
     const tmpl = templates.find((t) => t.id === templateId);
     if (!tmpl || monthlyIncome <= 0) return;
-
     const blockBudgets = {
       stability: monthlyIncome * (tmpl.stability / 100),
       lifestyle: monthlyIncome * (tmpl.lifestyle / 100),
       build: monthlyIncome * (tmpl.build / 100),
     };
-
-    // Count categories per block
     const blockCounts: Record<string, number> = { stability: 0, lifestyle: 0, build: 0 };
     expenseCategories.forEach((c) => {
       const bucket = (c as any).bucket || "lifestyle";
       if (blockCounts[bucket] !== undefined) blockCounts[bucket]++;
     });
-
     const budgets = expenseCategories.map((c) => {
       const bucket = (c as any).bucket || "lifestyle";
       const count = blockCounts[bucket] || 1;
-      return {
-        category_id: c.id,
-        name: c.name,
-        bucket,
-        amount: Math.round((blockBudgets[bucket as keyof typeof blockBudgets] || 0) / count),
-      };
+      return { category_id: c.id, name: c.name, bucket, amount: Math.round((blockBudgets[bucket as keyof typeof blockBudgets] || 0) / count) };
     });
-
     setCategoryBudgets(budgets);
   };
 
   const runSmartAnalysis = async () => {
     if (!user) return;
     setLoadingHistory(true);
-
     const end = endOfMonth(new Date());
     const start = startOfMonth(subMonths(new Date(), 3));
-
     const [{ data: txs }, { data: incomeTxs }] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select("category_id, amount")
-        .eq("type", "expense")
-        .gte("transaction_date", format(start, "yyyy-MM-dd"))
-        .lte("transaction_date", format(end, "yyyy-MM-dd")),
-      supabase
-        .from("transactions")
-        .select("amount")
-        .eq("type", "income")
-        .gte("transaction_date", format(start, "yyyy-MM-dd"))
-        .lte("transaction_date", format(end, "yyyy-MM-dd")),
+      supabase.from("transactions").select("category_id, amount").eq("type", "expense").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
+      supabase.from("transactions").select("amount").eq("type", "income").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
     ]);
-
     const totalIncome = (incomeTxs ?? []).reduce((s, t) => s + Number(t.amount), 0) / 3;
     setMonthlyIncome(Math.round(totalIncome));
-
     const catTotals: Record<string, number> = {};
     let totalExpense = 0;
-    (txs ?? []).forEach((tx) => {
-      totalExpense += Number(tx.amount);
-      if (tx.category_id) {
-        catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount);
-      }
-    });
-
-    // Calculate block percentages
+    (txs ?? []).forEach((tx) => { totalExpense += Number(tx.amount); if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount); });
     let stabilityTotal = 0, lifestyleTotal = 0, buildTotal = 0;
     const catMap = new Map(expenseCategories.map((c) => [c.id, c]));
     Object.entries(catTotals).forEach(([catId, amount]) => {
@@ -211,97 +181,48 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       else if (bucket === "build") buildTotal += amount;
       else lifestyleTotal += amount;
     });
-
     const stabilityPct = totalExpense > 0 ? (stabilityTotal / totalExpense) * 100 : 0;
     const lifestylePct = totalExpense > 0 ? (lifestyleTotal / totalExpense) * 100 : 0;
     const buildPct = totalExpense > 0 ? (buildTotal / totalExpense) * 100 : 0;
-
-    // Smart suggestion: move 3% from lifestyle to build
     const suggestedBuild = Math.min(buildPct + 3, 30);
     const suggestedLifestyle = Math.max(lifestylePct - 3, 15);
     const suggestedStability = 100 - suggestedBuild - suggestedLifestyle;
-
-    setSmartAnalysis({
-      stabilityPct,
-      lifestylePct,
-      buildPct,
-      message: `Actualmente destinas ${stabilityPct.toFixed(0)}% a Estabilidad, ${lifestylePct.toFixed(0)}% a Calidad de Vida y ${buildPct.toFixed(0)}% a Construcción. Te sugerimos mover gradualmente hacia una estructura más equilibrada.`,
-    });
-
-    // Create budgets using suggested ratios
-    const suggestedBlockBudgets = {
-      stability: totalIncome * (suggestedStability / 100),
-      lifestyle: totalIncome * (suggestedLifestyle / 100),
-      build: totalIncome * (suggestedBuild / 100),
-    };
-
+    setSmartAnalysis({ stabilityPct, lifestylePct, buildPct, message: `Actualmente destinas ${stabilityPct.toFixed(0)}% a Estabilidad, ${lifestylePct.toFixed(0)}% a Calidad de Vida y ${buildPct.toFixed(0)}% a Construcción. Te sugerimos mover gradualmente hacia una estructura más equilibrada.` });
+    const suggestedBlockBudgets = { stability: totalIncome * (suggestedStability / 100), lifestyle: totalIncome * (suggestedLifestyle / 100), build: totalIncome * (suggestedBuild / 100) };
     const blockCounts: Record<string, number> = { stability: 0, lifestyle: 0, build: 0 };
-    expenseCategories.forEach((c) => {
-      const bucket = (c as any).bucket || "lifestyle";
-      if (blockCounts[bucket] !== undefined) blockCounts[bucket]++;
-    });
-
-    // Distribute with historical proportions within each block
+    expenseCategories.forEach((c) => { const bucket = (c as any).bucket || "lifestyle"; if (blockCounts[bucket] !== undefined) blockCounts[bucket]++; });
     const budgets = expenseCategories.map((c) => {
       const bucket = (c as any).bucket || "lifestyle";
       const catAvg = (catTotals[c.id] || 0) / 3;
-      const blockTotal =
-        bucket === "stability" ? stabilityTotal / 3 :
-        bucket === "build" ? buildTotal / 3 : lifestyleTotal / 3;
+      const blockTotal = bucket === "stability" ? stabilityTotal / 3 : bucket === "build" ? buildTotal / 3 : lifestyleTotal / 3;
       const proportion = blockTotal > 0 ? catAvg / blockTotal : 1 / (blockCounts[bucket] || 1);
       const blockBudget = suggestedBlockBudgets[bucket as keyof typeof suggestedBlockBudgets] || 0;
-
-      return {
-        category_id: c.id,
-        name: c.name,
-        bucket,
-        amount: Math.round(blockBudget * proportion),
-        average: Math.round(catAvg),
-      };
+      return { category_id: c.id, name: c.name, bucket, amount: Math.round(blockBudget * proportion), average: Math.round(catAvg) };
     });
-
     setCategoryBudgets(budgets);
     setLoadingHistory(false);
   };
 
   const updateCategoryAmount = (catId: string, amount: number) => {
-    setCategoryBudgets((prev) =>
-      prev.map((b) => (b.category_id === catId ? { ...b, amount } : b))
-    );
+    setCategoryBudgets((prev) => prev.map((b) => (b.category_id === catId ? { ...b, amount } : b)));
   };
 
-  const blockTotals = (block: string) => {
-    const items = categoryBudgets.filter((b) => b.bucket === block);
-    return items.reduce((s, b) => s + b.amount, 0);
-  };
-
+  const blockTotals = (block: string) => categoryBudgets.filter((b) => b.bucket === block).reduce((s, b) => s + b.amount, 0);
   const grandTotal = categoryBudgets.reduce((s, b) => s + b.amount, 0);
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-
     try {
       const validBudgets = categoryBudgets.filter((b) => b.amount > 0);
-
       const inserts = validBudgets.map((b) => ({
-        user_id: user.id,
-        category_id: b.category_id,
-        name: b.name,
-        amount: b.amount,
-        period: "monthly" as const,
-        month,
-        year,
-        spent: 0,
-        created_from: method,
-        is_active: true,
+        user_id: user.id, category_id: b.category_id, name: b.name, amount: b.amount,
+        period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
       }));
-
       if (inserts.length > 0) {
         const { error } = await supabase.from("budgets").insert(inserts);
         if (error) throw error;
       }
-
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
       toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
       onOpenChange(false);
@@ -312,24 +233,13 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     }
   };
 
-  const handleMethodSelect = (m: Method) => {
-    setMethod(m);
-    setStep("period");
-  };
+  const handleMethodSelect = (m: Method) => { setMethod(m); setStep("period"); };
 
   const handlePeriodNext = async () => {
-    if (method === "manual") {
-      initManualBudgets();
-      setStep("configure");
-    } else if (method === "historical") {
-      await fetchHistoricalData();
-      setStep("configure");
-    } else if (method === "template") {
-      setStep("configure");
-    } else if (method === "smart") {
-      await runSmartAnalysis();
-      setStep("configure");
-    }
+    if (method === "manual") { initManualBudgets(); setStep("configure"); }
+    else if (method === "historical") { await fetchHistoricalData(); setStep("configure"); }
+    else if (method === "template") { setStep("configure"); }
+    else if (method === "smart") { await runSmartAnalysis(); setStep("configure"); }
   };
 
   const renderMethodStep = () => (
@@ -359,38 +269,35 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   );
 
   const renderPeriodStep = () => (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Selecciona el periodo para tu presupuesto.</p>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">Mes</label>
-          <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {months.map((m) => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">Año</label>
-          <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <div className="space-y-1.5">
+      <p className="text-sm text-muted-foreground mb-3">Selecciona el periodo para tu presupuesto.</p>
+
+      <FieldRow label="Mes">
+        <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FieldRow>
+
+      <FieldRow label="Año">
+        <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FieldRow>
 
       {method === "historical" && (
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">Periodo histórico</label>
+        <FieldRow label="Periodo histórico">
           <Select value={String(historyMonths)} onValueChange={(v) => setHistoryMonths(parseInt(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="1">Último mes</SelectItem>
               <SelectItem value="3">Últimos 3 meses</SelectItem>
@@ -398,22 +305,22 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
               <SelectItem value="12">Últimos 12 meses</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FieldRow>
       )}
 
       {(method === "template" || method === "smart") && (
-        <div>
-          <label className="text-xs font-medium text-foreground mb-1 block">Ingreso mensual estimado</label>
+        <FieldRow label="Ingreso mensual" hint="Estimado">
           <Input
+            className="h-8 text-sm text-right"
             type="number"
             placeholder="0"
             value={monthlyIncome || ""}
             onChange={(e) => setMonthlyIncome(Number(e.target.value))}
           />
-        </div>
+        </FieldRow>
       )}
 
-      <Button className="w-full" onClick={handlePeriodNext} disabled={loadingHistory}>
+      <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={loadingHistory}>
         {loadingHistory ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
         Continuar
       </Button>
@@ -433,14 +340,9 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
                 key={t.id}
                 className={cn(
                   "w-full p-3 rounded-xl border text-left transition-colors",
-                  selectedTemplate === t.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-secondary/50"
+                  selectedTemplate === t.id ? "border-primary bg-primary/5" : "border-border hover:bg-secondary/50"
                 )}
-                onClick={() => {
-                  setSelectedTemplate(t.id);
-                  applyTemplate(t.id);
-                }}
+                onClick={() => { setSelectedTemplate(t.id); applyTemplate(t.id); }}
               >
                 <p className="text-sm font-medium">{t.name}</p>
                 <p className="text-xs text-muted-foreground">{t.desc}</p>
@@ -457,7 +359,6 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
         {categoryBudgets.length > 0 && (
           <>
-            {/* Block summary */}
             <div className="grid grid-cols-3 gap-2">
               {blocks.map((block) => {
                 const config = blockConfig[block];
@@ -478,14 +379,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
               Total: {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(grandTotal)}
             </p>
 
-            {/* Categories by block */}
             {blocks.map((block) => {
               const config = blockConfig[block];
               const items = categoryBudgets.filter((b) => b.bucket === block);
               if (items.length === 0) return null;
-
               return (
-                <div key={block} className="space-y-2">
+                <div key={block} className="space-y-1.5">
                   <h4 className="text-xs font-heading font-semibold text-muted-foreground flex items-center gap-1">
                     {config.emoji} {config.label}
                   </h4>
@@ -511,11 +410,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           </>
         )}
 
-        <Button
-          className="w-full"
-          onClick={handleSave}
-          disabled={saving || grandTotal <= 0}
-        >
+        <Button className="w-full" onClick={handleSave} disabled={saving || grandTotal <= 0}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
           Guardar presupuesto
         </Button>

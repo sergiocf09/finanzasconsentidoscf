@@ -4,12 +4,10 @@ import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
-} from "@/components/ui/form";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -36,6 +34,16 @@ interface TransferFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
 
 export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const { accounts } = useAccounts();
@@ -64,7 +72,6 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const toAccount = activeAccounts.find((a) => a.id === toId);
   const needsFx = fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
 
-  // When fx_rate changes, auto-calculate amount_to
   const watchedFxRate = form.watch("fx_rate");
   const watchedAmount = form.watch("amount");
 
@@ -73,12 +80,8 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
     const to = activeAccounts.find((a) => a.id === data.to_account_id)!;
     const isCrossCurrency = from.currency !== to.currency;
 
-    const amountTo = isCrossCurrency && data.amount_to
-      ? data.amount_to
-      : data.amount;
-    const fxRate = isCrossCurrency && data.fx_rate
-      ? data.fx_rate
-      : undefined;
+    const amountTo = isCrossCurrency && data.amount_to ? data.amount_to : data.amount;
+    const fxRate = isCrossCurrency && data.fx_rate ? data.fx_rate : undefined;
 
     await createTransfer.mutateAsync({
       from_account_id: data.from_account_id,
@@ -97,139 +100,113 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nueva transferencia</DialogTitle>
           <DialogDescription>Mueve dinero entre tus cuentas</DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={form.control} name="from_account_id" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cuenta origen</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {activeAccounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        <span className="flex items-center justify-between w-full gap-2">
-                          <span>{a.name} ({a.currency})</span>
-                          <span className="text-muted-foreground text-[11px] font-semibold">{fmtBalance(a)}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-2">
+          <FieldRow label="Cuenta origen">
+            <Select value={fromId} onValueChange={(v) => form.setValue("from_account_id", v)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+              <SelectContent>
+                {activeAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    <span className="flex items-center justify-between w-full gap-2">
+                      <span>{a.name} ({a.currency})</span>
+                      <span className="text-muted-foreground text-[11px] font-semibold">{fmtBalance(a)}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
 
-            <FormField control={form.control} name="to_account_id" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cuenta destino</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {activeAccounts.filter((a) => a.id !== fromId).map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        <span className="flex items-center justify-between w-full gap-2">
-                          <span>{a.name} ({a.currency})</span>
-                          <span className="text-muted-foreground text-[11px] font-semibold">{fmtBalance(a)}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+          <FieldRow label="Cuenta destino">
+            <Select value={toId} onValueChange={(v) => form.setValue("to_account_id", v)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+              <SelectContent>
+                {activeAccounts.filter((a) => a.id !== fromId).map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    <span className="flex items-center justify-between w-full gap-2">
+                      <span>{a.name} ({a.currency})</span>
+                      <span className="text-muted-foreground text-[11px] font-semibold">{fmtBalance(a)}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
+          {form.formState.errors.to_account_id && (
+            <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.to_account_id.message}</p>
+          )}
 
-            <FormField control={form.control} name="amount" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto {fromAccount ? `(${fromAccount.currency})` : ""}</FormLabel>
-                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+          <FieldRow label={`Monto ${fromAccount ? `(${fromAccount.currency})` : ""}`}>
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("amount", { valueAsNumber: true })} />
+          </FieldRow>
+          {form.formState.errors.amount && (
+            <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
+          )}
 
-            {needsFx && (
-              <div className="space-y-3 rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Monedas diferentes: {fromAccount?.currency} → {toAccount?.currency}
-                </p>
-                <FormField control={form.control} name="fx_rate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Tipo de cambio</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        placeholder="Ej: 17.50"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          const rate = parseFloat(e.target.value);
-                          if (rate > 0 && watchedAmount > 0) {
-                            form.setValue("amount_to", Math.round(watchedAmount * rate * 100) / 100);
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="amount_to" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Monto destino ({toAccount?.currency})</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          const amtTo = parseFloat(e.target.value);
-                          if (amtTo > 0 && watchedAmount > 0) {
-                            form.setValue("fx_rate", Math.round((amtTo / watchedAmount) * 10000) / 10000);
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            )}
-
-            <FormField control={form.control} name="transfer_date" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha</FormLabel>
-                <FormControl><Input type="date" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <FormField control={form.control} name="description" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Concepto (opcional)</FormLabel>
-                <FormControl><Input placeholder="Ej: Pago de tarjeta" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>
-                {createTransfer.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Transferir
-              </Button>
+          {needsFx && (
+            <div className="space-y-1.5 rounded-lg bg-muted p-3">
+              <p className="text-xs text-muted-foreground font-medium">
+                Monedas diferentes: {fromAccount?.currency} → {toAccount?.currency}
+              </p>
+              <FieldRow label="Tipo de cambio">
+                <Input
+                  className="h-8 text-sm text-right"
+                  type="number"
+                  step="0.0001"
+                  placeholder="Ej: 17.50"
+                  {...form.register("fx_rate", { valueAsNumber: true })}
+                  onChange={(e) => {
+                    form.setValue("fx_rate", parseFloat(e.target.value));
+                    const rate = parseFloat(e.target.value);
+                    if (rate > 0 && watchedAmount > 0) {
+                      form.setValue("amount_to", Math.round(watchedAmount * rate * 100) / 100);
+                    }
+                  }}
+                />
+              </FieldRow>
+              <FieldRow label={`Monto destino (${toAccount?.currency})`}>
+                <Input
+                  className="h-8 text-sm text-right"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...form.register("amount_to", { valueAsNumber: true })}
+                  onChange={(e) => {
+                    form.setValue("amount_to", parseFloat(e.target.value));
+                    const amtTo = parseFloat(e.target.value);
+                    if (amtTo > 0 && watchedAmount > 0) {
+                      form.setValue("fx_rate", Math.round((amtTo / watchedAmount) * 10000) / 10000);
+                    }
+                  }}
+                />
+              </FieldRow>
             </div>
-          </form>
-        </Form>
+          )}
+
+          <FieldRow label="Fecha">
+            <Input className="h-8 text-sm" type="date" {...form.register("transfer_date")} />
+          </FieldRow>
+
+          <FieldRow label="Concepto" hint="Opcional">
+            <Input className="h-8 text-sm" placeholder="Ej: Pago de tarjeta" {...form.register("description")} />
+          </FieldRow>
+
+          <div className="flex gap-3 pt-3 border-t border-border mt-3">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1" disabled={createTransfer.isPending}>
+              {createTransfer.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Transferir
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

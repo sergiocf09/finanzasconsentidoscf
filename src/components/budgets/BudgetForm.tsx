@@ -5,27 +5,12 @@ import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -60,6 +45,16 @@ const months = [
   { value: "11", label: "Noviembre" },
   { value: "12", label: "Diciembre" },
 ];
+
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
 
 export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
   const { createBudget } = useBudgets();
@@ -97,167 +92,85 @@ export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuevo presupuesto</DialogTitle>
-          <DialogDescription>
-            Define cuánto planeas gastar en una categoría.
-          </DialogDescription>
+          <DialogDescription>Define cuánto planeas gastar en una categoría.</DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre del presupuesto</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: Alimentación mensual" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-2">
+          <FieldRow label="Nombre">
+            <Input className="h-8 text-sm" placeholder="Ej: Alimentación mensual" {...form.register("name")} />
+          </FieldRow>
+          {form.formState.errors.name && (
+            <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.name.message}</p>
+          )}
 
-            <FormField
-              control={form.control}
-              name="category_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoría (opcional)</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una categoría" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {expenseCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label="Categoría" hint="Opcional">
+            <Select value={form.watch("category_id") || ""} onValueChange={(v) => form.setValue("category_id", v)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+              <SelectContent>
+                {expenseCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Monto presupuestado</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label="Monto presupuestado">
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("amount", { valueAsNumber: true })} />
+          </FieldRow>
+          {form.formState.errors.amount && (
+            <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
+          )}
 
-            <FormField
-              control={form.control}
-              name="period"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Periodo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="monthly">Mensual</SelectItem>
-                      <SelectItem value="yearly">Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label="Periodo">
+            <Select value={period} onValueChange={(v) => form.setValue("period", v as any)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Mensual</SelectItem>
+                <SelectItem value="yearly">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+          </FieldRow>
 
-            {period === "monthly" && (
-              <FormField
-                control={form.control}
-                name="month"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mes</FormLabel>
-                    <Select onValueChange={(v) => field.onChange(parseInt(v))} defaultValue={field.value?.toString()}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {months.map((month) => (
-                          <SelectItem key={month.value} value={month.value}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+          {period === "monthly" && (
+            <FieldRow label="Mes">
+              <Select value={String(form.watch("month"))} onValueChange={(v) => form.setValue("month", parseInt(v))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+          )}
 
-            <FormField
-              control={form.control}
-              name="year"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Año</FormLabel>
-                  <Select onValueChange={(v) => field.onChange(parseInt(v))} defaultValue={field.value?.toString()}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={(currentYear - 1).toString()}>{currentYear - 1}</SelectItem>
-                      <SelectItem value={currentYear.toString()}>{currentYear}</SelectItem>
-                      <SelectItem value={(currentYear + 1).toString()}>{currentYear + 1}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FieldRow label="Año">
+            <Select value={String(form.watch("year"))} onValueChange={(v) => form.setValue("year", parseInt(v))}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={(currentYear - 1).toString()}>{currentYear - 1}</SelectItem>
+                <SelectItem value={currentYear.toString()}>{currentYear}</SelectItem>
+                <SelectItem value={(currentYear + 1).toString()}>{currentYear + 1}</SelectItem>
+              </SelectContent>
+            </Select>
+          </FieldRow>
 
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={createBudget.isPending}
-              >
-                {createBudget.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Crear presupuesto"
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <div className="flex gap-3 pt-3 border-t border-border mt-3">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1" disabled={createBudget.isPending}>
+              {createBudget.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+              ) : "Crear presupuesto"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

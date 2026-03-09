@@ -2,7 +2,7 @@ import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCa
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
 import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
-import { Link } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
 import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";

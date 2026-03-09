@@ -35,7 +35,7 @@ export function BudgetSummary({ totalBudgeted, totalSpent, currency = "MXN" }: B
     <div className="rounded-2xl bg-primary p-4 text-primary-foreground card-elevated animate-fade-in-up">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="min-w-0">
-          <p className="text-xs text-primary-foreground/80">Presupuesto del mes</p>
+          <p className="text-xs font-semibold text-primary-foreground">Presupuesto del mes</p>
           <p className="text-xl font-bold font-heading mt-1 truncate">
             {fmt(totalSpent)} / {fmt(totalBudgeted)}
           </p>

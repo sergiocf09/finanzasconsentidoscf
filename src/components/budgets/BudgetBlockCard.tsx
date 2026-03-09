@@ -100,10 +100,10 @@ export function BudgetBlockCard({
             className={cn("h-1.5", getBarStatus(percentage))}
           />
           <div className="flex items-center justify-between mt-1">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs font-bold text-foreground tabular-nums">
               {fmt(totalSpent)} / {fmt(totalPlanned)}
             </span>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground tabular-nums">
               {remaining > 0 ? `Quedan ${fmt(remaining)}` : remaining < 0 ? `Excedido ${fmt(Math.abs(remaining))}` : ""}
             </span>
           </div>

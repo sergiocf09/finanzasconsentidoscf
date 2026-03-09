@@ -91,7 +91,7 @@ export function BudgetBlockCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <h3 className="font-heading font-bold text-foreground text-sm">{label}</h3>
-            <span className={cn("text-sm font-bold shrink-0", colors.text)}>
+            <span className={cn("text-sm font-bold shrink-0 text-foreground")}>
               {percentage.toFixed(0)}%
             </span>
           </div>

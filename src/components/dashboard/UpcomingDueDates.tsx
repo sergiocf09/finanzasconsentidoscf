@@ -363,23 +363,23 @@ export function UpcomingDueDates({
               <div
                 key={item.id}
                 className={cn(
-                  "rounded-xl border p-2.5 transition-colors",
+                  "rounded-xl border p-3 transition-colors",
                   isUrgent
                     ? "border-expense/30 bg-expense/5"
                     : "border-border bg-card"
                 )}
               >
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                   <div className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
+                    "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
                     isUrgent ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Icon className={cn("h-4 w-4", isUrgent ? "text-expense" : "text-primary")} />
+                    <Icon className={cn("h-5 w-5", isUrgent ? "text-expense" : "text-primary")} />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
                     </p>
                   </div>
@@ -413,7 +413,7 @@ export function UpcomingDueDates({
                       {(() => {
                         const val = parseFloat(getDisplayAmount(item));
                         if (!val && val !== 0) return <span className="text-muted-foreground">$0</span>;
-                        return <span className="text-foreground font-medium">{formatCurrencyAbs(val, item.currency)}</span>;
+                        return <span className="text-foreground font-bold">{formatCurrencyAbs(val, item.currency)}</span>;
                       })()}
                     </button>
                   )}

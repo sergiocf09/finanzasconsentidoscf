@@ -64,12 +64,6 @@ export default function Debts() {
           <p className="text-sm font-medium text-foreground truncate">{debt.name}</p>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span>{typeLabels[debt.type] ?? debt.type}</span>
-            {debt.due_day && (
-              <span className="flex items-center gap-0.5 text-status-warning">
-                <Calendar className="h-2.5 w-2.5" />
-                Día {debt.due_day}
-              </span>
-            )}
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
           </div>
         </div>
@@ -77,8 +71,14 @@ export default function Debts() {
           <p className="text-sm font-bold text-expense tabular-nums">
             {debt.current_balance !== 0 ? "-" : ""}{formatAmount(debt.current_balance, debt.currency)}
           </p>
+          {debt.due_day && (
+            <p className="text-[10px] font-bold text-expense tabular-nums flex items-center justify-end gap-0.5">
+              <Calendar className="h-2.5 w-2.5" />
+              Día {debt.due_day}
+            </p>
+          )}
           {debt.minimum_payment > 0 && (
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground tabular-nums">
               Mín: {formatAmount(debt.minimum_payment, debt.currency)}
             </p>
           )}

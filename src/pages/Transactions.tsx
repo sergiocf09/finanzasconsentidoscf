@@ -88,7 +88,22 @@ export default function Transactions() {
 
   const { startDate, endDate } = getDateRange(period, customStart, customEnd);
 
-  const { transactions, isLoading, totals, deleteTransaction } = useTransactions({ startDate, endDate });
+  // Totals query (lightweight, full period)
+  const { totals, deleteTransaction } = useTransactions({ startDate, endDate });
+  // Paginated query for the list
+  const {
+    transactions,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useTransactionsPaginated({
+    startDate,
+    endDate,
+    typeFilter: typeFilter === "transfer" ? "all" : typeFilter,
+    searchQuery,
+    sortAsc,
+  });
   const { transfers, isLoading: transfersLoading, totalTransferAmount } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();
   const { accounts } = useAccounts();

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { User, Bell, DollarSign, Shield, HelpCircle, Loader2, LogOut } from "lucide-react";
+import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

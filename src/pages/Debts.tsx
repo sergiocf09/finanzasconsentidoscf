@@ -30,7 +30,8 @@ const SHORT_TERM_TYPES = ["credit_card"];
 const LONG_TERM_TYPES = ["personal_loan", "mortgage", "car_loan", "student_loan", "other"];
 
 export default function Debts() {
-  const { debts, isLoading, totalDebt, totalMinimumPayment, snowballOrder, createDebt, deleteDebt } = useDebts();
+  const { debts, isLoading, totalDebt, totalMinimumPayment, snowballOrder, avalancheOrder, createDebt, deleteDebt } = useDebts();
+  const dti = useDebtIntelligence();
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Debt | null>(null);
   const [editTarget, setEditTarget] = useState<Debt | null>(null);

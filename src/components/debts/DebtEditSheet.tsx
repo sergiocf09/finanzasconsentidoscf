@@ -102,6 +102,7 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
         current_balance: signedBalance,
         interest_rate: parseFloat(interestRate) || 0,
         minimum_payment: parseFloat(minimumPayment) || 0,
+        planned_payment: parseFloat(plannedPayment) || 0,
         due_day: dueDay ? parseInt(dueDay) : null,
         cut_day: cutDay ? parseInt(cutDay) : null,
       });

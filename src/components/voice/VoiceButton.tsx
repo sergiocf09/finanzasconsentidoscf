@@ -290,41 +290,6 @@ export function VoiceButton() {
                       </button>
                     ))}
                   </div>
-
-                  {selectedType === "transfer" && (
-                    <div className="w-full space-y-2 rounded-lg bg-secondary p-3">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Cuenta origen</label>
-                        <Select value={preFromAccountId} onValueChange={setPreFromAccountId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona origen" /></SelectTrigger>
-                          <SelectContent>
-                            {activeAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex justify-center">
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Cuenta destino</label>
-                        <Select value={preToAccountId} onValueChange={setPreToAccountId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona destino" /></SelectTrigger>
-                          <SelectContent>
-                            {activeAccounts.filter(a => a.id !== preFromAccountId).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {preFromAccountId && preToAccountId && preFromAccountId !== preToAccountId && (
-                        <Button
-                          className="w-full mt-2"
-                          onClick={handleStartRecording}
-                          disabled={stt.isListening}
-                        >
-                          <Mic className="h-4 w-4 mr-2" /> Grabar monto
-                        </Button>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 

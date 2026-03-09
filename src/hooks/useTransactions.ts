@@ -114,7 +114,6 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date; en
 
       const { data: result, error } = await supabase.rpc('atomic_update_transaction', {
         p_old_id: id,
-        p_user_id: merged.user_id,
         p_account_id: merged.account_id,
         p_type: merged.type,
         p_amount: merged.amount,

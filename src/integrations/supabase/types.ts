@@ -933,27 +933,48 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      atomic_update_transaction: {
-        Args: {
-          p_account_id: string
-          p_amount: number
-          p_amount_in_base?: number
-          p_category_id?: string
-          p_currency?: string
-          p_description?: string
-          p_exchange_rate?: number
-          p_is_recurring?: boolean
-          p_notes?: string
-          p_old_id: string
-          p_recurring_frequency?: string
-          p_related_account_id?: string
-          p_transaction_date: string
-          p_type: string
-          p_user_id: string
-          p_voice_transcript?: string
-        }
-        Returns: string
-      }
+      atomic_update_transaction:
+        | {
+            Args: {
+              p_account_id: string
+              p_amount: number
+              p_amount_in_base?: number
+              p_category_id?: string
+              p_currency?: string
+              p_description?: string
+              p_exchange_rate?: number
+              p_is_recurring?: boolean
+              p_notes?: string
+              p_old_id: string
+              p_recurring_frequency?: string
+              p_related_account_id?: string
+              p_transaction_date: string
+              p_type: string
+              p_voice_transcript?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_account_id: string
+              p_amount: number
+              p_amount_in_base?: number
+              p_category_id?: string
+              p_currency?: string
+              p_description?: string
+              p_exchange_rate?: number
+              p_is_recurring?: boolean
+              p_notes?: string
+              p_old_id: string
+              p_recurring_frequency?: string
+              p_related_account_id?: string
+              p_transaction_date: string
+              p_type: string
+              p_user_id: string
+              p_voice_transcript?: string
+            }
+            Returns: string
+          }
       get_dashboard_summary: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json

@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.atomic_update_transaction(uuid, uuid, uuid, text, numeric, date, uuid, text, text, text, numeric, numeric, boolean, text, uuid, text);

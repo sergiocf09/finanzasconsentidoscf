@@ -72,16 +72,6 @@ export default function Dashboard() {
         summaryAccounts={summary?.accounts_summary ?? undefined}
       />
 
-      {/* Recent Transactions — from RPC */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-heading font-semibold text-foreground">Movimientos recientes</h2>
-          <Link to="/transactions" className="flex items-center gap-0.5 text-xs text-primary hover:underline">
-            Ver todos <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <RecentTransactions summaryTransactions={summary?.recent_transactions ?? undefined} />
-      </div>
     </div>
   );
 }

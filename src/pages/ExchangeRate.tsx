@@ -48,9 +48,9 @@ export default function ExchangeRate() {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
-    <div className="space-y-4 overflow-x-hidden">
+    <div className="overflow-x-hidden">
       {/* Header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm -mx-1 px-1 -mt-1">
+      <div className="bg-background -mx-1 px-1 pb-1">
         <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -71,7 +71,7 @@ export default function ExchangeRate() {
       </div>
 
       {/* Currency rate cards */}
-      <div className="space-y-3">
+      <div className="space-y-3 mt-3">
         {SUPPORTED_CURRENCIES.map((currency) => {
           const r = rates[currency.code] || 0;
           const isEditing = editingCurrency === currency.code;
@@ -140,13 +140,13 @@ export default function ExchangeRate() {
       </div>
 
       {/* Last update */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+      <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mt-3">
         <span>Última actualización</span>
         <span>{formattedDate}</span>
       </div>
 
       {/* Dashboard visibility toggles */}
-      <div className="rounded-xl bg-card border border-border p-4 space-y-3">
+      <div className="rounded-xl bg-card border border-border p-4 space-y-3 mt-3">
         <h3 className="text-sm font-heading font-semibold text-foreground">
           Mostrar en pantalla de inicio
         </h3>
@@ -173,7 +173,7 @@ export default function ExchangeRate() {
       </div>
 
       {/* Info card */}
-      <div className="rounded-xl bg-muted/30 border border-border p-4 space-y-2">
+      <div className="rounded-xl bg-muted/30 border border-border p-4 space-y-2 mt-3 mb-4">
         <h3 className="text-sm font-heading font-semibold text-foreground">¿Cómo funciona?</h3>
         <ul className="space-y-1.5 text-xs text-muted-foreground">
           <li>• Los tipos de cambio se consultan automáticamente al abrir la app.</li>

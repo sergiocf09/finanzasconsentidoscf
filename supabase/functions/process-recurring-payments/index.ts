@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
+};
+
 function getNextDate(current: string, frequency: string): string {
   const d = new Date(current + "T12:00:00Z");
   switch (frequency) {
@@ -13,7 +18,22 @@ function getNextDate(current: string, frequency: string): string {
   return d.toISOString().split("T")[0];
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate cron secret to prevent unauthorized invocations
+  const cronSecret = req.headers.get("x-cron-secret");
+  const expectedSecret = Deno.env.get("CRON_SECRET");
+
+  if (!expectedSecret || cronSecret !== expectedSecret) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -28,14 +48,16 @@ Deno.serve(async (_req) => {
     .lte("next_execution_date", today);
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   let processed = 0;
   const errors: string[] = [];
 
   for (const p of payments || []) {
-    // Insert transaction linked to this recurring payment
     const { error: txErr } = await supabase.from("transactions").insert({
       user_id: p.user_id,
       account_id: p.account_id,
@@ -62,7 +84,6 @@ Deno.serve(async (_req) => {
       ? Math.max(0, p.remaining_balance - p.amount)
       : null;
 
-    // Determine if completed
     let newStatus = "active";
     if (p.total_payments && newPaymentsMade >= p.total_payments) newStatus = "completed";
     if (p.end_date && nextDate > p.end_date) newStatus = "completed";
@@ -81,5 +102,8 @@ Deno.serve(async (_req) => {
     processed++;
   }
 
-  return new Response(JSON.stringify({ processed, errors }), { status: 200 });
+  return new Response(JSON.stringify({ processed, errors }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });

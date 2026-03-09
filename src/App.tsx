@@ -20,6 +20,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import FinancialDashboard from "./pages/FinancialDashboard";
 import ExchangeRate from "./pages/ExchangeRate";
+import RecurringPayments from "./pages/RecurringPayments";
 import NotFound from "./pages/NotFound";
 
 

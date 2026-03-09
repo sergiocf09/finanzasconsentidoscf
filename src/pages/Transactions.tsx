@@ -25,6 +25,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 // Page size handled by useTransactionsPaginated
 

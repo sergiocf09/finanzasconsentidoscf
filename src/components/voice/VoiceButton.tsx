@@ -307,10 +307,11 @@ export function VoiceButton() {
               )}
 
               {/* ─── Status when not listening and no result yet ──── */}
-              {!parseResult && !stt.isListening && selectedType && selectedType !== "transfer" && (
+              {!parseResult && !stt.isListening && selectedType && (
                 <p className="text-xs text-muted-foreground text-center italic">
                   {selectedType === "expense" && 'Ej: "Gasolina mil pesos Scotiabank"'}
                   {selectedType === "income" && 'Ej: "Renta 35 mil pesos BBVA"'}
+                  {selectedType === "transfer" && 'Ej: "5 mil pesos de BBVA a Scotiabank"'}
                 </p>
               )}
 

@@ -75,7 +75,7 @@ export default function Transactions() {
   const [formOpen, setFormOpen] = useState(false);
   const [defaultType, setDefaultType] = useState<"income" | "expense">("expense");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  // visibleCount removed — now using server-side pagination
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [sortAsc, setSortAsc] = useState(false);

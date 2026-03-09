@@ -74,10 +74,10 @@ export function BudgetProgress({
       </div>
 
       <div className="flex items-center justify-between text-xs">
-        <span className={cn("font-medium", textColorClass)}>
+        <span className={cn("font-bold", textColorClass)}>
           {percentage.toFixed(0)}% usado
         </span>
-        <span className="text-muted-foreground whitespace-nowrap">
+        <span className="text-foreground font-bold whitespace-nowrap tabular-nums">
           {remaining > 0 ? `Quedan ${formatAmount(remaining)}` : remaining === 0 ? "Justo en presupuesto" : `Excedido ${formatAmount(Math.abs(remaining))}`}
         </span>
       </div>

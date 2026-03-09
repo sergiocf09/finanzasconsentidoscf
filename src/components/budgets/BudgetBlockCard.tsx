@@ -103,7 +103,7 @@ export function BudgetBlockCard({
             <span className="text-xs font-bold text-foreground tabular-nums">
               {fmt(totalSpent)} / {fmt(totalPlanned)}
             </span>
-            <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+            <span className="text-xs font-bold text-foreground tabular-nums">
               {remaining > 0 ? `Quedan ${fmt(remaining)}` : remaining < 0 ? `Excedido ${fmt(Math.abs(remaining))}` : ""}
             </span>
           </div>

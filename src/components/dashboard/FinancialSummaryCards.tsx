@@ -204,8 +204,8 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-income shrink-0" />
-                <p className="text-[10px] font-semibold text-income truncate">Activos</p>
+                <ShieldCheck className="h-4 w-4 text-income shrink-0" />
+                <p className="text-xs font-bold text-foreground">Activos</p>
               </div>
               <p className="text-lg font-bold font-heading text-income leading-tight">
                 {mask(fmt(totalAssetsMXN, "MXN"))}
@@ -225,8 +225,8 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <CreditCard className="h-3.5 w-3.5 text-expense shrink-0" />
-                <p className="text-[10px] font-semibold text-expense truncate">Pasivos</p>
+                <CreditCard className="h-4 w-4 text-expense shrink-0" />
+                <p className="text-xs font-bold text-foreground">Pasivos</p>
               </div>
               <p className="text-lg font-bold font-heading text-expense leading-tight">
                 {hidden ? "••••••" : `-${fmt(totalLiabilitiesMXN, "MXN")}`}

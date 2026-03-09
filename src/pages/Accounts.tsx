@@ -54,50 +54,17 @@ export default function Accounts() {
   allCurrencies.sort((a, b) => (a === "MXN" ? -1 : b === "MXN" ? 1 : a.localeCompare(b)));
 
   const assetsByCurr = (currency: string) =>
-    activeAccounts.filter(a => isAssetType(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
+    activeAccounts.filter(a => isAssetType(a.type) && a.currency === currency).sort(sortByTypeOrder(ASSET_TYPE_ORDER));
 
   const liabsShortByCurr = (currency: string) =>
-    activeAccounts.filter(a => isLiabilityShort(a.type) && a.currency === currency).sort((a, b) => a.name.localeCompare(b.name));
+    activeAccounts.filter(a => isLiabilityShort(a.type) && a.currency === currency).sort(sortByTypeOrder(LIAB_SHORT_ORDER));
 
   const liabsLongByCurr = (currency: string) =>
-    activeAccounts.filter(a => isLiabilityLong(a.type) && a.currency === currency).sort((a, b) => b.current_balance - a.current_balance);
+    activeAccounts.filter(a => isLiabilityLong(a.type) && a.currency === currency).sort(sortByTypeOrder(LIAB_LONG_ORDER));
 
-  const renderAccountRow = (account: Account) => {
-    const Icon = typeIcons[account.type] || Wallet;
-    const debt = isLiability(account.type);
-    return (
-      <div
-        key={account.id}
-        className="flex items-center gap-2 rounded-lg bg-card border border-border p-2.5 card-interactive cursor-pointer"
-        onClick={() => navigate(`/accounts/${account.id}`)}
-      >
-        <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-income/10")}>
-          <Icon className={cn("h-4 w-4", debt ? "text-expense" : "text-income")} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
-          <p className="text-[10px] text-muted-foreground">{typeLabels[account.type] || account.type}</p>
-        </div>
-        <div className="text-right mr-0.5">
-          <p className={cn("text-xs font-semibold tabular-nums",
-            debt
-              ? (account.current_balance > 0 ? "text-income" : "text-expense")
-              : (account.current_balance < 0 ? "text-expense" : "text-income")
-          )}>
-            {mask(fmt(account.current_balance, account.currency))}
-          </p>
-        </div>
-        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
-          onClick={(e) => { e.stopPropagation(); setEditTarget(account); }}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
-          onClick={(e) => { e.stopPropagation(); setDeleteTarget(account); }}>
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-    );
-  };
+  const handleAccountClick = (account: Account) => navigate(`/accounts/${account.id}`);
+  const handleEdit = (account: Account) => setEditTarget(account);
+  const handleDelete = (account: Account) => setDeleteTarget(account);
 
   return (
     <div className="space-y-4">

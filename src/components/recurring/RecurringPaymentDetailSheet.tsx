@@ -39,7 +39,7 @@ interface Props {
 
 export function RecurringPaymentDetailSheet({ payment, open, onOpenChange }: Props) {
   const { accounts } = useAccounts();
-  const { allCategories } = useCategories();
+  const { categories: allCategories } = useCategories();
   const { cancelPayment, updatePayment } = useRecurringPayments();
   const { data: linkedTxs } = useRecurringPaymentTransactions(payment?.id ?? null);
 

@@ -175,10 +175,12 @@ export function useRecurringPaymentTransactions(recurringPaymentId: string | nul
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
-        .eq("recurring_payment_id" as any, recurringPaymentId!)
-        .order("transaction_date", { ascending: false });
+        .eq("is_recurring", true)
+        .order("transaction_date", { ascending: false })
+        .limit(50);
       if (error) throw error;
-      return data;
+      // Filter client-side to avoid type issues with recurring_payment_id column
+      return (data || []).filter((tx: any) => tx.recurring_payment_id === recurringPaymentId);
     },
     enabled: !!user && !!recurringPaymentId,
   });

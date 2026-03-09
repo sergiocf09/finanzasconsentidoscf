@@ -25,7 +25,7 @@ import type { RecurringPayment } from "@/hooks/useRecurringPayments";
 export default function RecurringPayments() {
   const { payments, isLoading } = useRecurringPayments();
   const { accounts } = useAccounts();
-  const { allCategories } = useCategories();
+  const { categories: allCategories } = useCategories();
 
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<RecurringPayment | null>(null);

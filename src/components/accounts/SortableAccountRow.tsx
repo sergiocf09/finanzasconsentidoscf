@@ -1,0 +1,82 @@
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Pencil, Trash2, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Account, isLiability } from "@/hooks/useAccounts";
+import { formatCurrency } from "@/lib/formatters";
+
+const typeIcons: Record<string, typeof Wallet> = {};
+// We import the icons map from parent to keep it DRY — but for isolation we accept props
+
+interface SortableAccountRowProps {
+  account: Account;
+  icon: React.ElementType;
+  typeLabel: string;
+  mask: (v: string) => string;
+  onEdit: (account: Account) => void;
+  onDelete: (account: Account) => void;
+  onClick: (account: Account) => void;
+}
+
+export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdit, onDelete, onClick }: SortableAccountRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: account.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  const debt = isLiability(account.type);
+  const fmt = (value: number, currency: string) => formatCurrency(value, currency);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 rounded-lg bg-card border border-border p-2.5 card-interactive cursor-pointer",
+        isDragging && "shadow-lg ring-2 ring-primary/30"
+      )}
+      onClick={() => onClick(account)}
+    >
+      {/* Drag handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="touch-none shrink-0 p-0.5 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-income/10")}>
+        <Icon className={cn("h-4 w-4", debt ? "text-expense" : "text-income")} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
+        <p className="text-[10px] text-muted-foreground">{typeLabel}</p>
+      </div>
+      <div className="text-right mr-0.5">
+        <p className={cn("text-xs font-semibold tabular-nums",
+          debt
+            ? (account.current_balance > 0 ? "text-income" : "text-expense")
+            : (account.current_balance < 0 ? "text-expense" : "text-income")
+        )}>
+          {mask(fmt(account.current_balance, account.currency))}
+        </p>
+      </div>
+      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
+        onClick={(e) => { e.stopPropagation(); onEdit(account); }}>
+        <Pencil className="h-3.5 w-3.5" />
+      </Button>
+      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
+        onClick={(e) => { e.stopPropagation(); onDelete(account); }}>
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+

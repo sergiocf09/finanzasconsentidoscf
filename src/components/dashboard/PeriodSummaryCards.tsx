@@ -227,11 +227,11 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
               <button
                 onClick={card.onAdd}
                 className={cn(
-                  "flex items-center justify-center gap-1 rounded-lg py-1.5 transition-all border",
+                  "flex items-center justify-center gap-1 rounded-lg py-1.5 transition-all border-2",
                   "hover:opacity-80 active:scale-95",
-                  card.color === "income" && "bg-income/10 text-income border-income/30",
-                  card.color === "expense" && "bg-expense/10 text-expense border-expense/30",
-                  card.color === "transfer" && "bg-transfer/10 text-transfer border-transfer/30"
+                  card.color === "income" && "bg-income/10 text-income border-income/40",
+                  card.color === "expense" && "bg-expense/10 text-expense border-expense/40",
+                  card.color === "transfer" && "bg-transfer/10 text-transfer border-transfer/40"
                 )}
               >
                 <Plus className="h-3.5 w-3.5" />

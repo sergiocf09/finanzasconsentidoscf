@@ -369,12 +369,12 @@ export function UpcomingDueDates({
                     : "border-border bg-card"
                 )}
               >
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                   <div className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
+                    "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
                     isUrgent ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Icon className={cn("h-4 w-4", isUrgent ? "text-expense" : "text-primary")} />
+                    <Icon className={cn("h-5 w-5", isUrgent ? "text-expense" : "text-primary")} />
                   </div>
 
                   <div className="flex-1 min-w-0">

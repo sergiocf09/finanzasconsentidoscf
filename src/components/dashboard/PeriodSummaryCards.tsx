@@ -127,7 +127,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
     <>
       <div className="space-y-2">
         {/* Period selector */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Select value={period} onValueChange={handlePeriodChange}>
             <SelectTrigger className="h-8 text-xs w-1/2">
               <SelectValue />

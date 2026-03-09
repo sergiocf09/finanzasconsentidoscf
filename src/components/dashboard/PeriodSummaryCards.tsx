@@ -138,7 +138,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
               ))}
             </SelectContent>
           </Select>
-          <button onClick={toggle} className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors" title={hidden ? "Mostrar montos" : "Ocultar montos"}>
+          <button onClick={toggle} className="ml-auto p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors" title={hidden ? "Mostrar montos" : "Ocultar montos"}>
             {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>

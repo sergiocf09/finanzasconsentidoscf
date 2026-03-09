@@ -16,7 +16,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDebts, Debt } from "@/hooks/useDebts";
-import { useReconciliations } from "@/hooks/useReconciliations";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +28,16 @@ const debtTypes = [
   { value: "student_loan", label: "Crédito Educativo" },
   { value: "other", label: "Otro" },
 ];
+
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
 
 interface DebtEditSheetProps {
   debt: Debt | null;
@@ -90,7 +99,6 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
   const executeSave = async () => {
     setSaving(true);
     try {
-      // The new balance should be negative for liabilities
       const signedBalance = newBalanceNum > 0 ? -newBalanceNum : newBalanceNum;
 
       await updateDebt.mutateAsync({
@@ -107,7 +115,6 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
         cut_day: cutDay ? parseInt(cutDay) : null,
       });
 
-      // If balance changed, record reconciliation on linked account
       if (hasDiff && debt.account_id) {
         const oldSigned = debt.current_balance;
         await supabase.from("account_reconciliations").insert({
@@ -139,43 +146,36 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
             <SheetDescription>Modifica los datos de esta deuda.</SheetDescription>
           </SheetHeader>
 
-          <div className="space-y-4 mt-4">
-            <div>
-              <Label>Nombre</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
+          <div className="space-y-1.5 mt-3">
+            <FieldRow label="Nombre">
+              <Input className="h-8 text-sm" value={name} onChange={(e) => setName(e.target.value)} />
+            </FieldRow>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Tipo</Label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {debtTypes.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Acreedor</Label>
-                <Input value={creditor} onChange={(e) => setCreditor(e.target.value)} placeholder="Ej: BBVA" />
-              </div>
-            </div>
+            <FieldRow label="Tipo">
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {debtTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Monto original</Label>
-                <Input type="number" step="0.01" value={originalAmount} onChange={(e) => setOriginalAmount(e.target.value)} />
-              </div>
-              <div>
-                <Label>Saldo actual</Label>
-                <Input type="number" step="0.01" value={currentBalance} onChange={(e) => setCurrentBalance(e.target.value)} />
-              </div>
-            </div>
+            <FieldRow label="Acreedor" hint="Opcional">
+              <Input className="h-8 text-sm" value={creditor} onChange={(e) => setCreditor(e.target.value)} placeholder="Ej: BBVA" />
+            </FieldRow>
+
+            <FieldRow label="Monto original">
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" value={originalAmount} onChange={(e) => setOriginalAmount(e.target.value)} />
+            </FieldRow>
+
+            <FieldRow label="Saldo actual">
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" value={currentBalance} onChange={(e) => setCurrentBalance(e.target.value)} />
+            </FieldRow>
 
             {hasDiff && (
-              <div className="rounded-lg bg-status-warning/10 border border-status-warning/20 p-3 space-y-2">
+              <div className="rounded-lg bg-status-warning/10 border border-status-warning/20 p-2.5 space-y-1.5">
                 <p className="text-xs text-muted-foreground">
                   Saldo anterior: <strong>{fmt(oldBalanceAbs)}</strong> → Nuevo: <strong>{fmt(newBalanceNum)}</strong>
                 </p>
@@ -184,41 +184,34 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
                   value={reconciliationNote}
                   onChange={(e) => setReconciliationNote(e.target.value)}
                   rows={2}
+                  className="text-sm"
                 />
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Tasa de interés (%)</Label>
-                <Input type="number" step="0.01" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
-              </div>
-              <div>
-                <Label>Pago mínimo</Label>
-                <Input type="number" step="0.01" value={minimumPayment} onChange={(e) => setMinimumPayment(e.target.value)} />
-              </div>
-            </div>
+            <FieldRow label="Tasa de interés" hint="% anual">
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
+            </FieldRow>
+
+            <FieldRow label="Pago mínimo" hint="Mensual">
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" value={minimumPayment} onChange={(e) => setMinimumPayment(e.target.value)} />
+            </FieldRow>
 
             {type === "credit_card" && (
-              <div>
-                <Label>Pago deseado mensual</Label>
-                <Input type="number" step="0.01" value={plannedPayment} onChange={(e) => setPlannedPayment(e.target.value)} placeholder="Lo que planeas pagar" />
-                <p className="text-[10px] text-muted-foreground mt-1">Para proyecciones de costo y DTI</p>
-              </div>
+              <FieldRow label="Pago deseado" hint="Lo que planeas pagar">
+                <Input className="h-8 text-sm text-right" type="number" step="0.01" value={plannedPayment} onChange={(e) => setPlannedPayment(e.target.value)} placeholder="0.00" />
+              </FieldRow>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Día de corte</Label>
-                <Input type="number" min="1" max="31" value={cutDay} onChange={(e) => setCutDay(e.target.value)} placeholder="15" />
-              </div>
-              <div>
-                <Label>Día de pago</Label>
-                <Input type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" />
-              </div>
-            </div>
+            <FieldRow label="Día de corte">
+              <Input className="h-8 text-sm text-right" type="number" min="1" max="31" value={cutDay} onChange={(e) => setCutDay(e.target.value)} placeholder="15" />
+            </FieldRow>
 
-            <div className="flex gap-3 pt-4">
+            <FieldRow label="Día de pago">
+              <Input className="h-8 text-sm text-right" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" />
+            </FieldRow>
+
+            <div className="flex gap-3 pt-3 border-t border-border mt-3">
               <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

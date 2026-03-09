@@ -53,6 +53,16 @@ const debtTypes = [
   { value: "other", label: "Otro" },
 ];
 
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
+
 export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   const { createDebt } = useDebts();
 
@@ -92,16 +102,6 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
     onOpenChange(false);
   };
 
-  const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
-    <div className="flex items-center gap-3 min-h-[2.5rem]">
-      <div className="w-[40%] shrink-0">
-        <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
-        {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
-      </div>
-      <div className="flex-1">{children}</div>
-    </div>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
@@ -110,9 +110,9 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
           <DialogDescription>Agrega una deuda para dar seguimiento.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2.5 mt-2">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-2">
           <FieldRow label="Nombre">
-            <Input className="h-9 text-sm" placeholder="Ej: Tarjeta BBVA" {...form.register("name")} />
+            <Input className="h-8 text-sm" placeholder="Ej: Tarjeta BBVA" {...form.register("name")} />
           </FieldRow>
           {form.formState.errors.name && (
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.name.message}</p>
@@ -120,7 +120,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
 
           <FieldRow label="Tipo">
             <Select value={watchType} onValueChange={(v) => form.setValue("type", v as any)}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {debtTypes.map((t) => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -130,50 +130,42 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
           </FieldRow>
 
           <FieldRow label="Acreedor" hint="Opcional">
-            <Input className="h-9 text-sm" placeholder="Ej: BBVA" {...form.register("creditor")} />
+            <Input className="h-8 text-sm" placeholder="Ej: BBVA" {...form.register("creditor")} />
           </FieldRow>
 
-          <div className="border-t border-border pt-2.5 mt-2.5">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Montos</p>
-          </div>
-
           <FieldRow label="Monto original">
-            <Input className="h-9 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("original_amount")} />
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("original_amount")} />
           </FieldRow>
 
           <FieldRow label="Saldo actual">
-            <Input className="h-9 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("current_balance")} />
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("current_balance")} />
           </FieldRow>
 
           <FieldRow label="Tasa de interés" hint="% anual">
-            <Input className="h-9 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("interest_rate")} />
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("interest_rate")} />
           </FieldRow>
 
           <FieldRow label="Pago mínimo" hint="Mensual">
-            <Input className="h-9 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("minimum_payment")} />
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("minimum_payment")} />
           </FieldRow>
 
           {watchType === "credit_card" && (
             <FieldRow label="Pago deseado" hint="Lo que planeas pagar">
-              <Input className="h-9 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("planned_payment")} />
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("planned_payment")} />
             </FieldRow>
           )}
 
-          <div className="border-t border-border pt-2.5 mt-2.5">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Fechas y moneda</p>
-          </div>
-
           <FieldRow label="Día de corte">
-            <Input className="h-9 text-sm text-right" type="number" min="1" max="31" placeholder="15" {...form.register("cut_day")} />
+            <Input className="h-8 text-sm text-right" type="number" min="1" max="31" placeholder="15" {...form.register("cut_day")} />
           </FieldRow>
 
           <FieldRow label="Día de pago">
-            <Input className="h-9 text-sm text-right" type="number" min="1" max="31" placeholder="5" {...form.register("due_day")} />
+            <Input className="h-8 text-sm text-right" type="number" min="1" max="31" placeholder="5" {...form.register("due_day")} />
           </FieldRow>
 
           <FieldRow label="Moneda">
             <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="MXN">MXN</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
@@ -188,7 +180,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  className={cn("w-full h-9 text-sm justify-start font-normal", !form.watch("start_date") && "text-muted-foreground")}
+                  className={cn("w-full h-8 text-sm justify-start font-normal", !form.watch("start_date") && "text-muted-foreground")}
                 >
                   {form.watch("start_date") ? format(form.watch("start_date")!, "PPP", { locale: es }) : "Seleccionar"}
                   <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
@@ -205,7 +197,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
             </Popover>
           </FieldRow>
 
-          <div className="flex gap-3 pt-4 border-t border-border mt-4">
+          <div className="flex gap-3 pt-3 border-t border-border mt-3">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

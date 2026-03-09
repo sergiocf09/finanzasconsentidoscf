@@ -164,20 +164,39 @@ export default function Debts() {
             </div>
           )}
 
-          {/* Strategy suggestion */}
+          {/* DTI Summary */}
+          <DTISummaryCards dti={dti} />
+
+          {/* Strategy suggestions */}
           {snowballOrder.length >= 2 && (() => {
-            const first = snowballOrder.find(d => Math.abs(d.current_balance) > 0) || snowballOrder[0];
+            const snowFirst = snowballOrder[0];
+            const avaFirst = avalancheOrder[0];
             return (
-              <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10 p-4">
-                <div className="flex items-start gap-3">
-                  <TrendingDown className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-foreground">Estrategia: Bola de nieve</p>
-                    <p className="text-xs text-muted-foreground">
-                      Paga primero <span className="font-medium text-foreground">{first.name}</span> (-{formatAmount(first.current_balance, first.currency)})
-                    </p>
+              <div className="space-y-2">
+                <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/10 p-3">
+                  <div className="flex items-start gap-2.5">
+                    <TrendingDown className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-medium text-foreground">Bola de nieve</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Paga primero <span className="font-medium text-foreground">{snowFirst.name}</span> (-{formatAmount(snowFirst.current_balance, snowFirst.currency)}) — saldo más bajo
+                      </p>
+                    </div>
                   </div>
                 </div>
+                {avaFirst && avaFirst.interest_rate > 0 && avaFirst.id !== snowFirst.id && (
+                  <div className="rounded-xl bg-gradient-to-r from-accent/5 to-primary/5 border border-accent/10 p-3">
+                    <div className="flex items-start gap-2.5">
+                      <TrendingDown className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-foreground">Avalancha</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Paga primero <span className="font-medium text-foreground">{avaFirst.name}</span> ({avaFirst.interest_rate}%) — tasa más alta, ahorras más en intereses
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}

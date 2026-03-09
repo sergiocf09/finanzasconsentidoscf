@@ -199,6 +199,14 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
               </div>
             </div>
 
+            {type === "credit_card" && (
+              <div>
+                <Label>Pago deseado mensual</Label>
+                <Input type="number" step="0.01" value={plannedPayment} onChange={(e) => setPlannedPayment(e.target.value)} placeholder="Lo que planeas pagar" />
+                <p className="text-[10px] text-muted-foreground mt-1">Para proyecciones de costo y DTI</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Día de corte</Label>

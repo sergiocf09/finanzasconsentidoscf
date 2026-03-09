@@ -191,6 +191,28 @@ export function VoiceButton() {
       if (editType === "expense") {
         setTimeout(() => checkAlerts(), 1000);
       }
+
+      // Create recurring payment if switch is on
+      if (makeRecurring && editType !== "transfer" && editAccountId) {
+        const acc = accounts.find(a => a.id === editAccountId)!;
+        const txDate = new Date(editDate + "T12:00:00");
+        const nextDate = getNextExecutionDate(txDate, recurringFrequency);
+        await createRecurring.mutateAsync({
+          name: editDescription || cleanTranscript || committedText || "Pago recurrente",
+          description: editDescription || cleanTranscript || committedText || null,
+          type: editType,
+          account_id: editAccountId,
+          category_id: editCategoryId || undefined,
+          amount: parseFloat(editAmount),
+          currency: acc.currency,
+          frequency: recurringFrequency,
+          start_date: editDate,
+          next_execution_date: format(nextDate, "yyyy-MM-dd"),
+          payments_made: 1,
+        });
+        queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      }
+
       toast.success("Registrado correctamente");
       handleReset();
       setIsOpen(false);

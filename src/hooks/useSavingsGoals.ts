@@ -34,7 +34,7 @@ export interface CreateSavingsGoalData {
   currency?: string;
 }
 
-export function useSavingsGoals() {
+export function useSavingsGoals(options?: { enabled?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

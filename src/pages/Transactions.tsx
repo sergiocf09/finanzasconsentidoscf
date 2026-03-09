@@ -405,8 +405,12 @@ export default function Transactions() {
 
           {hasMore && (
             <div className="text-center pt-4">
-              <Button variant="outline" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
-                Cargar más ({filtered.length - visibleCount} restantes)
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? "Cargando..." : "Cargar más"}
               </Button>
             </div>
           )}

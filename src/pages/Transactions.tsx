@@ -174,8 +174,8 @@ export default function Transactions() {
     );
   });
 
-  const displayed = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
+  const displayed = filtered;
+  const hasMore = hasNextPage && typeFilter !== "transfer";
 
   const handleDelete = async () => {
     if (!deleteId) return;

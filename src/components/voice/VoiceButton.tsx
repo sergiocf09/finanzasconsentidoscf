@@ -240,6 +240,8 @@ export function VoiceButton() {
     setEditCategoryId("");
     setEditDescription("");
     setEditDate(format(new Date(), "yyyy-MM-dd"));
+    setMakeRecurring(false);
+    setRecurringFrequency("monthly");
   };
 
   const handleCancel = async () => {

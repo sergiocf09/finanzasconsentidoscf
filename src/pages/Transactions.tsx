@@ -105,7 +105,7 @@ export default function Transactions() {
     searchQuery,
     sortAsc,
   });
-  const { transfers, isLoading: transfersLoading, totalTransferAmount } = useTransfers(undefined, { startDate, endDate });
+  const { transfers, isLoading: transfersLoading, totalTransferAmount, deleteTransfer } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();
   const { accounts } = useAccounts();
 

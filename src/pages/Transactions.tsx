@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown, ArrowUpDown, CalendarDays } from "lucide-react";
+import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown, ArrowUpDown, CalendarDays, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions, useTransactionsPaginated } from "@/hooks/useTransactions";
@@ -65,6 +65,7 @@ interface UnifiedItem {
   source: "tx" | "transfer";
   accountName: string;
   secondaryInfo?: string;
+  isRecurring?: boolean;
 }
 
 export default function Transactions() {
@@ -138,6 +139,7 @@ export default function Transactions() {
       currency: tx.currency,
       source: "tx" as const,
       accountName: getAccountName(tx.account_id),
+      isRecurring: tx.is_recurring === true,
       secondaryInfo: isAdjustment
         ? `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`
         : `${getCategoryName(tx.category_id)} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`,
@@ -373,7 +375,10 @@ export default function Transactions() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {item.isRecurring && <Repeat className="inline h-3 w-3 text-primary mr-1" />}
+                    {item.description}
+                  </p>
                   <div className="flex items-center gap-1 shrink-0">
                     <p className={cn(
                       "text-sm font-semibold tabular-nums",

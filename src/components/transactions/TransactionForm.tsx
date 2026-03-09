@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Loader2, Info } from "lucide-react";
+import { CalendarIcon, Loader2, Info, Repeat } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 
 import { Button } from "@/components/ui/button";
@@ -38,12 +38,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Select as FreqSelect, SelectContent as FreqContent,
+  SelectItem as FreqItem, SelectTrigger as FreqTrigger, SelectValue as FreqValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -72,12 +79,15 @@ interface TransactionFormProps {
 
 export function TransactionForm({ open, onOpenChange, defaultType = "expense", voiceData }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<"income" | "expense">(defaultType);
+  const [makeRecurring, setMakeRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState("monthly");
   
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
   const { rate: fxRate } = useExchangeRate();
+  const { createPayment: createRecurring } = useRecurringPayments();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -97,6 +107,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     if (open) {
       setActiveTab(defaultType);
       form.setValue("type", defaultType);
+      setMakeRecurring(false);
     }
   }, [open, defaultType]);
 
@@ -159,7 +170,27 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     if (activeTab === "expense") {
       setTimeout(() => checkAlerts(), 1000);
     }
+
+    // Create recurring payment if switch is on
+    if (makeRecurring && data.account_id) {
+      const nextDate = getNextExecutionDate(data.transaction_date, recurringFrequency);
+      await createRecurring.mutateAsync({
+        name: data.description || "Pago recurrente",
+        description: data.description || null,
+        type: activeTab,
+        account_id: data.account_id,
+        category_id: data.category_id || undefined,
+        amount: data.amount,
+        currency: data.currency,
+        frequency: recurringFrequency,
+        start_date: format(data.transaction_date, "yyyy-MM-dd"),
+        next_execution_date: format(nextDate, "yyyy-MM-dd"),
+        payments_made: 1,
+      });
+    }
+
     form.reset();
+    setMakeRecurring(false);
     onOpenChange(false);
   };
 
@@ -358,6 +389,30 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Recurring switch */}
+              <div className="rounded-lg border border-border p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-3.5 w-3.5 text-primary" />
+                    <Label className="text-xs font-medium">Convertir en pago recurrente</Label>
+                  </div>
+                  <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
+                </div>
+                {makeRecurring && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground shrink-0">Frecuencia:</Label>
+                    <FreqSelect value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                      <FreqTrigger className="h-8 text-xs flex-1"><FreqValue /></FreqTrigger>
+                      <FreqContent>
+                        {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                          <FreqItem key={k} value={k}>{v}</FreqItem>
+                        ))}
+                      </FreqContent>
+                    </FreqSelect>
+                  </div>
+                )}
               </div>
 
               {/* Buttons */}

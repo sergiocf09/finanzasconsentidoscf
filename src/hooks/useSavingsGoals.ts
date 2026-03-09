@@ -50,7 +50,7 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
       if (error) throw error;
       return (data || []) as SavingsGoal[];
     },
-    enabled: !!user,
+    enabled: !!user && options?.enabled !== false,
   });
 
   const createGoal = useMutation({

@@ -115,7 +115,7 @@ export function useDebts(options?: { enabled?: boolean }) {
 
       return (debts || []) as Debt[];
     },
-    enabled: !!user,
+    enabled: !!user && options?.enabled !== false,
   });
 
   const createDebt = useMutation({

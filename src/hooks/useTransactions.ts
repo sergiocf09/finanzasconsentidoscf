@@ -69,7 +69,7 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date; en
       if (error) throw error;
       return data as Transaction[];
     },
-    enabled: !!user,
+    enabled: !!user && options?.enabled !== false,
   });
 
   const createTransaction = useMutation({

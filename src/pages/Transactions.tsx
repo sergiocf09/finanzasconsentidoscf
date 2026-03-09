@@ -384,11 +384,9 @@ export default function Transactions() {
                     )}>
                       {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
                     </p>
-                    {item.source === "tx" && (
-                      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
+                    <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
                   </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground">

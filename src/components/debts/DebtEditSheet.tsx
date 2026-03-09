@@ -64,6 +64,7 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
       setCurrentBalance(String(Math.abs(debt.current_balance)));
       setInterestRate(String(debt.interest_rate ?? 0));
       setMinimumPayment(String(debt.minimum_payment ?? 0));
+      setPlannedPayment(String((debt as any).planned_payment ?? 0));
       setDueDay(debt.due_day ? String(debt.due_day) : "");
       setCutDay(debt.cut_day ? String(debt.cut_day) : "");
       setReconciliationNote("");

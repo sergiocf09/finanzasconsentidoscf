@@ -107,6 +107,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     if (open) {
       setActiveTab(defaultType);
       form.setValue("type", defaultType);
+      setMakeRecurring(false);
     }
   }, [open, defaultType]);
 

@@ -120,77 +120,71 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
           <SheetHeader className="pb-2">
-            <SheetTitle className="font-heading text-lg">Editar movimiento</SheetTitle>
+            <SheetTitle className="font-heading text-base">Editar movimiento</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Tipo</label>
-                <Select value={editType} onValueChange={setEditType}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Gasto</SelectItem>
-                    <SelectItem value="income">Ingreso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Monto</label>
-                <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="h-9" />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
-                <Select value={editAccountId} onValueChange={setEditAccountId}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {activeAccounts.map(a => {
-                      const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: a.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(a.current_balance ?? 0);
-                      return (
-                        <SelectItem key={a.id} value={a.id}>
-                          <span className="flex items-center justify-between w-full gap-2">
-                            <span>{a.name}</span>
-                            <span className="text-muted-foreground text-[10px]">{bal}</span>
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Categoría</label>
-                <Select value={editCategoryId} onValueChange={setEditCategoryId}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Fecha</label>
-                <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="h-9" />
-              </div>
-              <div className="flex-[2]">
-                <label className="text-xs font-medium text-muted-foreground">Descripción</label>
-                <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} className="h-9" placeholder="Descripción" />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Notas</label>
-              <Input value={editNotes} onChange={e => setEditNotes(e.target.value)} className="h-9" placeholder="Notas adicionales" />
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>
-                <X className="h-4 w-4 mr-1" /> Cancelar
-              </Button>
-              <Button className="flex-1" onClick={handleSave} disabled={updateTransaction.isPending}>
-                <Check className="h-4 w-4 mr-1" /> Guardar
-              </Button>
-            </div>
+          <div className="space-y-1.5 py-2">
+            <FieldRow label="Tipo">
+              <Select value={editType} onValueChange={setEditType}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense">Gasto</SelectItem>
+                  <SelectItem value="income">Ingreso</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            <FieldRow label="Monto">
+              <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="h-8 text-xs" />
+            </FieldRow>
+
+            <FieldRow label="Cuenta">
+              <Select value={editAccountId} onValueChange={setEditAccountId}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {activeAccounts.map(a => {
+                    const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: a.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(a.current_balance ?? 0);
+                    return (
+                      <SelectItem key={a.id} value={a.id}>
+                        <span className="flex items-center justify-between w-full gap-2">
+                          <span>{a.name}</span>
+                          <span className="text-muted-foreground text-[10px]">{bal}</span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            <FieldRow label="Categoría">
+              <Select value={editCategoryId} onValueChange={setEditCategoryId}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            <FieldRow label="Fecha">
+              <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="h-8 text-xs" />
+            </FieldRow>
+
+            <FieldRow label="Descripción">
+              <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} className="h-8 text-xs" placeholder="Descripción" />
+            </FieldRow>
+
+            <FieldRow label="Notas">
+              <Input value={editNotes} onChange={e => setEditNotes(e.target.value)} className="h-8 text-xs" placeholder="Notas adicionales" />
+            </FieldRow>
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-border">
+            <Button variant="outline" className="flex-1 h-10" onClick={() => setIsEditing(false)}>
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button className="flex-1 h-10" onClick={handleSave} disabled={updateTransaction.isPending}>
+              <Check className="h-4 w-4 mr-1" /> Guardar
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

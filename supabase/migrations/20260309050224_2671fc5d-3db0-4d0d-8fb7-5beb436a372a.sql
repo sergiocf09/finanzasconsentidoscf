@@ -1,0 +1,1 @@
+ALTER TABLE public.debts ADD COLUMN planned_payment numeric DEFAULT 0;

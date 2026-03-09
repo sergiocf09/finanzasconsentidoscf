@@ -195,18 +195,8 @@ export default function Transactions() {
   };
 
   const handlePeriodChange = (v: string) => {
-    const key = v as PeriodKey;
-    setPeriod(key);
-    if (key === "custom") {
-      setShowCustomPicker(true);
-    } else {
-      setShowCustomPicker(false);
-    }
+    setPeriod(v as PeriodKey);
   };
-
-  const customLabel = period === "custom"
-    ? `${format(new Date(customStart + "T12:00:00"), "d MMM", { locale: es })} – ${format(new Date(customEnd + "T12:00:00"), "d MMM", { locale: es })}`
-    : null;
 
   const loading = isLoading || transfersLoading;
 
@@ -229,55 +219,58 @@ export default function Transactions() {
         </div>
       </div>
 
-      {/* Period selector */}
-      <div className="flex items-center justify-between gap-2">
-        <Popover open={showCustomPicker} onOpenChange={setShowCustomPicker}>
-          <div className="flex items-center gap-1">
-            <Select value={period} onValueChange={handlePeriodChange}>
-              <SelectTrigger className="h-7 w-auto gap-1 text-xs border-none bg-muted/50 px-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(periodLabels).map(([k, label]) => (
-                  <SelectItem key={k} value={k}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {period === "custom" && (
+      {/* Period selector — same style as Dashboard */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={handlePeriodChange}>
+            <SelectTrigger className="h-8 text-xs w-1/2">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(periodLabels).map(([k, label]) => (
+                <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Custom date pickers below */}
+        {period === "custom" && (
+          <div className="flex gap-2">
+            <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 text-[10px] text-primary px-1.5">
-                  {customLabel}
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {format(customStartDate, "dd MMM yyyy", { locale: es })}
                 </Button>
               </PopoverTrigger>
-            )}
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customStartDate}
+                  onSelect={(d) => d && setCustomStartDate(d)}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {format(customEndDate, "dd MMM yyyy", { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={customEndDate}
+                  onSelect={(d) => d && setCustomEndDate(d)}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-          <PopoverContent className="w-auto p-3 space-y-3" align="start">
-            <p className="text-xs font-medium text-foreground">Selecciona un rango</p>
-            <div className="flex items-center gap-2">
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground">Desde</label>
-                <Input
-                  type="date"
-                  value={customStart}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                  className="h-8 text-xs w-[130px]"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] text-muted-foreground">Hasta</label>
-                <Input
-                  type="date"
-                  value={customEnd}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                  className="h-8 text-xs w-[130px]"
-                />
-              </div>
-            </div>
-            <Button size="sm" className="w-full h-7 text-xs" onClick={() => setShowCustomPicker(false)}>
-              Aplicar
-            </Button>
-          </PopoverContent>
-        </Popover>
+        )}
       </div>
 
       {/* Clickable filter cards: Ingresos / Gastos / Transferencias */}

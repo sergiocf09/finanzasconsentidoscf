@@ -951,6 +951,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_dashboard_summary: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

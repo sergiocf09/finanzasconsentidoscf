@@ -363,7 +363,7 @@ export function UpcomingDueDates({
               <div
                 key={item.id}
                 className={cn(
-                  "rounded-xl border p-2.5 transition-colors",
+                  "rounded-xl border p-3 transition-colors",
                   isUrgent
                     ? "border-expense/30 bg-expense/5"
                     : "border-border bg-card"

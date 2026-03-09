@@ -18,7 +18,7 @@ export function AppLayout() {
 
       {/* Main Content */}
       <main className="lg:pl-72 min-h-screen overflow-x-hidden">
-        <div className="mx-auto max-w-6xl px-4 pt-2 pb-24 sm:px-6 lg:px-8 lg:pt-6 lg:pb-8 overflow-x-hidden">
+        <div className="mx-auto max-w-6xl px-4 pt-1 pb-24 sm:px-6 lg:px-8 lg:pt-4 lg:pb-8 overflow-x-hidden">
           <Outlet />
         </div>
       </main>

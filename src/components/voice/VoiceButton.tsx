@@ -416,7 +416,32 @@ export function VoiceButton() {
                     </div>
                   </div>
 
-                  {/* ─── 3-COLUMN ACCOUNT SELECTOR ──── */}
+                  {/* ─── RECURRING PAYMENT SWITCH ──── */}
+                  {editType !== "transfer" && (
+                    <div className="w-full rounded-lg border border-border p-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Repeat className="h-3 w-3 text-primary" />
+                          <Label className="text-[11px] font-medium">Pago recurrente</Label>
+                        </div>
+                        <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
+                      </div>
+                      {makeRecurring && (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-[10px] text-muted-foreground shrink-0">Frecuencia:</Label>
+                          <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                            <SelectTrigger className="h-7 text-[11px] flex-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                                <SelectItem key={k} value={k}>{v}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {((!editAccountId || parseResult.accountStatus === "uncertain") && editType !== "transfer") && (() => {
                     const cardAccs = activeAccounts.filter(a => a.type === "credit_card");
                     const bankAccs = activeAccounts.filter(a => ["bank", "checking", "savings", "investment"].includes(a.type));

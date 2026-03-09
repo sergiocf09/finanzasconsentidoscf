@@ -60,11 +60,10 @@ export function VoiceButton() {
   // ─── ONE-TAP: selecting type immediately starts recording ────
   const handleTypeSelect = useCallback((type: "expense" | "income" | "transfer") => {
     setSelectedType(type);
-    if (type !== "transfer") {
-      setTimeout(() => {
-        stt.start();
-      }, 150);
-    }
+    // All types now start recording immediately
+    setTimeout(() => {
+      stt.start();
+    }, 150);
   }, [stt]);
 
   // Auto-process when STT stops listening and we have text
@@ -291,41 +290,6 @@ export function VoiceButton() {
                       </button>
                     ))}
                   </div>
-
-                  {selectedType === "transfer" && (
-                    <div className="w-full space-y-2 rounded-lg bg-secondary p-3">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Cuenta origen</label>
-                        <Select value={preFromAccountId} onValueChange={setPreFromAccountId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona origen" /></SelectTrigger>
-                          <SelectContent>
-                            {activeAccounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex justify-center">
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Cuenta destino</label>
-                        <Select value={preToAccountId} onValueChange={setPreToAccountId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona destino" /></SelectTrigger>
-                          <SelectContent>
-                            {activeAccounts.filter(a => a.id !== preFromAccountId).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {preFromAccountId && preToAccountId && preFromAccountId !== preToAccountId && (
-                        <Button
-                          className="w-full mt-2"
-                          onClick={handleStartRecording}
-                          disabled={stt.isListening}
-                        >
-                          <Mic className="h-4 w-4 mr-2" /> Grabar monto
-                        </Button>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -343,10 +307,11 @@ export function VoiceButton() {
               )}
 
               {/* ─── Status when not listening and no result yet ──── */}
-              {!parseResult && !stt.isListening && selectedType && selectedType !== "transfer" && (
+              {!parseResult && !stt.isListening && selectedType && (
                 <p className="text-xs text-muted-foreground text-center italic">
                   {selectedType === "expense" && 'Ej: "Gasolina mil pesos Scotiabank"'}
                   {selectedType === "income" && 'Ej: "Renta 35 mil pesos BBVA"'}
+                  {selectedType === "transfer" && 'Ej: "5 mil pesos de BBVA a Scotiabank"'}
                 </p>
               )}
 
@@ -469,6 +434,52 @@ export function VoiceButton() {
                             {cashAccs.length > 0 ? cashAccs.map(chipBtn) : (
                               <p className="text-[10px] text-muted-foreground/50 text-center">—</p>
                             )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ─── TRANSFER ACCOUNT SELECTOR ──── */}
+                  {editType === "transfer" && (!editAccountId || !editToAccountId || parseResult.accountStatus === "uncertain") && (() => {
+                    const chipBtn = (acc: typeof activeAccounts[0], isDestination: boolean) => {
+                      const isSelected = isDestination ? editToAccountId === acc.id : editAccountId === acc.id;
+                      const isUsedInOther = isDestination ? editAccountId === acc.id : editToAccountId === acc.id;
+                      return (
+                        <button
+                          key={acc.id}
+                          onClick={() => isDestination ? setEditToAccountId(acc.id) : setEditAccountId(acc.id)}
+                          disabled={isUsedInOther}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all truncate",
+                            isSelected
+                              ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                              : isUsedInOther
+                                ? "border-border/50 bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
+                                : "border-border bg-card text-foreground hover:border-primary/50"
+                          )}
+                        >
+                          {acc.name}
+                        </button>
+                      );
+                    };
+
+                    return (
+                      <div className="space-y-3 w-full">
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <span className="text-expense">↑</span> Cuenta origen:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeAccounts.map(a => chipBtn(a, false))}
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <span className="text-income">↓</span> Cuenta destino:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeAccounts.map(a => chipBtn(a, true))}
                           </div>
                         </div>
                       </div>

@@ -85,7 +85,7 @@ export function useDashboardSummary(options?: UseDashboardSummaryOptions) {
       });
 
       if (error) throw error;
-      return data as DashboardSummary;
+      return data as unknown as DashboardSummary;
     },
     enabled: !!user,
     staleTime: 30_000, // 30 seconds

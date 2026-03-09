@@ -22,6 +22,7 @@ const navigation = [
   { name: "Cuentas", href: "/accounts", icon: Wallet },
   { name: "Categorías", href: "/categories", icon: Tag },
   { name: "Deudas", href: "/debts", icon: CreditCard },
+  { name: "Pagos Recurrentes", href: "/recurring", icon: Repeat },
   { name: "Construcción", href: "/construction", icon: Target },
   { name: "Dashboard", href: "/financial-dashboard", icon: Gauge },
   { name: "Tipo de cambio", href: "/exchange-rate", icon: ArrowRightLeft },

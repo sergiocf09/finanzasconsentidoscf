@@ -26,7 +26,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 
-const PAGE_SIZE = 20;
+// Page size handled by useTransactionsPaginated
 
 type PeriodKey = "current" | "previous" | "last3" | "custom";
 

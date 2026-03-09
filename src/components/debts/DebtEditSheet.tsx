@@ -16,7 +16,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useDebts, Debt } from "@/hooks/useDebts";
-import { useReconciliations } from "@/hooks/useReconciliations";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +28,16 @@ const debtTypes = [
   { value: "student_loan", label: "Crédito Educativo" },
   { value: "other", label: "Otro" },
 ];
+
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
 
 interface DebtEditSheetProps {
   debt: Debt | null;
@@ -90,7 +99,6 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
   const executeSave = async () => {
     setSaving(true);
     try {
-      // The new balance should be negative for liabilities
       const signedBalance = newBalanceNum > 0 ? -newBalanceNum : newBalanceNum;
 
       await updateDebt.mutateAsync({
@@ -107,7 +115,6 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
         cut_day: cutDay ? parseInt(cutDay) : null,
       });
 
-      // If balance changed, record reconciliation on linked account
       if (hasDiff && debt.account_id) {
         const oldSigned = debt.current_balance;
         await supabase.from("account_reconciliations").insert({

@@ -15,13 +15,13 @@ export function FxRateWidget() {
     <button
       onClick={fetchRate}
       disabled={isLoading}
-      className="flex items-center gap-1.5 rounded-lg bg-muted/60 border border-border px-2 py-1.5 transition-colors hover:bg-muted"
+      className="flex items-center gap-1.5 rounded-lg bg-muted/60 border border-border px-2 py-1 transition-colors hover:bg-muted"
       title="Tipos de cambio — Toca para actualizar"
     >
       <ArrowRightLeft className="h-3 w-3 text-muted-foreground shrink-0" />
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-col gap-0">
         {visibleCurrencies.map((c) => (
-          <span key={c.code} className="text-[10px] font-medium text-foreground tabular-nums whitespace-nowrap">
+          <span key={c.code} className="text-[11px] font-semibold text-foreground tabular-nums whitespace-nowrap leading-tight">
             {c.flag} ${(rates[c.code] || 0).toFixed(2)}
           </span>
         ))}

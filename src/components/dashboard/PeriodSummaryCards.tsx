@@ -211,10 +211,10 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                     )}
                   />
                 </div>
-                <span className="text-[10px] font-semibold text-foreground">{card.label}</span>
+                <span className="text-xs font-bold text-foreground">{card.label}</span>
                 <span
                   className={cn(
-                    "text-sm font-bold font-heading tabular-nums tracking-tight leading-tight",
+                    "text-base font-extrabold font-heading tabular-nums tracking-tight leading-tight",
                     card.color === "income" && "text-income",
                     card.color === "expense" && "text-expense",
                     card.color === "transfer" && "text-transfer"

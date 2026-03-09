@@ -413,7 +413,7 @@ export function UpcomingDueDates({
                       {(() => {
                         const val = parseFloat(getDisplayAmount(item));
                         if (!val && val !== 0) return <span className="text-muted-foreground">$0</span>;
-                        return <span className="text-foreground font-medium">{formatCurrencyAbs(val, item.currency)}</span>;
+                        return <span className="text-foreground font-bold">{formatCurrencyAbs(val, item.currency)}</span>;
                       })()}
                     </button>
                   )}

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Repeat, Filter, Search, ArrowLeft } from "lucide-react";
+import { Plus, Repeat, Search, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import {
 } from "@/hooks/useRecurringPayments";
 import { RecurringPaymentForm } from "@/components/recurring/RecurringPaymentForm";
 import { RecurringPaymentDetailSheet } from "@/components/recurring/RecurringPaymentDetailSheet";
+import { SuggestedRecurringPayments } from "@/components/recurring/SuggestedRecurringPayments";
+import { RecurringCalendar } from "@/components/recurring/RecurringCalendar";
 import type { RecurringPayment } from "@/hooks/useRecurringPayments";
 
 export default function RecurringPayments() {
@@ -29,6 +31,7 @@ export default function RecurringPayments() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<RecurringPayment | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [frequencyFilter, setFrequencyFilter] = useState("all");
@@ -68,9 +71,14 @@ export default function RecurringPayments() {
           <h1 className="text-lg font-heading font-semibold">Pagos Recurrentes</h1>
           <p className="text-xs text-muted-foreground">Cargos y pagos programados automáticos</p>
         </div>
-        <Button size="sm" onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
-        </Button>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => setCalendarOpen(true)}>
+            <CalendarDays className="h-4 w-4" />
+          </Button>
+          <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Nuevo
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -101,6 +109,9 @@ export default function RecurringPayments() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Suggested recurring payments */}
+      <SuggestedRecurringPayments />
 
       {/* List */}
       {isLoading ? (
@@ -163,6 +174,7 @@ export default function RecurringPayments() {
 
       <RecurringPaymentForm open={formOpen} onOpenChange={setFormOpen} />
       <RecurringPaymentDetailSheet payment={selected} open={!!selected} onOpenChange={v => { if (!v) setSelected(null); }} />
+      <RecurringCalendar open={calendarOpen} onOpenChange={setCalendarOpen} />
     </div>
   );
 }

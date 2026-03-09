@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight } from "lucide-react";
+import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import {
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════
@@ -34,6 +37,7 @@ export function VoiceButton() {
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
+  const { createPayment: createRecurring } = useRecurringPayments();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
@@ -56,6 +60,8 @@ export function VoiceButton() {
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [makeRecurring, setMakeRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState("monthly");
 
   // ─── ONE-TAP: selecting type immediately starts recording ────
   const handleTypeSelect = useCallback((type: "expense" | "income" | "transfer") => {
@@ -185,6 +191,28 @@ export function VoiceButton() {
       if (editType === "expense") {
         setTimeout(() => checkAlerts(), 1000);
       }
+
+      // Create recurring payment if switch is on
+      if (makeRecurring && editType !== "transfer" && editAccountId) {
+        const acc = accounts.find(a => a.id === editAccountId)!;
+        const txDate = new Date(editDate + "T12:00:00");
+        const nextDate = getNextExecutionDate(txDate, recurringFrequency);
+        await createRecurring.mutateAsync({
+          name: editDescription || cleanTranscript || committedText || "Pago recurrente",
+          description: editDescription || cleanTranscript || committedText || null,
+          type: editType,
+          account_id: editAccountId,
+          category_id: editCategoryId || undefined,
+          amount: parseFloat(editAmount),
+          currency: acc.currency,
+          frequency: recurringFrequency,
+          start_date: editDate,
+          next_execution_date: format(nextDate, "yyyy-MM-dd"),
+          payments_made: 1,
+        });
+        queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      }
+
       toast.success("Registrado correctamente");
       handleReset();
       setIsOpen(false);
@@ -212,6 +240,8 @@ export function VoiceButton() {
     setEditCategoryId("");
     setEditDescription("");
     setEditDate(format(new Date(), "yyyy-MM-dd"));
+    setMakeRecurring(false);
+    setRecurringFrequency("monthly");
   };
 
   const handleCancel = async () => {
@@ -386,7 +416,32 @@ export function VoiceButton() {
                     </div>
                   </div>
 
-                  {/* ─── 3-COLUMN ACCOUNT SELECTOR ──── */}
+                  {/* ─── RECURRING PAYMENT SWITCH ──── */}
+                  {editType !== "transfer" && (
+                    <div className="w-full rounded-lg border border-border p-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Repeat className="h-3 w-3 text-primary" />
+                          <Label className="text-[11px] font-medium">Pago recurrente</Label>
+                        </div>
+                        <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
+                      </div>
+                      {makeRecurring && (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-[10px] text-muted-foreground shrink-0">Frecuencia:</Label>
+                          <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                            <SelectTrigger className="h-7 text-[11px] flex-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                                <SelectItem key={k} value={k}>{v}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {((!editAccountId || parseResult.accountStatus === "uncertain") && editType !== "transfer") && (() => {
                     const cardAccs = activeAccounts.filter(a => a.type === "credit_card");
                     const bankAccs = activeAccounts.filter(a => ["bank", "checking", "savings", "investment"].includes(a.type));

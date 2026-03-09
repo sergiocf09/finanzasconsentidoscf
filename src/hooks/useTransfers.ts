@@ -34,7 +34,7 @@ export interface CreateTransferData {
   created_from?: string;
 }
 
-export function useTransfers(accountId?: string, options?: { startDate?: Date; endDate?: Date }) {
+export function useTransfers(accountId?: string, options?: { startDate?: Date; endDate?: Date; enabled?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

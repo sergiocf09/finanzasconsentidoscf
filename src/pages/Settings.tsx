@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { User, Bell, DollarSign, Shield, HelpCircle, Loader2, LogOut } from "lucide-react";
+import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -219,7 +220,8 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Help */}
+        {/* Archived Items */}
+        <ArchivedItemsSection />
         <div className="rounded-2xl bg-card border border-border overflow-hidden">
           <div className="flex items-center gap-3 p-4 border-b border-border">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format, addDays, addMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon, Loader2, AlertTriangle } from "lucide-react";
@@ -101,41 +101,39 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   const isEdit = !!editPayment;
 
-  // Reset form when opened
-  const handleOpenChange = (v: boolean) => {
-    if (v) {
-      if (editPayment) {
-        setName(editPayment.name);
-        setDescription(editPayment.description || "");
-        setType(editPayment.type);
-        setAmount(String(editPayment.amount));
-        setCurrency(editPayment.currency);
-        setAccountId(editPayment.account_id);
-        setCategoryId(editPayment.category_id || "");
-        setFrequency(editPayment.frequency);
-        setStartDate(new Date(editPayment.start_date));
-        setEndDate(editPayment.end_date ? new Date(editPayment.end_date) : undefined);
-        setTotalPayments(editPayment.total_payments ? String(editPayment.total_payments) : "");
-        setOriginalTotal(editPayment.original_total_amount ? String(editPayment.original_total_amount) : "");
-        setNotes(editPayment.notes || "");
-      } else {
-        setName(prefill?.description || "");
-        setDescription(prefill?.description || "");
-        setType(prefill?.type || "expense");
-        setAmount(prefill?.amount ? String(prefill.amount) : "");
-        setCurrency(prefill?.currency || "MXN");
-        setAccountId(prefill?.account_id || "");
-        setCategoryId(prefill?.category_id || "");
-        setFrequency("monthly");
-        setStartDate(prefill?.date || new Date());
-        setEndDate(undefined);
-        setTotalPayments("");
-        setOriginalTotal("");
-        setNotes("");
-      }
+  // Populate form fields when opening (works for both controlled and uncontrolled open)
+  useEffect(() => {
+    if (!open) return;
+    if (editPayment) {
+      setName(editPayment.name);
+      setDescription(editPayment.description || "");
+      setType(editPayment.type);
+      setAmount(String(editPayment.amount));
+      setCurrency(editPayment.currency);
+      setAccountId(editPayment.account_id);
+      setCategoryId(editPayment.category_id || "");
+      setFrequency(editPayment.frequency);
+      setStartDate(new Date(editPayment.start_date));
+      setEndDate(editPayment.end_date ? new Date(editPayment.end_date) : undefined);
+      setTotalPayments(editPayment.total_payments ? String(editPayment.total_payments) : "");
+      setOriginalTotal(editPayment.original_total_amount ? String(editPayment.original_total_amount) : "");
+      setNotes(editPayment.notes || "");
+    } else {
+      setName(prefill?.description || "");
+      setDescription(prefill?.description || "");
+      setType(prefill?.type || "expense");
+      setAmount(prefill?.amount ? String(prefill.amount) : "");
+      setCurrency(prefill?.currency || "MXN");
+      setAccountId(prefill?.account_id || "");
+      setCategoryId(prefill?.category_id || "");
+      setFrequency("monthly");
+      setStartDate(prefill?.date || new Date());
+      setEndDate(undefined);
+      setTotalPayments("");
+      setOriginalTotal("");
+      setNotes("");
     }
-    onOpenChange(v);
-  };
+  }, [open, editPayment]);
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
 
@@ -250,7 +248,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleOpenChange}>
+      <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-heading">

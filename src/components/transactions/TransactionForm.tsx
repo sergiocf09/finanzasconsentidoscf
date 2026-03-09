@@ -79,12 +79,15 @@ interface TransactionFormProps {
 
 export function TransactionForm({ open, onOpenChange, defaultType = "expense", voiceData }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<"income" | "expense">(defaultType);
+  const [makeRecurring, setMakeRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState("monthly");
   
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
   const { rate: fxRate } = useExchangeRate();
+  const { createPayment: createRecurring } = useRecurringPayments();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),

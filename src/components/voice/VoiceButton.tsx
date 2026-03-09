@@ -60,11 +60,10 @@ export function VoiceButton() {
   // ─── ONE-TAP: selecting type immediately starts recording ────
   const handleTypeSelect = useCallback((type: "expense" | "income" | "transfer") => {
     setSelectedType(type);
-    if (type !== "transfer") {
-      setTimeout(() => {
-        stt.start();
-      }, 150);
-    }
+    // All types now start recording immediately
+    setTimeout(() => {
+      stt.start();
+    }, 150);
   }, [stt]);
 
   // Auto-process when STT stops listening and we have text

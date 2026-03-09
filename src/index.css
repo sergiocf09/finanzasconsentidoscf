@@ -58,9 +58,9 @@ body {
     --radius: 1rem;
 
     /* Semantic Finance Colors */
-    --income: 150 45% 45%;
+    --income: 150 45% 36%;
     --income-foreground: 40 30% 98%;
-    --expense: 0 55% 55%;
+    --expense: 0 55% 45%;
     --expense-foreground: 40 30% 98%;
     --transfer: 210 45% 55%;
     --transfer-foreground: 40 30% 98%;

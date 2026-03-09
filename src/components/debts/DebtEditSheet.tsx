@@ -48,6 +48,7 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
   const [currentBalance, setCurrentBalance] = useState("");
   const [interestRate, setInterestRate] = useState("");
   const [minimumPayment, setMinimumPayment] = useState("");
+  const [plannedPayment, setPlannedPayment] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [cutDay, setCutDay] = useState("");
   const [reconciliationNote, setReconciliationNote] = useState("");

@@ -93,7 +93,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   };
 
   const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
-    <div className="flex items-center gap-3 min-h-[2.5rem]">
+    <div className="flex items-center gap-3 min-h-[2rem]">
       <div className="w-[40%] shrink-0">
         <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
         {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}

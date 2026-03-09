@@ -83,8 +83,8 @@ export default function Transactions() {
 
   // Period selector state
   const [period, setPeriod] = useState<PeriodKey>("current");
-  const [customStart, setCustomStart] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
-  const [customEnd, setCustomEnd] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
+  const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
   const [showCustomPicker, setShowCustomPicker] = useState(false);
 
   const { startDate, endDate } = getDateRange(period, customStart, customEnd);

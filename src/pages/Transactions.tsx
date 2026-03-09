@@ -180,7 +180,12 @@ export default function Transactions() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    await deleteTransaction.mutateAsync(deleteId);
+    const item = allItems.find(i => i.id === deleteId);
+    if (item?.source === "transfer") {
+      await deleteTransfer.mutateAsync(deleteId);
+    } else {
+      await deleteTransaction.mutateAsync(deleteId);
+    }
     setDeleteId(null);
   };
 

@@ -391,6 +391,30 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 />
               </div>
 
+              {/* Recurring switch */}
+              <div className="rounded-lg border border-border p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-3.5 w-3.5 text-primary" />
+                    <Label className="text-xs font-medium">Convertir en pago recurrente</Label>
+                  </div>
+                  <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
+                </div>
+                {makeRecurring && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground shrink-0">Frecuencia:</Label>
+                    <FreqSelect value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                      <FreqTrigger className="h-8 text-xs flex-1"><FreqValue /></FreqTrigger>
+                      <FreqContent>
+                        {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                          <FreqItem key={k} value={k}>{v}</FreqItem>
+                        ))}
+                      </FreqContent>
+                    </FreqSelect>
+                  </div>
+                )}
+              </div>
+
               {/* Buttons */}
               <div className="flex gap-3 pt-2">
                 <Button

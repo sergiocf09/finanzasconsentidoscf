@@ -21,6 +21,7 @@ export interface Debt {
   created_at: string;
   updated_at: string;
   account_id: string | null;
+  planned_payment: number;
 }
 
 export interface DebtPayment {

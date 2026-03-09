@@ -376,6 +376,7 @@ export type Database = {
           minimum_payment: number | null
           name: string
           original_amount: number
+          planned_payment: number | null
           start_date: string | null
           type: string
           updated_at: string | null
@@ -395,6 +396,7 @@ export type Database = {
           minimum_payment?: number | null
           name: string
           original_amount: number
+          planned_payment?: number | null
           start_date?: string | null
           type: string
           updated_at?: string | null
@@ -414,6 +416,7 @@ export type Database = {
           minimum_payment?: number | null
           name?: string
           original_amount?: number
+          planned_payment?: number | null
           start_date?: string | null
           type?: string
           updated_at?: string | null

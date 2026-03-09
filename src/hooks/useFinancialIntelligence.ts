@@ -282,11 +282,27 @@ export function useFinancialIntelligence() {
       }
     });
 
-    // Debt minimum payments
+    // Debt DTI signals
     const activeDebts = debts.filter((d) => d.is_active);
     const totalMinPayments = activeDebts.reduce((s, d) => s + (d.minimum_payment ?? 0), 0);
-    if (income > 0 && totalMinPayments > income * 0.2) {
+    const totalPlannedPayments = activeDebts.reduce((s, d) => {
+      const planned = (d as any).planned_payment ?? 0;
+      return s + (planned > 0 ? planned : (d.minimum_payment ?? 0));
+    }, 0);
+    const plannedDTI = income > 0 ? (totalPlannedPayments / income) * 100 : 0;
+    const minDTI = income > 0 ? (totalMinPayments / income) * 100 : 0;
+
+    if (plannedDTI > 35) {
+      r.push({ id: "dti-critical", priority: 1, message: `Tu endeudamiento planeado (DTI ${plannedDTI.toFixed(0)}%) es crítico. Tus pagos de deuda consumen más del 35% de tu ingreso.` });
+    } else if (plannedDTI > 25) {
+      r.push({ id: "dti-elevated", priority: 2, message: `Tu DTI planeado está al ${plannedDTI.toFixed(0)}%. Busca reducir deudas para bajar del 25%.` });
+    } else if (income > 0 && totalMinPayments > income * 0.2) {
       r.push({ id: "debt-pressure", priority: 2, message: "Tus pagos mínimos de deuda absorben una parte importante de tu flujo. Considera si puedes renegociar condiciones." });
+    }
+
+    // Minimum-only trap warning
+    if (minDTI > 0 && plannedDTI - minDTI > 5) {
+      r.push({ id: "min-trap", priority: 3, message: `Si solo pagaras mínimos (DTI ${minDTI.toFixed(0)}%), parecerías libre pero pagarías mucho más en intereses a largo plazo.` });
     }
 
     // Emergency fund

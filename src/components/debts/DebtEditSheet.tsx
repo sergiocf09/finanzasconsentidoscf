@@ -48,6 +48,7 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
   const [currentBalance, setCurrentBalance] = useState("");
   const [interestRate, setInterestRate] = useState("");
   const [minimumPayment, setMinimumPayment] = useState("");
+  const [plannedPayment, setPlannedPayment] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [cutDay, setCutDay] = useState("");
   const [reconciliationNote, setReconciliationNote] = useState("");
@@ -63,6 +64,7 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
       setCurrentBalance(String(Math.abs(debt.current_balance)));
       setInterestRate(String(debt.interest_rate ?? 0));
       setMinimumPayment(String(debt.minimum_payment ?? 0));
+      setPlannedPayment(String((debt as any).planned_payment ?? 0));
       setDueDay(debt.due_day ? String(debt.due_day) : "");
       setCutDay(debt.cut_day ? String(debt.cut_day) : "");
       setReconciliationNote("");
@@ -100,6 +102,7 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
         current_balance: signedBalance,
         interest_rate: parseFloat(interestRate) || 0,
         minimum_payment: parseFloat(minimumPayment) || 0,
+        planned_payment: parseFloat(plannedPayment) || 0,
         due_day: dueDay ? parseInt(dueDay) : null,
         cut_day: cutDay ? parseInt(cutDay) : null,
       });
@@ -195,6 +198,14 @@ export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) 
                 <Input type="number" step="0.01" value={minimumPayment} onChange={(e) => setMinimumPayment(e.target.value)} />
               </div>
             </div>
+
+            {type === "credit_card" && (
+              <div>
+                <Label>Pago deseado mensual</Label>
+                <Input type="number" step="0.01" value={plannedPayment} onChange={(e) => setPlannedPayment(e.target.value)} placeholder="Lo que planeas pagar" />
+                <p className="text-[10px] text-muted-foreground mt-1">Para proyecciones de costo y DTI</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

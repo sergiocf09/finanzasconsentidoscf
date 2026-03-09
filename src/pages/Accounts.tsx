@@ -141,7 +141,14 @@ export default function Accounts() {
                     className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5 scroll-mt-24">
                     <TrendingUp className="h-3.5 w-3.5 text-income" /> Activos {currency}
                   </h2>
-                  {items.map(renderAccountRow)}
+                  <SortableAccountSection
+                    sectionKey={`assets-${currency}`}
+                    accounts={items}
+                    mask={mask}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onClick={handleAccountClick}
+                  />
                 </div>
               );
             })}
@@ -160,13 +167,27 @@ export default function Accounts() {
                   {short.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Corto plazo</p>
-                      {short.map(renderAccountRow)}
+                      <SortableAccountSection
+                        sectionKey={`liabs-short-${currency}`}
+                        accounts={short}
+                        mask={mask}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onClick={handleAccountClick}
+                      />
                     </div>
                   )}
                   {long.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Largo plazo</p>
-                      {long.map(renderAccountRow)}
+                      <SortableAccountSection
+                        sectionKey={`liabs-long-${currency}`}
+                        accounts={long}
+                        mask={mask}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onClick={handleAccountClick}
+                      />
                     </div>
                   )}
                 </div>

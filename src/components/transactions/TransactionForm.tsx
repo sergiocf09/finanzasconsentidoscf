@@ -170,7 +170,27 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     if (activeTab === "expense") {
       setTimeout(() => checkAlerts(), 1000);
     }
+
+    // Create recurring payment if switch is on
+    if (makeRecurring && data.account_id) {
+      const nextDate = getNextExecutionDate(data.transaction_date, recurringFrequency);
+      await createRecurring.mutateAsync({
+        name: data.description || "Pago recurrente",
+        description: data.description || null,
+        type: activeTab,
+        account_id: data.account_id,
+        category_id: data.category_id || undefined,
+        amount: data.amount,
+        currency: data.currency,
+        frequency: recurringFrequency,
+        start_date: format(data.transaction_date, "yyyy-MM-dd"),
+        next_execution_date: format(nextDate, "yyyy-MM-dd"),
+        payments_made: 1,
+      });
+    }
+
     form.reset();
+    setMakeRecurring(false);
     onOpenChange(false);
   };
 

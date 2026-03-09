@@ -216,7 +216,14 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
         <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
           <SheetHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <SheetTitle className="font-heading text-lg">Detalle del movimiento</SheetTitle>
+              <div className="flex items-center gap-2">
+                <SheetTitle className="font-heading text-lg">Detalle del movimiento</SheetTitle>
+                {transaction.is_recurring && (
+                  <Badge className="bg-primary/15 text-primary border-primary/30 text-[10px] px-1.5 py-0">
+                    <Repeat className="h-2.5 w-2.5 mr-0.5" /> Recurrente
+                  </Badge>
+                )}
+              </div>
               {canEdit && (
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>

@@ -87,7 +87,7 @@ export default function Transactions() {
   const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
   const [showCustomPicker, setShowCustomPicker] = useState(false);
 
-  const { startDate, endDate } = getDateRange(period, customStart, customEnd);
+  const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
 
   // Totals query (lightweight, full period)
   const { totals, deleteTransaction } = useTransactions({ startDate, endDate });

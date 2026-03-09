@@ -39,7 +39,7 @@ export const isLiabilityShort = (type: string) => (LIABILITY_SHORT_TYPES as read
 export const isLiabilityLong = (type: string) => (LIABILITY_LONG_TYPES as readonly string[]).includes(type);
 export const isLiability = (type: string) => isLiabilityShort(type) || isLiabilityLong(type);
 
-export function useAccounts() {
+export function useAccounts(options?: { enabled?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -55,7 +55,7 @@ export function useAccounts() {
       if (error) throw error;
       return data as Account[];
     },
-    enabled: !!user,
+    enabled: !!user && options?.enabled !== false,
   });
 
   const createAccount = useMutation({

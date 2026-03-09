@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp,
   Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
-import { useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
+import { formatCurrency } from "@/lib/formatters";
+import { useAccounts, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import type { DashboardSummary } from "@/hooks/useDashboardSummary";
+
+type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];
 
 const typeIcons: Record<string, typeof Wallet> = {
   cash: Wallet, bank: Building2, savings: PiggyBank, investment: TrendingUp,
@@ -18,12 +21,55 @@ const typeIcons: Record<string, typeof Wallet> = {
 
 const fmt = (v: number, currency: string) => formatCurrency(v, currency);
 
-export function FinancialSummaryCards() {
+interface FinancialSummaryCardsProps {
+  accountsSummary?: AccountSummaryItem[];
+}
+
+export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCardsProps) {
   const navigate = useNavigate();
-  const { accounts, assetsByCurrency, liabilitiesByCurrency } = useAccounts();
+  // Only fetch accounts from DB if no summary data provided
+  const { accounts: hookAccounts } = useAccounts({ enabled: !accountsSummary });
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const { convertToMXN } = useExchangeRate();
   const [expanded, setExpanded] = useState<"assets" | "liabilities" | null>(null);
+
+  // Normalize accounts from either source
+  const accounts = useMemo(() => {
+    if (accountsSummary) {
+      return accountsSummary.map(a => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        current_balance: a.current_balance,
+        is_active: a.is_active,
+      }));
+    }
+    return hookAccounts.map(a => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      currency: a.currency,
+      current_balance: a.current_balance,
+      is_active: a.is_active,
+    }));
+  }, [accountsSummary, hookAccounts]);
+
+  const activeOnly = useMemo(() => accounts.filter(a => a.is_active), [accounts]);
+
+  // Group balances by currency
+  const { assetsByCurrency, liabilitiesByCurrency } = useMemo(() => {
+    const assets: Record<string, number> = {};
+    const liabilities: Record<string, number> = {};
+    activeOnly.forEach(acc => {
+      if (isAssetType(acc.type)) {
+        assets[acc.currency] = (assets[acc.currency] ?? 0) + (acc.current_balance ?? 0);
+      } else if (isLiability(acc.type)) {
+        liabilities[acc.currency] = (liabilities[acc.currency] ?? 0) + Math.abs(acc.current_balance ?? 0);
+      }
+    });
+    return { assetsByCurrency: assets, liabilitiesByCurrency: liabilities };
+  }, [activeOnly]);
 
   // Compute totals in MXN
   const totalAssetsMXN = Object.entries(assetsByCurrency).reduce(
@@ -33,11 +79,11 @@ export function FinancialSummaryCards() {
     (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
   );
 
-  const hasData = totalAssetsMXN > 0 || totalLiabilitiesMXN > 0 || accounts.some(a => a.is_active);
+  const hasData = totalAssetsMXN > 0 || totalLiabilitiesMXN > 0 || activeOnly.length > 0;
   if (!hasData) return null;
 
   const allCurrencies = Array.from(
-    new Set(accounts.filter(a => a.is_active).map(a => a.currency))
+    new Set(activeOnly.map(a => a.currency))
   ).sort((a, b) => (a === "MXN" ? -1 : b === "MXN" ? 1 : a.localeCompare(b)));
 
   const handleAccountClick = (accountId: string, e: React.MouseEvent) => {
@@ -45,7 +91,7 @@ export function FinancialSummaryCards() {
     navigate(`/accounts/${accountId}`);
   };
 
-  const renderAccountItem = (account: Account) => {
+  const renderAccountItem = (account: typeof accounts[0]) => {
     const Icon = typeIcons[account.type] || Wallet;
     const debt = isLiability(account.type);
     return (
@@ -75,30 +121,28 @@ export function FinancialSummaryCards() {
       <div className="flex justify-center">
         <div className="w-[90%] rounded-xl bg-card border border-border p-3 space-y-2">
           {allCurrencies.map(currency => {
-            let accsForCurrency: Account[];
+            let accsForCurrency: typeof accounts;
             let subtotal: number;
 
             if (isAsset) {
-              accsForCurrency = accounts
-                .filter(a => a.is_active && isAssetType(a.type) && a.currency === currency)
+              accsForCurrency = activeOnly
+                .filter(a => isAssetType(a.type) && a.currency === currency)
                 .sort((a, b) => a.name.localeCompare(b.name));
               subtotal = assetsByCurrency[currency] || 0;
             } else {
-              accsForCurrency = accounts
-                .filter(a => a.is_active && isLiability(a.type) && a.currency === currency)
+              accsForCurrency = activeOnly
+                .filter(a => isLiability(a.type) && a.currency === currency)
                 .sort((a, b) => Math.abs(b.current_balance) - Math.abs(a.current_balance));
               subtotal = liabilitiesByCurrency[currency] || 0;
             }
 
             if (accsForCurrency.length === 0) return null;
 
-            // Group liabilities by short/long
             const shortAccs = isAsset ? [] : accsForCurrency.filter(a => isLiabilityShort(a.type));
             const longAccs = isAsset ? [] : accsForCurrency.filter(a => isLiabilityLong(a.type));
 
             return (
               <div key={currency} className="space-y-1">
-                {/* Currency subtotal header */}
                 <div className="flex items-center justify-between px-1 py-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {currency}
@@ -114,7 +158,6 @@ export function FinancialSummaryCards() {
                   </span>
                 </div>
 
-                {/* Account list */}
                 {isAsset ? (
                   accsForCurrency.map(renderAccountItem)
                 ) : (
@@ -143,7 +186,6 @@ export function FinancialSummaryCards() {
 
   return (
     <div className="space-y-2">
-      {/* Eye toggle */}
       <div className="flex justify-end">
         <button
           onClick={toggle}
@@ -154,9 +196,7 @@ export function FinancialSummaryCards() {
         </button>
       </div>
 
-      {/* Two cards: Assets | Liabilities */}
       <div className="grid grid-cols-2 gap-2">
-        {/* Assets card */}
         <div
           className="rounded-xl bg-income/10 border border-income/20 p-3 cursor-pointer card-interactive"
           onClick={() => setExpanded(expanded === "assets" ? null : "assets")}
@@ -178,7 +218,6 @@ export function FinancialSummaryCards() {
           </div>
         </div>
 
-        {/* Liabilities card */}
         <div
           className="rounded-xl bg-expense/10 border border-expense/20 p-3 cursor-pointer card-interactive"
           onClick={() => setExpanded(expanded === "liabilities" ? null : "liabilities")}
@@ -201,7 +240,6 @@ export function FinancialSummaryCards() {
         </div>
       </div>
 
-      {/* Expanded detail */}
       {expanded && renderExpandedSection(expanded)}
     </div>
   );

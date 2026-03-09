@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { DashboardSummary } from "@/hooks/useDashboardSummary";
 
 interface DueItem {
   id: string;
@@ -54,12 +55,29 @@ function getMaxDays(filter: TimeFilter, today: Date): number {
   return Math.ceil((nextMonth.getTime() - today.getTime()) / 86400000);
 }
 
-export function UpcomingDueDates() {
+type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];
+
+interface UpcomingDueDatesProps {
+  summaryDebts?: NonNullable<DashboardSummary["upcoming_debts"]>;
+  summaryGoals?: NonNullable<DashboardSummary["upcoming_goals"]>;
+  summaryPaidDueDates?: NonNullable<DashboardSummary["paid_due_dates"]>;
+  summaryAccounts?: AccountSummaryItem[];
+}
+
+export function UpcomingDueDates({
+  summaryDebts,
+  summaryGoals,
+  summaryPaidDueDates,
+  summaryAccounts,
+}: UpcomingDueDatesProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { debts } = useDebts();
-  const { goals } = useSavingsGoals();
-  const { accounts } = useAccounts();
+
+  // Only fetch from DB when no summary data provided
+  const hasSummary = !!summaryDebts;
+  const { debts: hookDebts } = useDebts({ enabled: !hasSummary });
+  const { goals: hookGoals } = useSavingsGoals({ enabled: !hasSummary });
+  const { accounts: hookAccounts } = useAccounts({ enabled: !summaryAccounts });
   const { mask } = useHideAmounts("balances");
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
@@ -69,11 +87,11 @@ export function UpcomingDueDates() {
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
 
-  // Query transfers created from due_dates in the current month to filter out already-paid items
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
   const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
 
+  // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({
     queryKey: ["due_date_transfers", user?.id, monthStart],
     queryFn: async () => {
@@ -86,8 +104,30 @@ export function UpcomingDueDates() {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user,
+    enabled: !!user && !summaryPaidDueDates,
   });
+
+  // Normalize accounts from either source
+  const accounts = useMemo(() => {
+    if (summaryAccounts) {
+      return summaryAccounts.map(a => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        current_balance: a.current_balance,
+        is_active: a.is_active,
+      }));
+    }
+    return hookAccounts.map(a => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      currency: a.currency,
+      current_balance: a.current_balance,
+      is_active: a.is_active,
+    }));
+  }, [summaryAccounts, hookAccounts]);
 
   const sourceAccounts = useMemo(() =>
     accounts.filter(a => a.is_active && !["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"].includes(a.type)),
@@ -100,16 +140,16 @@ export function UpcomingDueDates() {
     const maxDays = getMaxDays(timeFilter, today);
     const result: DueItem[] = [];
 
-    (debts ?? [])
-      .filter(d => d.is_active && d.due_day)
-      .forEach(d => {
-        const next = getNextOccurrence(d.due_day!, today);
+    if (summaryDebts) {
+      // Use RPC data
+      summaryDebts.forEach(d => {
+        const next = getNextOccurrence(d.due_day, today);
         const diff = Math.ceil((next.getTime() - today.getTime()) / 86400000);
         if (diff <= maxDays) {
           result.push({
             id: `debt-${d.id}`,
             name: d.name,
-            day: d.due_day!,
+            day: d.due_day,
             nextDate: next,
             daysLeft: diff,
             amount: d.minimum_payment ?? 0,
@@ -119,40 +159,81 @@ export function UpcomingDueDates() {
           });
         }
       });
+    } else {
+      (hookDebts ?? [])
+        .filter(d => d.is_active && d.due_day)
+        .forEach(d => {
+          const next = getNextOccurrence(d.due_day!, today);
+          const diff = Math.ceil((next.getTime() - today.getTime()) / 86400000);
+          if (diff <= maxDays) {
+            result.push({
+              id: `debt-${d.id}`,
+              name: d.name,
+              day: d.due_day!,
+              nextDate: next,
+              daysLeft: diff,
+              amount: d.minimum_payment ?? 0,
+              currency: d.currency,
+              type: "debt",
+              accountId: d.account_id,
+            });
+          }
+        });
+    }
 
-    (goals ?? [])
-      .filter(g => g.is_active && (g as any).contribution_day)
-      .forEach(g => {
-        const cDay = (g as any).contribution_day as number;
-        const next = getNextOccurrence(cDay, today);
+    if (summaryGoals) {
+      summaryGoals.forEach(g => {
+        const next = getNextOccurrence(g.contribution_day, today);
         const diff = Math.ceil((next.getTime() - today.getTime()) / 86400000);
         if (diff <= maxDays) {
           result.push({
             id: `goal-${g.id}`,
             name: g.name,
-            day: cDay,
+            day: g.contribution_day,
             nextDate: next,
             daysLeft: diff,
-            amount: (g as any).monthly_contribution ?? 0,
+            amount: g.monthly_contribution ?? 0,
             currency: "MXN",
             type: "goal",
             accountId: g.account_id,
           });
         }
       });
+    } else {
+      (hookGoals ?? [])
+        .filter(g => g.is_active && (g as any).contribution_day)
+        .forEach(g => {
+          const cDay = (g as any).contribution_day as number;
+          const next = getNextOccurrence(cDay, today);
+          const diff = Math.ceil((next.getTime() - today.getTime()) / 86400000);
+          if (diff <= maxDays) {
+            result.push({
+              id: `goal-${g.id}`,
+              name: g.name,
+              day: cDay,
+              nextDate: next,
+              daysLeft: diff,
+              amount: (g as any).monthly_contribution ?? 0,
+              currency: "MXN",
+              type: "goal",
+              accountId: g.account_id,
+            });
+          }
+        });
+    }
 
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [debts, goals, timeFilter]);
+  }, [summaryDebts, summaryGoals, hookDebts, hookGoals, timeFilter]);
 
   // Filter out items that already have a due_dates transfer this month
   const paidKeys = useMemo(() => {
     const set = new Set<string>();
-    (paidTransfers ?? []).forEach(t => {
-      // Match by description pattern "Pago: <name>" or "Aportación: <name>"
+    const source = summaryPaidDueDates ?? paidTransfers ?? [];
+    source.forEach(t => {
       if (t.description) set.add(t.description);
     });
     return set;
-  }, [paidTransfers]);
+  }, [summaryPaidDueDates, paidTransfers]);
 
   const visibleItems = useMemo(() =>
     items.filter(item => {
@@ -164,10 +245,13 @@ export function UpcomingDueDates() {
   );
 
   const hasAnyDueItems = useMemo(() => {
-    const hasDebts = (debts ?? []).some(d => d.is_active && d.due_day);
-    const hasGoals = (goals ?? []).some(g => g.is_active && (g as any).contribution_day);
+    if (summaryDebts || summaryGoals) {
+      return (summaryDebts?.length ?? 0) > 0 || (summaryGoals?.length ?? 0) > 0;
+    }
+    const hasDebts = (hookDebts ?? []).some(d => d.is_active && d.due_day);
+    const hasGoals = (hookGoals ?? []).some(g => g.is_active && (g as any).contribution_day);
     return hasDebts || hasGoals;
-  }, [debts, goals]);
+  }, [summaryDebts, summaryGoals, hookDebts, hookGoals]);
 
   const handleAmountChange = useCallback((itemId: string, value: string) => {
     setEditedAmounts(prev => ({ ...prev, [itemId]: value }));
@@ -225,6 +309,7 @@ export function UpcomingDueDates() {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Transferencia registrada");
       queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
       handleCancelTransfer();
@@ -284,7 +369,6 @@ export function UpcomingDueDates() {
                     : "border-border bg-card"
                 )}
               >
-                {/* Main row: icon + info + editable amount + transfer button */}
                 <div className="flex items-center gap-2">
                   <div className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
@@ -302,7 +386,6 @@ export function UpcomingDueDates() {
 
                   {isUrgent && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
 
-                  {/* Editable amount field — formatted when idle, raw input when focused */}
                   {focusedItemId === item.id ? (
                     <Input
                       type="number"
@@ -335,7 +418,6 @@ export function UpcomingDueDates() {
                     </button>
                   )}
 
-                  {/* Transfer button */}
                   {item.accountId && !isTransferring && (
                     <button
                       onClick={() => handleStartTransfer(item.id)}
@@ -350,7 +432,6 @@ export function UpcomingDueDates() {
                   )}
                 </div>
 
-                {/* Transfer flow: select source account + confirm */}
                 {isTransferring && (
                   <div className="space-y-2 mt-2 pt-2 border-t border-border">
                     <Select value={sourceAccountId} onValueChange={setSourceAccountId}>

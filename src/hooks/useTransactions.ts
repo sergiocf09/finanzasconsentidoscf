@@ -48,7 +48,7 @@ const PAGE_SIZE = 30;
  * Standard hook – loads all transactions in a date range.
  * Used by dashboard widgets and summaries where full-period data is needed.
  */
-export function useTransactions(options?: { startDate?: Date; endDate?: Date }) {
+export function useTransactions(options?: { startDate?: Date; endDate?: Date; enabled?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

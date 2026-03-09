@@ -173,7 +173,7 @@ export default function ExchangeRate() {
       </div>
 
       {/* Info card */}
-      <div className="rounded-xl bg-muted/30 border border-border p-4 space-y-2">
+      <div className="rounded-xl bg-muted/30 border border-border p-4 space-y-2 mt-3 mb-4">
         <h3 className="text-sm font-heading font-semibold text-foreground">¿Cómo funciona?</h3>
         <ul className="space-y-1.5 text-xs text-muted-foreground">
           <li>• Los tipos de cambio se consultan automáticamente al abrir la app.</li>

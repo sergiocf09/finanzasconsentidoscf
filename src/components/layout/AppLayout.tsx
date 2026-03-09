@@ -3,10 +3,12 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { VoiceButton } from "../voice/VoiceButton";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  useSwipeNavigation();
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">

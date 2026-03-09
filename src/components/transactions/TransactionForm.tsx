@@ -38,12 +38,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Select as FreqSelect, SelectContent as FreqContent,
+  SelectItem as FreqItem, SelectTrigger as FreqTrigger, SelectValue as FreqValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),

@@ -50,7 +50,7 @@ export default function ExchangeRate() {
   return (
     <div className="overflow-x-hidden">
       {/* Header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm -mx-1 px-1 pb-3">
+      <div className="bg-background -mx-1 px-1 pb-1">
         <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />

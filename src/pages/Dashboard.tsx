@@ -1,9 +1,7 @@
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
-import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
 import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
-import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";

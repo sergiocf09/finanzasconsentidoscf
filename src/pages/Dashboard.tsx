@@ -3,7 +3,6 @@ import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
 import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
 import { useProfile } from "@/hooks/useProfile";
-import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 import { format } from "date-fns";

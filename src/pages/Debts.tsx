@@ -9,8 +9,10 @@ import {
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
 import { useDebts, Debt } from "@/hooks/useDebts";
+import { useDebtIntelligence } from "@/hooks/useDebtIntelligence";
 import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
+import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
 import { useNavigate } from "react-router-dom";
 
 const typeIcons: Record<string, typeof CreditCard> = {

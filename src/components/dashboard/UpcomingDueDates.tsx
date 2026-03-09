@@ -330,16 +330,16 @@ export function UpcomingDueDates({
           <CalendarClock className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-heading font-semibold text-foreground">Próximos vencimientos</h2>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           {(Object.keys(filterLabels) as TimeFilter[]).map(f => (
             <button
               key={f}
               onClick={() => setTimeFilter(f)}
               className={cn(
-                "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+                "text-xs font-bold px-3 py-1 rounded-full border transition-colors",
                 timeFilter === f
                   ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-secondary text-muted-foreground border-border hover:border-muted-foreground/30"
+                  : "bg-secondary text-foreground border-border hover:border-muted-foreground/30"
               )}
             >
               {filterLabels[f]}

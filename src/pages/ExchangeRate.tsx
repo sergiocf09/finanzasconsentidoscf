@@ -146,7 +146,7 @@ export default function ExchangeRate() {
       </div>
 
       {/* Dashboard visibility toggles */}
-      <div className="rounded-xl bg-card border border-border p-4 space-y-3">
+      <div className="rounded-xl bg-card border border-border p-4 space-y-3 mt-3">
         <h3 className="text-sm font-heading font-semibold text-foreground">
           Mostrar en pantalla de inicio
         </h3>

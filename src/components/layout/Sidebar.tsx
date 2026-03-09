@@ -6,6 +6,7 @@ import {
   PiggyBank,
   Wallet,
   CreditCard,
+  Repeat,
   Target,
   BookOpen,
   Settings,

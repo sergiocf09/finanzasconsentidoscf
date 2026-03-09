@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.elevenlabs-scribe-token]
 verify_jwt = false
+
+[functions.process-recurring-payments]
+verify_jwt = false

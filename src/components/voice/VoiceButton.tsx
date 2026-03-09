@@ -441,43 +441,47 @@ export function VoiceButton() {
                   })()}
 
                   {/* ─── TRANSFER ACCOUNT SELECTOR ──── */}
-                  {editType === "transfer" && (!editAccountId || !editToAccountId) && (() => {
-                    const chipBtn = (acc: typeof activeAccounts[0], isDestination: boolean) => (
-                      <button
-                        key={acc.id}
-                        onClick={() => isDestination ? setEditToAccountId(acc.id) : setEditAccountId(acc.id)}
-                        disabled={isDestination ? editAccountId === acc.id : editToAccountId === acc.id}
-                        className={cn(
-                          "w-full px-2 py-1.5 rounded-lg text-xs font-medium border transition-all text-left truncate",
-                          (isDestination ? editToAccountId === acc.id : editAccountId === acc.id)
-                            ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
-                            : (isDestination && editAccountId === acc.id) || (!isDestination && editToAccountId === acc.id)
-                              ? "border-border/50 bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
-                              : "border-border bg-card text-foreground hover:border-primary/50"
-                        )}
-                      >
-                        {acc.name}
-                      </button>
-                    );
+                  {editType === "transfer" && (!editAccountId || !editToAccountId || parseResult.accountStatus === "uncertain") && (() => {
+                    const chipBtn = (acc: typeof activeAccounts[0], isDestination: boolean) => {
+                      const isSelected = isDestination ? editToAccountId === acc.id : editAccountId === acc.id;
+                      const isUsedInOther = isDestination ? editAccountId === acc.id : editToAccountId === acc.id;
+                      return (
+                        <button
+                          key={acc.id}
+                          onClick={() => isDestination ? setEditToAccountId(acc.id) : setEditAccountId(acc.id)}
+                          disabled={isUsedInOther}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all truncate",
+                            isSelected
+                              ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                              : isUsedInOther
+                                ? "border-border/50 bg-muted/30 text-muted-foreground/40 cursor-not-allowed"
+                                : "border-border bg-card text-foreground hover:border-primary/50"
+                          )}
+                        >
+                          {acc.name}
+                        </button>
+                      );
+                    };
 
                     return (
                       <div className="space-y-3 w-full">
-                        {!editAccountId && (
-                          <div className="space-y-1.5">
-                            <p className="text-xs font-medium text-muted-foreground">↑ Selecciona cuenta origen:</p>
-                            <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
-                              {activeAccounts.map(a => chipBtn(a, false))}
-                            </div>
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <span className="text-expense">↑</span> Cuenta origen:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeAccounts.map(a => chipBtn(a, false))}
                           </div>
-                        )}
-                        {editAccountId && !editToAccountId && (
-                          <div className="space-y-1.5">
-                            <p className="text-xs font-medium text-muted-foreground">↓ Selecciona cuenta destino:</p>
-                            <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
-                              {activeAccounts.map(a => chipBtn(a, true))}
-                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <span className="text-income">↓</span> Cuenta destino:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeAccounts.map(a => chipBtn(a, true))}
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })()}

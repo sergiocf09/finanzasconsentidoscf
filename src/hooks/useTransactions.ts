@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +42,12 @@ export interface CreateTransactionData {
   voice_transcript?: string;
 }
 
+const PAGE_SIZE = 30;
+
+/**
+ * Standard hook – loads all transactions in a date range.
+ * Used by dashboard widgets and summaries where full-period data is needed.
+ */
 export function useTransactions(options?: { startDate?: Date; endDate?: Date }) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -81,12 +87,13 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
       if (error) throw error;
       return newTx;
     },
-    onSuccess: (_data, _vars, _ctx) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions_paginated'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });
       toast({ title: "Movimiento registrado", description: "Se ha guardado correctamente." });
-      // Budget alert check will be triggered by the caller via onTransactionCreated callback
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -95,7 +102,6 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
 
   const updateTransaction = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Transaction> & { id: string }) => {
-      // Fetch old transaction to merge fields
       const { data: oldTx, error: fetchErr } = await supabase
         .from('transactions')
         .select('*')
@@ -106,7 +112,6 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
       const merged = { ...oldTx, ...data };
       merged.amount_in_base = merged.amount * (merged.exchange_rate ?? 1);
 
-      // Use atomic SECURITY DEFINER function (delete+insert in single DB transaction)
       const { data: result, error } = await supabase.rpc('atomic_update_transaction', {
         p_old_id: id,
         p_user_id: merged.user_id,
@@ -130,8 +135,10 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions_paginated'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });
       toast({ title: "Movimiento actualizado" });
     },
     onError: (error) => {
@@ -150,8 +157,10 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions_paginated'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });
       toast({ title: "Movimiento eliminado" });
     },
     onError: (error) => {
@@ -159,13 +168,10 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     },
   });
 
-  // Calculate totals
-  // Calculate totals — adjustments are excluded from income/expense
   const totals = transactionsQuery.data?.reduce(
     (acc, tx) => {
       if (tx.type === 'income') acc.income += tx.amount;
       else if (tx.type === 'expense') acc.expense += tx.amount;
-      // transfers and adjustments are excluded from income/expense totals
       return acc;
     },
     { income: 0, expense: 0 }
@@ -179,5 +185,87 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date }) 
     createTransaction,
     updateTransaction,
     deleteTransaction,
+  };
+}
+
+/**
+ * Paginated hook – loads transactions in pages of PAGE_SIZE using cursor-based pagination.
+ * Used by the Transactions list page for efficient infinite scrolling.
+ */
+export function useTransactionsPaginated(options?: {
+  startDate?: Date;
+  endDate?: Date;
+  typeFilter?: string;
+  searchQuery?: string;
+  sortAsc?: boolean;
+}) {
+  const { user } = useAuth();
+  const startDate = options?.startDate ?? startOfMonth(new Date());
+  const endDate = options?.endDate ?? endOfMonth(new Date());
+  const typeFilter = options?.typeFilter ?? "all";
+  const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
+  const sortAsc = options?.sortAsc ?? false;
+
+  const infiniteQuery = useInfiniteQuery({
+    queryKey: [
+      'transactions_paginated',
+      user?.id,
+      format(startDate, 'yyyy-MM-dd'),
+      format(endDate, 'yyyy-MM-dd'),
+      typeFilter,
+      sortAsc,
+      // Don't include searchQuery in key — we filter client-side for responsiveness
+    ],
+    queryFn: async ({ pageParam }) => {
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .gte('transaction_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('transaction_date', format(endDate, 'yyyy-MM-dd'))
+        .order('transaction_date', { ascending: sortAsc })
+        .order('created_at', { ascending: sortAsc })
+        .limit(PAGE_SIZE);
+
+      // Type filter at DB level
+      if (typeFilter === 'income') query = query.eq('type', 'income');
+      else if (typeFilter === 'expense') query = query.eq('type', 'expense');
+
+      // Cursor-based pagination: use offset from pageParam
+      if (pageParam > 0) {
+        query = query.range(pageParam, pageParam + PAGE_SIZE - 1);
+      } else {
+        query = query.range(0, PAGE_SIZE - 1);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Transaction[];
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.length * PAGE_SIZE;
+    },
+    enabled: !!user,
+  });
+
+  // Flatten all pages into a single array
+  const allTransactions = infiniteQuery.data?.pages.flat() ?? [];
+
+  // Client-side search filter for instant responsiveness
+  const filtered = searchQuery
+    ? allTransactions.filter(tx =>
+        (tx.description || "").toLowerCase().includes(searchQuery) ||
+        (tx.notes || "").toLowerCase().includes(searchQuery)
+      )
+    : allTransactions;
+
+  return {
+    transactions: filtered,
+    isLoading: infiniteQuery.isLoading,
+    isFetchingNextPage: infiniteQuery.isFetchingNextPage,
+    hasNextPage: infiniteQuery.hasNextPage,
+    fetchNextPage: infiniteQuery.fetchNextPage,
+    error: infiniteQuery.error,
   };
 }

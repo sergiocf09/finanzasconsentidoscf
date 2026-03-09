@@ -65,6 +65,7 @@ interface UnifiedItem {
   source: "tx" | "transfer";
   accountName: string;
   secondaryInfo?: string;
+  isRecurring?: boolean;
 }
 
 export default function Transactions() {

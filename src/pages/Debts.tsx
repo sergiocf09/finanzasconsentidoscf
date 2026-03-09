@@ -64,12 +64,6 @@ export default function Debts() {
           <p className="text-sm font-medium text-foreground truncate">{debt.name}</p>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span>{typeLabels[debt.type] ?? debt.type}</span>
-            {debt.due_day && (
-              <span className="flex items-center gap-0.5 text-status-warning">
-                <Calendar className="h-2.5 w-2.5" />
-                Día {debt.due_day}
-              </span>
-            )}
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
           </div>
         </div>

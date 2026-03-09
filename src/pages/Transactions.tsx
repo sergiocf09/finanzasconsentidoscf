@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactions, useTransactionsPaginated } from "@/hooks/useTransactions";
 import { useTransfers, Transfer } from "@/hooks/useTransfers";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -26,7 +26,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 
-const PAGE_SIZE = 20;
+// Page size handled by useTransactionsPaginated
 
 type PeriodKey = "current" | "previous" | "last3" | "custom";
 
@@ -75,7 +75,7 @@ export default function Transactions() {
   const [formOpen, setFormOpen] = useState(false);
   const [defaultType, setDefaultType] = useState<"income" | "expense">("expense");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  // visibleCount removed — now using server-side pagination
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
@@ -88,7 +88,22 @@ export default function Transactions() {
 
   const { startDate, endDate } = getDateRange(period, customStart, customEnd);
 
-  const { transactions, isLoading, totals, deleteTransaction } = useTransactions({ startDate, endDate });
+  // Totals query (lightweight, full period)
+  const { totals, deleteTransaction } = useTransactions({ startDate, endDate });
+  // Paginated query for the list
+  const {
+    transactions,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useTransactionsPaginated({
+    startDate,
+    endDate,
+    typeFilter: typeFilter === "transfer" ? "all" : typeFilter,
+    searchQuery,
+    sortAsc,
+  });
   const { transfers, isLoading: transfersLoading, totalTransferAmount } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();
   const { accounts } = useAccounts();
@@ -159,8 +174,8 @@ export default function Transactions() {
     );
   });
 
-  const displayed = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
+  const displayed = filtered;
+  const hasMore = hasNextPage && typeFilter !== "transfer";
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -274,7 +289,6 @@ export default function Transactions() {
               key={card.key}
               onClick={() => {
                 setTypeFilter(isActive ? "all" : card.key);
-                setVisibleCount(PAGE_SIZE);
               }}
               className={cn(
                 "rounded-xl p-2.5 text-left transition-all border",
@@ -391,8 +405,12 @@ export default function Transactions() {
 
           {hasMore && (
             <div className="text-center pt-4">
-              <Button variant="outline" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
-                Cargar más ({filtered.length - visibleCount} restantes)
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? "Cargando..." : "Cargar más"}
               </Button>
             </div>
           )}

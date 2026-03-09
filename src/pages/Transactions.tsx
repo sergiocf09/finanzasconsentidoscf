@@ -139,6 +139,7 @@ export default function Transactions() {
       currency: tx.currency,
       source: "tx" as const,
       accountName: getAccountName(tx.account_id),
+      isRecurring: tx.is_recurring === true,
       secondaryInfo: isAdjustment
         ? `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`
         : `${getCategoryName(tx.category_id)} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`,

@@ -32,6 +32,8 @@ interface Transaction {
   related_account_id: string | null;
   voice_transcript: string | null;
   created_at: string | null;
+  is_recurring?: boolean | null;
+  recurring_payment_id?: string | null;
 }
 
 interface TransactionDetailSheetProps {

@@ -123,9 +123,9 @@ export default function Settings() {
   const displayCurrency = profile?.base_currency || "MXN";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header — sticky */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm -mx-1 px-1">
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm -mx-1 px-1 pb-1">
         <h1 className="text-lg font-heading font-semibold text-foreground py-1">Configuración</h1>
       </div>
 

@@ -140,7 +140,7 @@ export default function ExchangeRate() {
       </div>
 
       {/* Last update */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+      <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mt-3">
         <span>Última actualización</span>
         <span>{formattedDate}</span>
       </div>

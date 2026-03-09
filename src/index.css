@@ -66,9 +66,9 @@ body {
     --transfer-foreground: 40 30% 98%;
 
     /* Budget Status - gentle, no alarm */
-    --status-safe: 150 45% 50%;
-    --status-warning: 40 70% 50%;
-    --status-danger: 15 50% 55%;
+    --status-safe: 150 45% 38%;
+    --status-warning: 40 70% 46%;
+    --status-danger: 15 50% 45%;
 
     /* Budget Blocks - Finanzas con Sentido */
     --block-stability: 210 40% 55%;

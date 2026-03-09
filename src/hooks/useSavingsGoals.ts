@@ -34,7 +34,7 @@ export interface CreateSavingsGoalData {
   currency?: string;
 }
 
-export function useSavingsGoals() {
+export function useSavingsGoals(options?: { enabled?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,7 +50,7 @@ export function useSavingsGoals() {
       if (error) throw error;
       return (data || []) as SavingsGoal[];
     },
-    enabled: !!user,
+    enabled: !!user && options?.enabled !== false,
   });
 
   const createGoal = useMutation({

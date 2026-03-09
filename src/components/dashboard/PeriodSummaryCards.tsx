@@ -42,18 +42,39 @@ function getDateRange(period: PeriodKey, customStart?: Date, customEnd?: Date) {
   }
 }
 
-export function PeriodSummaryCards() {
+interface PeriodSummaryCardsProps {
+  /** Pre-fetched totals from consolidated RPC (used for "current" period) */
+  initialTotals?: { income: number; expense: number };
+  /** Pre-fetched transfer total from consolidated RPC */
+  initialTransferTotal?: number;
+}
+
+export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: PeriodSummaryCardsProps) {
   const navigate = useNavigate();
   const { hidden, toggle, mask } = useHideAmounts("period");
 
-  // Period state
   const [period, setPeriod] = useState<PeriodKey>("current");
   const [customStart, setCustomStart] = useState<Date>(startOfMonth(new Date()));
   const [customEnd, setCustomEnd] = useState<Date>(endOfMonth(new Date()));
 
+  // When period = "current" and we have initial data from the RPC, skip individual queries
+  const useRpcData = period === "current" && initialTotals !== undefined;
+
   const { startDate, endDate } = getDateRange(period, customStart, customEnd);
-  const { totals } = useTransactions({ startDate, endDate });
-  const { totalTransferAmount } = useTransfers(undefined, { startDate, endDate });
+  const { totals: fetchedTotals } = useTransactions({
+    startDate,
+    endDate,
+    enabled: !useRpcData,
+  });
+  const { totalTransferAmount: fetchedTransfer } = useTransfers(undefined, {
+    startDate,
+    endDate,
+    enabled: !useRpcData,
+  });
+
+  // Use RPC data for current month, fetched data for other periods
+  const totals = useRpcData ? initialTotals! : fetchedTotals;
+  const transferTotal = useRpcData ? (initialTransferTotal ?? 0) : fetchedTransfer;
 
   // Form state
   const [txFormOpen, setTxFormOpen] = useState(false);
@@ -94,7 +115,7 @@ export function PeriodSummaryCards() {
     },
     {
       label: "Transferencias",
-      amount: totalTransferAmount,
+      amount: transferTotal,
       icon: ArrowRightLeft,
       color: "transfer" as const,
       filterType: "transfer",
@@ -108,7 +129,6 @@ export function PeriodSummaryCards() {
         {/* Period selector */}
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={handlePeriodChange}>
-
             <SelectTrigger className="h-8 text-xs flex-1">
               <SelectValue />
             </SelectTrigger>
@@ -165,7 +185,6 @@ export function PeriodSummaryCards() {
         <div className="grid grid-cols-3 gap-2">
           {cards.map((card) => (
             <div key={card.label} className="flex flex-col gap-1">
-              {/* Summary card — navigates to transactions filtered */}
               <button
                 onClick={() => navigate(`/transactions?type=${card.filterType}`)}
                 className={cn(
@@ -205,7 +224,6 @@ export function PeriodSummaryCards() {
                 </span>
               </button>
 
-              {/* Quick-add button */}
               <button
                 onClick={card.onAdd}
                 className={cn(

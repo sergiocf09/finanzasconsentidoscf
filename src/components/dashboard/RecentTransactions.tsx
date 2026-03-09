@@ -8,6 +8,9 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
+import type { DashboardSummary } from "@/hooks/useDashboardSummary";
+
+type SummaryTransaction = NonNullable<DashboardSummary["recent_transactions"]>[number];
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
   Transporte: Car, Salario: Briefcase, Alimentación: Utensils, Vivienda: Home,
@@ -16,12 +19,19 @@ const categoryIcons: Record<string, typeof ShoppingBag> = {
 
 interface RecentTransactionsProps {
   limit?: number;
+  /** Pre-fetched transactions from consolidated RPC */
+  summaryTransactions?: SummaryTransaction[];
 }
 
-export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
-  const { transactions, isLoading } = useTransactions();
+export function RecentTransactions({ limit = 5, summaryTransactions }: RecentTransactionsProps) {
+  // Only query individually when no summary data
+  const { transactions: hookTransactions, isLoading: hookLoading } = useTransactions({
+    enabled: !summaryTransactions,
+  });
   const { categories } = useCategories();
-  const [selectedTx, setSelectedTx] = useState<typeof transactions[0] | null>(null);
+  const [selectedTx, setSelectedTx] = useState<any>(null);
+
+  const isLoading = !summaryTransactions && hookLoading;
 
   const formatAmount = (value: number, currency: string) => formatCurrency(value, currency);
   const formatDate = (dateStr: string) => formatRelativeDate(dateStr);
@@ -39,7 +49,9 @@ export function RecentTransactions({ limit = 5 }: RecentTransactionsProps) {
     );
   }
 
-  const displayed = transactions.slice(0, limit);
+  // Use summary data if available, otherwise fall back to hook data
+  const rawTransactions = summaryTransactions ?? hookTransactions;
+  const displayed = rawTransactions.slice(0, limit);
 
   if (displayed.length === 0) {
     return (

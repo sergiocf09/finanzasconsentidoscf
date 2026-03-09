@@ -57,7 +57,7 @@ const debtTypeToAccountType: Record<string, string> = {
   other: "payable",
 };
 
-export function useDebts() {
+export function useDebts(options?: { enabled?: boolean }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -115,7 +115,7 @@ export function useDebts() {
 
       return (debts || []) as Debt[];
     },
-    enabled: !!user,
+    enabled: !!user && options?.enabled !== false,
   });
 
   const createDebt = useMutation({

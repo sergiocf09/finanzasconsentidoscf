@@ -38,7 +38,7 @@ const periodLabels: Record<PeriodKey, string> = {
   custom: "Rango personalizado",
 };
 
-function getDateRange(period: PeriodKey, customStart?: string, customEnd?: string) {
+function getDateRange(period: PeriodKey, customStart?: Date, customEnd?: Date) {
   const now = new Date();
   switch (period) {
     case "previous":
@@ -47,8 +47,8 @@ function getDateRange(period: PeriodKey, customStart?: string, customEnd?: strin
       return { startDate: startOfMonth(subMonths(now, 2)), endDate: endOfMonth(now) };
     case "custom":
       return {
-        startDate: customStart ? new Date(customStart + "T00:00:00") : startOfMonth(now),
-        endDate: customEnd ? new Date(customEnd + "T23:59:59") : endOfMonth(now),
+        startDate: customStart || startOfMonth(now),
+        endDate: customEnd || endOfMonth(now),
       };
     default:
       return { startDate: startOfMonth(now), endDate: endOfMonth(now) };

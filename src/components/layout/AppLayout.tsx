@@ -8,6 +8,7 @@ import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  useSwipeNavigation();
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">

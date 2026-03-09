@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight } from "lucide-react";
+import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import {
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════

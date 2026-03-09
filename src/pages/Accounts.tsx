@@ -1,34 +1,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Plus, Wallet, Building2, PiggyBank, CreditCard, TrendingUp, Trash2, HandCoins,
-  Home, Car, User, Landmark, ShieldCheck, Pencil, Eye, EyeOff,
+  Plus, Wallet, CreditCard, TrendingUp, ShieldCheck, Eye, EyeOff,
 } from "lucide-react";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import {
-  useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong, isLiability,
+  useAccounts, Account, isAssetType, isLiabilityShort, isLiabilityLong,
 } from "@/hooks/useAccounts";
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountEditSheet } from "@/components/accounts/AccountEditSheet";
+import { SortableAccountSection } from "@/components/accounts/SortableAccountSection";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const typeIcons: Record<string, typeof Wallet> = {
-  cash: Wallet, bank: Building2, savings: PiggyBank, investment: TrendingUp,
-  credit_card: CreditCard, payable: HandCoins, mortgage: Home, auto_loan: Car,
-  personal_loan: User, caucion_bursatil: Landmark,
-};
+// Default sort priority within each section
+const ASSET_TYPE_ORDER: Record<string, number> = { cash: 0, bank: 1, savings: 2, investment: 3 };
+const LIAB_SHORT_ORDER: Record<string, number> = { credit_card: 0, payable: 1 };
+const LIAB_LONG_ORDER: Record<string, number> = { mortgage: 0, auto_loan: 1, personal_loan: 1, caucion_bursatil: 1 };
 
-const typeLabels: Record<string, string> = {
-  cash: "Efectivo", bank: "Cuenta bancaria", savings: "Ahorro", investment: "Inversión",
-  credit_card: "Tarjeta de crédito", payable: "Cuenta por pagar", mortgage: "Crédito hipotecario",
-  auto_loan: "Crédito automotriz", personal_loan: "Crédito personal", caucion_bursatil: "Caución bursátil",
+const sortByTypeOrder = (order: Record<string, number>) => (a: Account, b: Account) => {
+  const oa = order[a.type] ?? 99;
+  const ob = order[b.type] ?? 99;
+  if (oa !== ob) return oa - ob;
+  return a.name.localeCompare(b.name);
 };
 
 const fmt = (value: number, currency: string) => formatCurrency(value, currency);

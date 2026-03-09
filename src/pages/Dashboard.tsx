@@ -1,10 +1,7 @@
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
-import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
 import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
-import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
@@ -74,16 +71,6 @@ export default function Dashboard() {
         summaryAccounts={summary?.accounts_summary ?? undefined}
       />
 
-      {/* Recent Transactions — from RPC */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-heading font-semibold text-foreground">Movimientos recientes</h2>
-          <Link to="/transactions" className="flex items-center gap-0.5 text-xs text-primary hover:underline">
-            Ver todos <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <RecentTransactions summaryTransactions={summary?.recent_transactions ?? undefined} />
-      </div>
     </div>
   );
 }

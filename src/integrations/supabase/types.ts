@@ -650,6 +650,93 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_payments: {
+        Row: {
+          account_id: string
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          currency: string
+          description: string | null
+          end_date: string | null
+          frequency: string
+          id: string
+          name: string
+          next_execution_date: string
+          notes: string | null
+          original_total_amount: number | null
+          payments_made: number
+          remaining_balance: number | null
+          start_date: string
+          status: string
+          total_payments: number | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          category_id?: string | null
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          name: string
+          next_execution_date: string
+          notes?: string | null
+          original_total_amount?: number | null
+          payments_made?: number
+          remaining_balance?: number | null
+          start_date: string
+          status?: string
+          total_payments?: number | null
+          type?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          name?: string
+          next_execution_date?: string
+          notes?: string | null
+          original_total_amount?: number | null
+          payments_made?: number
+          remaining_balance?: number | null
+          start_date?: string
+          status?: string
+          total_payments?: number | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_payments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       savings_goals: {
         Row: {
           account_id: string | null
@@ -726,6 +813,7 @@ export type Database = {
           is_recurring: boolean | null
           notes: string | null
           recurring_frequency: string | null
+          recurring_payment_id: string | null
           related_account_id: string | null
           transaction_date: string
           type: string
@@ -746,6 +834,7 @@ export type Database = {
           is_recurring?: boolean | null
           notes?: string | null
           recurring_frequency?: string | null
+          recurring_payment_id?: string | null
           related_account_id?: string | null
           transaction_date?: string
           type: string
@@ -766,6 +855,7 @@ export type Database = {
           is_recurring?: boolean | null
           notes?: string | null
           recurring_frequency?: string | null
+          recurring_payment_id?: string | null
           related_account_id?: string | null
           transaction_date?: string
           type?: string
@@ -786,6 +876,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_payment_id_fkey"
+            columns: ["recurring_payment_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_payments"
             referencedColumns: ["id"]
           },
           {

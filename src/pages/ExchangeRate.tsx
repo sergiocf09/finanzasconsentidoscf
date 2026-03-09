@@ -48,9 +48,9 @@ export default function ExchangeRate() {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
-    <div className="space-y-3 overflow-x-hidden">
+    <div className="overflow-x-hidden">
       {/* Header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm -mx-1 px-1 pb-2">
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm -mx-1 px-1 pb-2 -mt-2">
         <div className="flex items-center justify-between py-1">
           <div className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />

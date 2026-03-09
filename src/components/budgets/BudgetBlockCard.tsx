@@ -91,7 +91,7 @@ export function BudgetBlockCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <h3 className="font-heading font-bold text-foreground text-sm">{label}</h3>
-            <span className={cn("text-sm font-bold shrink-0", colors.text)}>
+            <span className={cn("text-sm font-bold shrink-0 text-foreground")}>
               {percentage.toFixed(0)}%
             </span>
           </div>
@@ -103,7 +103,7 @@ export function BudgetBlockCard({
             <span className="text-xs font-bold text-foreground tabular-nums">
               {fmt(totalSpent)} / {fmt(totalPlanned)}
             </span>
-            <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+            <span className="text-xs font-bold text-foreground tabular-nums">
               {remaining > 0 ? `Quedan ${fmt(remaining)}` : remaining < 0 ? `Excedido ${fmt(Math.abs(remaining))}` : ""}
             </span>
           </div>

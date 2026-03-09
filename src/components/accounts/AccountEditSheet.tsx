@@ -40,6 +40,16 @@ interface AccountEditSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
+
 export function AccountEditSheet({ account, open, onOpenChange }: AccountEditSheetProps) {
   const { user } = useAuth();
   const { updateAccount } = useAccounts();
@@ -85,16 +95,13 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
     try {
       const balanceChanged = hasDiff && !isNaN(parsedBalance);
 
-      // Update name/type
       await updateAccount.mutateAsync({
         id: account.id,
         name,
         type: type as Account["type"],
-        // Direct overwrite of current_balance if changed
         ...(balanceChanged ? { current_balance: parsedBalance } : {}),
       });
 
-      // If balance changed, create reconciliation record (informational only)
       if (balanceChanged) {
         await supabase.from("account_reconciliations").insert({
           account_id: account.id,
@@ -106,7 +113,6 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
         });
       }
 
-      // Invalidate all relevant queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["accounts"] }),
         queryClient.invalidateQueries({ queryKey: ["transactions"] }),
@@ -133,36 +139,31 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
             <SheetDescription>Modifica los datos de tu cuenta.</SheetDescription>
           </SheetHeader>
 
-          <div className="space-y-5 mt-6">
-            <div className="space-y-2">
-              <Label>Nombre</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
+          <div className="space-y-1.5 mt-6">
+            <FieldRow label="Nombre">
+              <Input className="h-8 text-sm" value={name} onChange={(e) => setName(e.target.value)} />
+            </FieldRow>
 
-            <div className="space-y-2">
-              <Label>Tipo de cuenta</Label>
+            <FieldRow label="Tipo de cuenta">
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {accountTypes.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldRow>
 
-            <div className="space-y-2">
-              <Label>Saldo actual ({account.currency})</Label>
+            <FieldRow label={`Saldo actual (${account.currency})`} hint={`Registrado: ${fmt(account.current_balance, account.currency)}`}>
               <Input
+                className="h-8 text-sm text-right"
                 type="number"
                 step="0.01"
                 value={newBalance}
                 onChange={(e) => setNewBalance(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Saldo registrado: {fmt(account.current_balance, account.currency)}
-              </p>
-            </div>
+            </FieldRow>
 
             {hasDiff && (
               <div className="rounded-xl bg-secondary/50 border border-border p-4 space-y-2">
@@ -182,18 +183,18 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
             )}
 
             {hasDiff && (
-              <div className="space-y-2">
-                <Label>Nota de conciliación (opcional)</Label>
+              <FieldRow label="Nota de conciliación" hint="Opcional">
                 <Textarea
-                  placeholder="Ej: Movimientos no registrados, corte bancario, efectivo..."
+                  placeholder="Ej: Movimientos no registrados..."
                   value={reconciliationNote}
                   onChange={(e) => setReconciliationNote(e.target.value)}
                   rows={2}
+                  className="text-sm"
                 />
-              </div>
+              </FieldRow>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-3 border-t border-border mt-3">
               <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
@@ -205,22 +206,15 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
         </SheetContent>
       </Sheet>
 
-      {/* Confirmation dialog for balance reconciliation */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Ajuste de saldo (conciliación)</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  Vas a reemplazar el saldo actual por el saldo real que indicas.
-                </p>
-                <p>
-                  Las transacciones ya registradas <strong className="text-foreground">NO cambiarán</strong>.
-                </p>
-                <p>
-                  Guardaremos una nota de conciliación con la diferencia para tu referencia.
-                </p>
+                <p>Vas a reemplazar el saldo actual por el saldo real que indicas.</p>
+                <p>Las transacciones ya registradas <strong className="text-foreground">NO cambiarán</strong>.</p>
+                <p>Guardaremos una nota de conciliación con la diferencia para tu referencia.</p>
                 <p className="font-medium text-foreground">
                   {fmt(account.current_balance, account.currency)} → {fmt(parsedBalance, account.currency)}{" "}
                   <span className={balanceDiff > 0 ? "text-income" : "text-expense"}>
@@ -232,9 +226,7 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={executeSave}>
-              Confirmar ajuste
-            </AlertDialogAction>
+            <AlertDialogAction onClick={executeSave}>Confirmar ajuste</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

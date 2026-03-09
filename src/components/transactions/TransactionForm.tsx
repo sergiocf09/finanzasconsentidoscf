@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,41 +9,19 @@ import { formatCurrency } from "@/lib/formatters";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import {
-  Select as FreqSelect, SelectContent as FreqContent,
-  SelectItem as FreqItem, SelectTrigger as FreqTrigger, SelectValue as FreqValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -77,11 +55,21 @@ interface TransactionFormProps {
   };
 }
 
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
+
 export function TransactionForm({ open, onOpenChange, defaultType = "expense", voiceData }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<"income" | "expense">(defaultType);
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
-  
+
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
@@ -102,7 +90,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     },
   });
 
-  // Sync activeTab and form type when defaultType changes (e.g. opening from QuickActions)
   useEffect(() => {
     if (open) {
       setActiveTab(defaultType);
@@ -113,7 +100,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   const categories = activeTab === "income" ? incomeCategories : expenseCategories;
 
-  // Cross-currency detection
   const watchedAccountId = form.watch("account_id");
   const watchedCurrency = form.watch("currency");
   const watchedAmount = Number(form.watch("amount")) || 0;
@@ -130,7 +116,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const onSubmit = async (data: TransactionFormValues) => {
     const account = accounts.find(a => a.id === data.account_id);
     const crossCurrency = account && data.currency !== account.currency;
-    
+
     let finalAmount = data.amount;
     let finalCurrency = data.currency;
     let exchangeRate = 1;
@@ -139,9 +125,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     let notes = "";
 
     if (crossCurrency && fxRate > 0) {
-      // Store original amount in amount_in_base
       amountInBase = data.amount;
-      // Convert to account's currency
       if (data.currency === "USD" && account.currency === "MXN") {
         finalAmount = data.amount * fxRate;
         exchangeRate = fxRate;
@@ -150,7 +134,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         exchangeRate = 1 / fxRate;
       }
       finalCurrency = account.currency;
-      // Add conversion note to notes field
       notes = `Originalmente ${data.amount.toFixed(2)} ${data.currency} · TC: ${fxRate.toFixed(2)}`;
     }
 
@@ -166,12 +149,11 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       type: activeTab,
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
-    // Check budget alerts after expense (with small delay for DB triggers to settle)
+
     if (activeTab === "expense") {
       setTimeout(() => checkAlerts(), 1000);
     }
 
-    // Create recurring payment if switch is on
     if (makeRecurring && data.account_id) {
       const nextDate = getNextExecutionDate(data.transaction_date, recurringFrequency);
       await createRecurring.mutateAsync({
@@ -196,12 +178,10 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-base font-heading">Registrar movimiento</DialogTitle>
-          <DialogDescription className="text-xs">
-            Agrega un ingreso o gasto.
-          </DialogDescription>
+          <DialogDescription className="text-xs">Agrega un ingreso o gasto.</DialogDescription>
         </DialogHeader>
 
         <div>
@@ -212,236 +192,148 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             </TabsList>
           </Tabs>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 mt-3">
-              {/* Amount + Currency */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-3">
+            <FieldRow label="Monto">
               <div className="flex gap-2">
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Monto</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          className="h-9"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...form.register("amount", { valueAsNumber: true })}
+                  className="h-8 text-sm text-right flex-1"
                 />
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem className="w-20">
-                      <FormLabel className="text-xs">Moneda</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="MXN">MXN</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+                <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
+                  <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MXN">MXN</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </FieldRow>
+            {form.formState.errors.amount && (
+              <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
+            )}
 
-              {/* Account */}
-              <FormField
-                control={form.control}
-                name="account_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Cuenta</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Selecciona una cuenta" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts.map((account) => {
-                          const bal = formatCurrency(account.current_balance ?? 0, account.currency);
-                          return (
-                            <SelectItem key={account.id} value={account.id}>
-                              <span className="flex items-center gap-3 w-full">
-                                <span className="truncate">{account.name}</span>
-                                <span className="text-muted-foreground text-xs font-bold ml-auto">{bal}</span>
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FieldRow label="Cuenta">
+              <Select value={watchedAccountId} onValueChange={(v) => form.setValue("account_id", v)}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map((account) => {
+                    const bal = formatCurrency(account.current_balance ?? 0, account.currency);
+                    return (
+                      <SelectItem key={account.id} value={account.id}>
+                        <span className="flex items-center gap-3 w-full">
+                          <span className="truncate">{account.name}</span>
+                          <span className="text-muted-foreground text-xs font-bold ml-auto">{bal}</span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            {form.formState.errors.account_id && (
+              <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>
+            )}
 
-              {/* Cross-currency info */}
-              {isCrossCurrency && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
-                  <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                  <div className="text-xs text-muted-foreground space-y-0.5">
-                    <p className="font-medium text-foreground">Conversión automática</p>
-                    <p>
-                      La cuenta es en {selectedAccount?.currency}. Se convertirá usando TC: ${fxRate.toFixed(2)}.
+            {/* Cross-currency info */}
+            {isCrossCurrency && (
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <p className="font-medium text-foreground">Conversión automática</p>
+                  <p>La cuenta es en {selectedAccount?.currency}. TC: ${fxRate.toFixed(2)}.</p>
+                  {convertedAmount !== null && (
+                    <p className="font-semibold text-foreground">
+                      {watchedAmount.toFixed(2)} {watchedCurrency} → {convertedAmount.toFixed(2)} {selectedAccount?.currency}
                     </p>
-                    {convertedAmount !== null && (
-                      <p className="font-semibold text-foreground">
-                        {watchedAmount.toFixed(2)} {watchedCurrency} → {convertedAmount.toFixed(2)} {selectedAccount?.currency}
-                      </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <FieldRow label="Categoría" hint="Opcional">
+              <Select value={form.watch("category_id") || ""} onValueChange={(v) => form.setValue("category_id", v)}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            <FieldRow label="Fecha">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full h-8 text-sm justify-start font-normal",
+                      !form.watch("transaction_date") && "text-muted-foreground"
                     )}
-                  </div>
+                  >
+                    {form.watch("transaction_date")
+                      ? format(form.watch("transaction_date"), "PPP", { locale: es })
+                      : "Seleccionar"}
+                    <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.watch("transaction_date")}
+                    onSelect={(d) => d && form.setValue("transaction_date", d)}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </FieldRow>
+
+            <FieldRow label="Descripción" hint="Opcional">
+              <Input className="h-8 text-sm" placeholder="Ej: Uber oficina" {...form.register("description")} />
+            </FieldRow>
+
+            {/* Recurring switch */}
+            <div className="rounded-lg border border-border p-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-3.5 w-3.5 text-primary" />
+                  <Label className="text-xs font-medium">Convertir en pago recurrente</Label>
                 </div>
+                <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
+              </div>
+              {makeRecurring && (
+                <FieldRow label="Frecuencia">
+                  <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldRow>
               )}
+            </div>
 
-              {/* Category */}
-              <FormField
-                control={form.control}
-                name="category_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Categoría</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Selecciona una categoría" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-
-              {/* Date + Description side by side */}
-              <div className="flex gap-2">
-                <FormField
-                  control={form.control}
-                  name="transaction_date"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs">Fecha</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-2 text-left font-normal h-9 text-xs",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "dd/MM/yy", { locale: es })
-                              ) : (
-                                <span>Fecha</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="flex-[2]">
-                      <FormLabel className="text-xs">Descripción</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Uber oficina" {...field} className="h-9 text-xs" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Recurring switch */}
-              <div className="rounded-lg border border-border p-2.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Repeat className="h-3.5 w-3.5 text-primary" />
-                    <Label className="text-xs font-medium">Convertir en pago recurrente</Label>
-                  </div>
-                  <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
-                </div>
-                {makeRecurring && (
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-muted-foreground shrink-0">Frecuencia:</Label>
-                    <FreqSelect value={recurringFrequency} onValueChange={setRecurringFrequency}>
-                      <FreqTrigger className="h-8 text-xs flex-1"><FreqValue /></FreqTrigger>
-                      <FreqContent>
-                        {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
-                          <FreqItem key={k} value={k}>{v}</FreqItem>
-                        ))}
-                      </FreqContent>
-                    </FreqSelect>
-                  </div>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 h-10"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 h-10"
-                  disabled={createTransaction.isPending}
-                >
-                  {createTransaction.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    "Guardar"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
+            <div className="flex gap-3 pt-3 border-t border-border mt-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1" disabled={createTransaction.isPending}>
+                {createTransaction.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                ) : "Guardar"}
+              </Button>
+            </div>
+          </form>
         </div>
       </DialogContent>
     </Dialog>

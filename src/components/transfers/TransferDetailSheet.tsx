@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -24,6 +25,16 @@ interface TransferDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center gap-3 min-h-[2rem]">
+    <div className="w-[40%] shrink-0">
+      <Label className="text-xs text-muted-foreground leading-tight">{label}</Label>
+      {hint && <p className="text-[10px] text-muted-foreground/60 leading-tight">{hint}</p>}
+    </div>
+    <div className="flex-1">{children}</div>
+  </div>
+);
 
 export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDetailSheetProps) {
   const { accounts } = useAccounts();
@@ -57,13 +68,12 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
   if (!transfer) return null;
 
   const fmt = (v: number, c: string) => formatCurrency(v, c, { decimals: 2 });
-
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";
-  const getAccountCurrency = (id: string) => accounts.find(a => a.id === id)?.currency ?? "MXN";
 
   const fromAccount = activeAccounts.find(a => a.id === editFromId);
   const toAccount = activeAccounts.find(a => a.id === editToId);
   const needsFx = fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
+  const fmtBalance = (acc: typeof accounts[0]) => formatCurrency(acc.current_balance ?? 0, acc.currency);
 
   const dateFormatted = format(new Date(transfer.transfer_date + "T12:00:00"), "EEEE d 'de' MMMM, yyyy", { locale: es });
 
@@ -97,8 +107,6 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
     onOpenChange(false);
   };
 
-  const fmtBalance = (acc: typeof accounts[0]) => formatCurrency(acc.current_balance ?? 0, acc.currency);
-
   if (isEditing) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -106,11 +114,10 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
           <SheetHeader className="pb-2">
             <SheetTitle className="font-heading text-lg">Editar transferencia</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Cuenta origen</label>
+          <div className="space-y-1.5">
+            <FieldRow label="Cuenta origen">
               <Select value={editFromId} onValueChange={setEditFromId}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {activeAccounts.map(a => (
                     <SelectItem key={a.id} value={a.id}>
@@ -122,11 +129,11 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Cuenta destino</label>
+            </FieldRow>
+
+            <FieldRow label="Cuenta destino">
               <Select value={editToId} onValueChange={setEditToId}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {activeAccounts.filter(a => a.id !== editFromId).map(a => (
                     <SelectItem key={a.id} value={a.id}>
@@ -138,46 +145,42 @@ export function TransferDetailSheet({ transfer, open, onOpenChange }: TransferDe
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Monto origen {fromAccount ? `(${fromAccount.currency})` : ""}</label>
-                <Input type="number" step="0.01" value={editAmountFrom} onChange={e => setEditAmountFrom(e.target.value)} className="h-9" />
-              </div>
-              {needsFx && (
-                <div className="flex-1">
-                  <label className="text-xs font-medium text-muted-foreground">Monto destino ({toAccount?.currency})</label>
-                  <Input type="number" step="0.01" value={editAmountTo} onChange={e => {
+            </FieldRow>
+
+            <FieldRow label={`Monto origen ${fromAccount ? `(${fromAccount.currency})` : ""}`}>
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" value={editAmountFrom} onChange={e => setEditAmountFrom(e.target.value)} />
+            </FieldRow>
+
+            {needsFx && (
+              <>
+                <FieldRow label={`Monto destino (${toAccount?.currency})`}>
+                  <Input className="h-8 text-sm text-right" type="number" step="0.01" value={editAmountTo} onChange={e => {
                     setEditAmountTo(e.target.value);
                     const at = parseFloat(e.target.value);
                     const af = parseFloat(editAmountFrom);
                     if (at > 0 && af > 0) setEditFxRate(String(Math.round((at / af) * 10000) / 10000));
-                  }} className="h-9" />
-                </div>
-              )}
-            </div>
-            {needsFx && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Tipo de cambio</label>
-                <Input type="number" step="0.0001" value={editFxRate} onChange={e => {
-                  setEditFxRate(e.target.value);
-                  const rate = parseFloat(e.target.value);
-                  const af = parseFloat(editAmountFrom);
-                  if (rate > 0 && af > 0) setEditAmountTo(String(Math.round(af * rate * 100) / 100));
-                }} className="h-9" />
-              </div>
+                  }} />
+                </FieldRow>
+                <FieldRow label="Tipo de cambio">
+                  <Input className="h-8 text-sm text-right" type="number" step="0.0001" value={editFxRate} onChange={e => {
+                    setEditFxRate(e.target.value);
+                    const rate = parseFloat(e.target.value);
+                    const af = parseFloat(editAmountFrom);
+                    if (rate > 0 && af > 0) setEditAmountTo(String(Math.round(af * rate * 100) / 100));
+                  }} />
+                </FieldRow>
+              </>
             )}
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground">Fecha</label>
-                <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="h-9" />
-              </div>
-              <div className="flex-[2]">
-                <label className="text-xs font-medium text-muted-foreground">Concepto</label>
-                <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} className="h-9" placeholder="Concepto" />
-              </div>
-            </div>
-            <div className="flex gap-2 pt-2">
+
+            <FieldRow label="Fecha">
+              <Input className="h-8 text-sm" type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
+            </FieldRow>
+
+            <FieldRow label="Concepto">
+              <Input className="h-8 text-sm" value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Concepto" />
+            </FieldRow>
+
+            <div className="flex gap-2 pt-3 border-t border-border mt-3">
               <Button variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>
                 <X className="h-4 w-4 mr-1" /> Cancelar
               </Button>

@@ -156,8 +156,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
     const parsedAmount = parseFloat(amount);
     if (!name || !parsedAmount || !accountId || !frequency) return;
 
-    // If retroactive dates exist and not editing, show confirmation
-    if (!isEdit && retroDates.length > 0) {
+    // If retroactive dates exist, show confirmation (both create and edit)
+    if (retroDates.length > 0) {
       setRetroConfirmOpen(true);
       return;
     }

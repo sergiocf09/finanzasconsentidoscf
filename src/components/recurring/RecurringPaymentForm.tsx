@@ -201,6 +201,48 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
     if (isEdit) {
       await updatePayment.mutateAsync({ id: editPayment.id, ...payload });
+
+      // Generate retroactive transactions for edit mode too
+      if (generateRetro && retroDates.length > 0) {
+        setIsSavingRetro(true);
+        try {
+          const transactions = retroDates.map(date => ({
+            user_id: user.id,
+            account_id: accountId,
+            category_id: categoryId || null,
+            type,
+            amount: parsedAmount,
+            currency,
+            exchange_rate: 1,
+            amount_in_base: parsedAmount,
+            description: description || name,
+            transaction_date: format(date, "yyyy-MM-dd"),
+            is_recurring: true,
+            recurring_payment_id: editPayment.id,
+          }));
+
+          await supabase.from("transactions").insert(transactions);
+
+          // Update payments_made and remaining balance
+          const newPaymentsMade = (editPayment.payments_made || 0) + retroDates.length;
+          const updateData: any = { payments_made: newPaymentsMade };
+          if (originalTotal) {
+            const totalPaid = parsedAmount * newPaymentsMade;
+            updateData.remaining_balance = Math.max(0, parseFloat(originalTotal) - totalPaid);
+          }
+          await supabase
+            .from("recurring_payments" as any)
+            .update(updateData as any)
+            .eq("id", editPayment.id);
+
+          queryClient.invalidateQueries({ queryKey: ["transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["budgets"] });
+          queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+        } finally {
+          setIsSavingRetro(false);
+        }
+      }
     } else {
       // Create the recurring payment
       const result = await createPayment.mutateAsync(payload);

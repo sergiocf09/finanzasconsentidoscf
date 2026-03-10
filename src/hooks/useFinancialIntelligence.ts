@@ -52,17 +52,10 @@ export interface PeriodComparison {
   blocks: Record<string, number>;
 }
 
-function determineStage(stability: number, _lifestyle: number, build: number): FinancialStage {
-  if (build >= 25 && stability <= 55) return "build";
-  if (build >= 10 && build <= 20 && stability >= 50 && stability <= 65) return "balance";
-  if (build <= 5 && stability >= 70) return "stabilize";
-
-  const distances = {
-    stabilize: Math.abs(build - 2.5) + Math.abs(stability - 77.5),
-    balance: Math.abs(build - 15) + Math.abs(stability - 57.5),
-    build: Math.abs(build - 32.5) + Math.abs(stability - 47.5),
-  };
-  return Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0] as FinancialStage;
+function determineStage(_stability: number, _lifestyle: number, build: number): FinancialStage {
+  if (build < 10) return "stabilize";
+  if (build < 25) return "balance";
+  return "build";
 }
 
 const stageLabels: Record<FinancialStage, { name: string; message: string }> = {

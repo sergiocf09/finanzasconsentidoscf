@@ -71,10 +71,7 @@ export default function Accounts() {
       {/* Header */}
       <div className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
             <h1 className="text-lg font-heading font-semibold text-foreground">Cuentas</h1>
-            <SectionHelp content={helpData.accounts} />
-          </div>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setFormOpen(true)}>
             <Plus className="h-3.5 w-3.5" /> Nueva cuenta
           </Button>

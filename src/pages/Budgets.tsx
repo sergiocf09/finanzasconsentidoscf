@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";

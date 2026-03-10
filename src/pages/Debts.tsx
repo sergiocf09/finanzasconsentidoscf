@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ChevronDown, ChevronUp, ArrowUpDown, Pencil } from "lucide-react";
+import { SectionHelp } from "@/components/help/SectionHelp";
+import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

@@ -248,7 +248,7 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
 
       {/* Help Sheet */}
       <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
-        <SheetContent side="bottom" className="max-h-[72vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="top" className="mt-14 rounded-b-2xl rounded-t-none border-t-0 max-h-[82vh] overflow-y-auto shadow-lg">
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-heading flex items-center gap-2">
               <CircleHelp className="h-4 w-4 text-primary" />

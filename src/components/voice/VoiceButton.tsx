@@ -159,15 +159,27 @@ export function VoiceButton() {
         const fromCurrency = from.currency;
         const toCurrency = to.currency;
         const isCrossCurrency = fromCurrency !== toCurrency;
+        let amountTo = amount;
+        let fxRate: number | null = null;
+        if (isCrossCurrency) {
+          const usdRate = fxRates["USD"] || 1;
+          if (fromCurrency === "MXN" && toCurrency === "USD") {
+            amountTo = amount / usdRate;
+            fxRate = usdRate;
+          } else if (fromCurrency === "USD" && toCurrency === "MXN") {
+            amountTo = amount * usdRate;
+            fxRate = usdRate;
+          }
+        }
         await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: editAccountId,
           to_account_id: editToAccountId,
           amount_from: amount,
           currency_from: fromCurrency,
-          amount_to: amount,
+          amount_to: amountTo,
           currency_to: toCurrency,
-          fx_rate: isCrossCurrency ? 1 : null,
+          fx_rate: fxRate,
           transfer_date: editDate,
           description: editDescription || cleanTranscript || committedText,
           created_from: "voice",
@@ -175,13 +187,36 @@ export function VoiceButton() {
         queryClient.invalidateQueries({ queryKey: ["transfers"] });
       } else {
         const acc = accounts.find(a => a.id === editAccountId)!;
+        let finalAmount = amount;
+        let amountInBase = amount;
+        let exchangeRate = 1;
+        let notes: string | null = null;
+
+        const usdRate = fxRates["USD"] || 0;
+        if (editCurrency !== acc.currency && usdRate > 0) {
+          if (editCurrency === "MXN" && acc.currency === "USD") {
+            finalAmount = amount / usdRate;
+            amountInBase = amount;
+            exchangeRate = 1 / usdRate;
+            notes = `Registrado: $${amount.toFixed(2)} MXN · TC: $${usdRate.toFixed(2)} · En cuenta: $${finalAmount.toFixed(2)} USD`;
+          } else if (editCurrency === "USD" && acc.currency === "MXN") {
+            finalAmount = amount * usdRate;
+            amountInBase = finalAmount;
+            exchangeRate = usdRate;
+            notes = `Registrado: $${amount.toFixed(2)} USD · TC: $${usdRate.toFixed(2)} · Equivalente: $${finalAmount.toFixed(2)} MXN`;
+          }
+        }
+
         await supabase.from("transactions").insert({
           user_id: user.id,
           account_id: editAccountId,
           category_id: editCategoryId || null,
           type: editType,
-          amount,
+          amount: finalAmount,
           currency: acc.currency,
+          exchange_rate: exchangeRate,
+          amount_in_base: amountInBase,
+          notes,
           description: editDescription || cleanTranscript || committedText,
           transaction_date: editDate,
           voice_transcript: committedText,

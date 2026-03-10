@@ -99,8 +99,8 @@ export function useDebts(options?: { enabled?: boolean }) {
             user_id: user.id,
             name: acc.name,
             type: accountTypeToDebtType[acc.type] || "other",
-            original_amount: acc.initial_balance || acc.current_balance || 0,
-            current_balance: acc.current_balance || 0,
+            original_amount: Math.abs(acc.initial_balance || acc.current_balance || 0),
+            current_balance: Math.abs(acc.current_balance || 0),
             currency: acc.currency,
             account_id: acc.id,
           });
@@ -130,8 +130,8 @@ export function useDebts(options?: { enabled?: boolean }) {
           name: data.name,
           type: accountType,
           currency: data.currency || "MXN",
-          initial_balance: data.original_amount,
-          current_balance: data.current_balance,
+          initial_balance: -Math.abs(data.original_amount),
+          current_balance: -Math.abs(data.current_balance),
         })
         .select()
         .single();

@@ -257,7 +257,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             <FieldRow label="Categoría" hint="Opcional">
               <Select value={form.watch("category_id") || ""} onValueChange={(v) => form.setValue("category_id", v)}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" avoidCollisions={false} className="max-h-[35vh] overflow-y-auto">
+                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}

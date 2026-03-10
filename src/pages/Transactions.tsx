@@ -62,6 +62,7 @@ interface UnifiedItem {
   description: string;
   amount: number;
   currency: string;
+  amount_in_base: number | null;
   source: "tx" | "transfer";
   accountName: string;
   secondaryInfo?: string;

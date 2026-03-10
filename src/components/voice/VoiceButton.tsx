@@ -428,7 +428,7 @@ export function VoiceButton() {
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">Monto:</span>
-                      <span className="font-medium text-right">{editAmount ? fmt(parseFloat(editAmount)) : <span className="text-destructive">Sin monto</span>}</span>
+                      <span className="font-medium text-right">{editAmount ? `${fmt(parseFloat(editAmount), editCurrency)} ${editCurrency}` : <span className="text-destructive">Sin monto</span>}</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
@@ -455,6 +455,29 @@ export function VoiceButton() {
                       <span className="font-medium text-right">{editDate === format(new Date(), "yyyy-MM-dd") ? "Hoy" : editDate}</span>
                     </div>
                   </div>
+
+                  {/* ─── CROSS-CURRENCY INDICATOR ──── */}
+                  {(() => {
+                    const acc = editAccountId ? activeAccounts.find(a => a.id === editAccountId) : null;
+                    if (!acc || editCurrency === acc.currency || !editAmount) return null;
+                    const amount = parseFloat(editAmount);
+                    const usdRate = fxRates["USD"] || 0;
+                    if (usdRate <= 0) return null;
+                    let converted = 0;
+                    if (editCurrency === "MXN" && acc.currency === "USD") converted = amount / usdRate;
+                    else if (editCurrency === "USD" && acc.currency === "MXN") converted = amount * usdRate;
+                    else return null;
+                    return (
+                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-2">
+                        <p className="text-[11px] text-foreground text-center">
+                          Conversión: <span className="font-semibold">${amount.toFixed(2)} {editCurrency}</span>
+                          {" → "}
+                          <span className="font-semibold">${converted.toFixed(2)} {acc.currency}</span>
+                          <span className="text-muted-foreground"> · TC: ${usdRate.toFixed(2)}</span>
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   {/* ─── RECURRING PAYMENT SWITCH ──── */}
                   {editType !== "transfer" && (

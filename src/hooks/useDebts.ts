@@ -130,8 +130,8 @@ export function useDebts(options?: { enabled?: boolean }) {
           name: data.name,
           type: accountType,
           currency: data.currency || "MXN",
-          initial_balance: data.original_amount,
-          current_balance: data.current_balance,
+          initial_balance: -Math.abs(data.original_amount),
+          current_balance: -Math.abs(data.current_balance),
         })
         .select()
         .single();

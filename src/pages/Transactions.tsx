@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown, ArrowUpDown, CalendarDays, Repeat } from "lucide-react";
+import { SectionHelp } from "@/components/help/SectionHelp";
+import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions, useTransactionsPaginated } from "@/hooks/useTransactions";

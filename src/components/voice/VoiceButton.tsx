@@ -26,6 +26,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════

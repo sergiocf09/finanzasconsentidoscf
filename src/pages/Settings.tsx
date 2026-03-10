@@ -130,8 +130,8 @@ export default function Settings() {
       </div>
 
       {/* Account */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <User className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Cuenta</h2>
         </div>

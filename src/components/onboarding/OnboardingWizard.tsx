@@ -136,7 +136,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
       </div>
       <div className="space-y-2">
         <Label className="text-xs">Tipo</Label>
-        <Select value={accountType} onValueChange={setAccountType}>
+        <Select value={accountType} onValueChange={v => setAccountType(v as AccountType)}>
           <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="bank">Cuenta bancaria</SelectItem>

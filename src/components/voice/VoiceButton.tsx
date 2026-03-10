@@ -281,6 +281,7 @@ export function VoiceButton() {
     setEditDate(format(new Date(), "yyyy-MM-dd"));
     setMakeRecurring(false);
     setRecurringFrequency("monthly");
+    setEditCurrency("MXN");
   };
 
   const handleCancel = async () => {

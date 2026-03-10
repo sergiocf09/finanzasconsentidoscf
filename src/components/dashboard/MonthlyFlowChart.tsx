@@ -103,7 +103,7 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
                     "text-xs font-semibold tabular-nums shrink-0",
                     expanded === "income" ? "text-income" : "text-expense"
                   )}>
-                    {formatCurrency(tx.amount)}
+                    {formatCurrency((tx as any).amount_in_base ?? tx.amount)}
                   </span>
                 </div>
               ))}

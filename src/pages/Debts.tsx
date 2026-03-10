@@ -109,10 +109,7 @@ export default function Debts() {
       {/* Header */}
       <div className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
             <h1 className="text-lg font-heading font-semibold text-foreground">Deudas</h1>
-            <SectionHelp content={helpData.debts} />
-          </div>
           <div className="flex items-center gap-1.5">
             {debts.length > 0 && (
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSortAsc(!sortAsc)} title={sortAsc ? "Mayor a menor" : "Menor a mayor"}>

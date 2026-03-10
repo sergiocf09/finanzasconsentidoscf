@@ -391,11 +391,13 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             {/* Retroactive warning */}
-            {!isEdit && retroDates.length > 0 && (
+            {retroDates.length > 0 && (
               <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-2.5 flex items-start gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-700">
-                  <p className="font-medium">La fecha de inicio es anterior a hoy.</p>
+                  <p className="font-medium">
+                    {isEdit ? "La fecha de inicio genera pagos pendientes." : "La fecha de inicio es anterior a hoy."}
+                  </p>
                   <p>Se generarán {retroDates.length} movimientos históricos al guardar.</p>
                 </div>
               </div>

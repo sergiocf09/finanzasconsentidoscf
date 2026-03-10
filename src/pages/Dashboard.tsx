@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
@@ -5,6 +6,9 @@ import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
 import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { SectionHelp } from "@/components/help/SectionHelp";
+import { helpData } from "@/components/help/sectionHelpData";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,12 +17,15 @@ export default function Dashboard() {
   const { profile } = useProfile();
   const displayName = profile?.display_name || "bienvenido";
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
+  const [wizardDismissed, setWizardDismissed] = useState(false);
 
   useBudgetAlerts();
 
   const now = new Date();
   const currentMonth = format(now, "MMMM yyyy", { locale: es });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
+
+  const showWizard = profile && !profile.onboarding_dismissed && !wizardDismissed;
 
   if (summaryLoading) {
     return (
@@ -40,11 +47,24 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 stagger-children overflow-x-hidden">
+      {/* Onboarding Wizard */}
+      {showWizard && (
+        <OnboardingWizard
+          open={true}
+          onDismiss={() => setWizardDismissed(true)}
+          displayName={displayName}
+          baseCurrency={profile?.base_currency || "MXN"}
+        />
+      )}
+
       {/* Welcome */}
       <div className="pb-1">
-        <h1 className="text-lg font-heading font-semibold text-foreground">
-          Hola, {displayName} 👋
-        </h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-lg font-heading font-semibold text-foreground">
+            Hola, {displayName} 👋
+          </h1>
+          <SectionHelp content={helpData.dashboard} />
+        </div>
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{capitalizedMonth}</p>
           <FxRateWidget />
@@ -70,7 +90,6 @@ export default function Dashboard() {
         summaryPaidDueDates={summary?.paid_due_dates ?? undefined}
         summaryAccounts={summary?.accounts_summary ?? undefined}
       />
-
     </div>
   );
 }

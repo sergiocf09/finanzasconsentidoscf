@@ -105,6 +105,7 @@ export function VoiceButton() {
       setEditAccountId(result.fromAccount?.id || "");
       setEditToAccountId(result.toAccount?.id || "");
       setEditDescription(result.concept);
+      setEditCurrency(result.currency ?? "MXN");
 
       // Log
       if (user) {

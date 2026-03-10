@@ -137,6 +137,7 @@ export default function Transactions() {
       description: isAdjustment ? "Ajuste de saldo" : (tx.description || getCategoryName(tx.category_id)),
       amount: tx.amount,
       currency: tx.currency,
+      amount_in_base: tx.amount_in_base ?? null,
       source: "tx" as const,
       accountName: getAccountName(tx.account_id),
       isRecurring: tx.is_recurring === true,

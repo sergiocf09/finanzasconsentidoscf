@@ -17,23 +17,10 @@ export interface DiagnosticResult {
   categoryBreakdown: Record<string, { amount: number; block: string; name: string }>;
 }
 
-function determineStage(stability: number, lifestyle: number, build: number): DiagnosticResult["stage"] {
-  // Stage 3: build ≥ 25% and stability ≤ 55%
-  if (build >= 25 && stability <= 55) return "build";
-  // Stage 2: build 10-20% and stability 50-65%
-  if (build >= 10 && build <= 20 && stability >= 50 && stability <= 65) return "balance";
-  // Stage 1: build ≤ 5% and stability ≥ 70%
-  if (build <= 5 && stability >= 70) return "stabilize";
-
-  // Between stages — find closest
-  const distances = {
-    stabilize: Math.abs(build - 2.5) + Math.abs(stability - 77.5),
-    balance: Math.abs(build - 15) + Math.abs(stability - 57.5),
-    build: Math.abs(build - 32.5) + Math.abs(stability - 47.5),
-  };
-
-  const closest = Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0] as DiagnosticResult["stage"];
-  return closest;
+function determineStage(_stability: number, _lifestyle: number, build: number): DiagnosticResult["stage"] {
+  if (build < 10) return "stabilize";
+  if (build < 25) return "balance";
+  return "build";
 }
 
 const stageConfig = {

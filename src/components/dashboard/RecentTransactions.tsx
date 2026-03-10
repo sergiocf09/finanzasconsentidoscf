@@ -107,9 +107,9 @@ export function RecentTransactions({ limit = 5, summaryTransactions }: RecentTra
                 )}>
                   {amountText}
                 </p>
-                {transaction.currency !== "MXN" && transaction.amount_in_base != null && (
+                {transaction.currency !== "MXN" && (transaction as any).amount_in_base != null && (
                   <p className="text-[10px] text-muted-foreground tabular-nums">
-                    ≈ {formatAmount(transaction.amount_in_base, "MXN")}
+                    ≈ {formatAmount((transaction as any).amount_in_base, "MXN")}
                   </p>
                 )}
               </div>

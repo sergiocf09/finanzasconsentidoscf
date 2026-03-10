@@ -218,10 +218,7 @@ export default function Transactions() {
       {/* Header */}
       <div className="pb-1">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
-            <SectionHelp content={helpData.transactions} />
-          </div>
+          <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => { setDefaultType("expense"); setFormOpen(true); }}>
             <Plus className="h-3.5 w-3.5" />
             Registrar

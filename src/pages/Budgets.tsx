@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { SectionHelp } from "@/components/help/SectionHelp";
+import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -103,9 +105,12 @@ export default function Budgets() {
       {/* Header with Period Selector */}
       <div className="pb-1">
         <div className="flex items-center justify-between gap-2">
-          <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">
-            Presupuestos
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">
+              Presupuestos
+            </h1>
+            <SectionHelp content={helpData.budgets} />
+          </div>
           <Button
             size="sm"
             className="gap-1 h-8 text-xs px-3"

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown, ArrowUpDown, CalendarDays, Repeat } from "lucide-react";
+import { SectionHelp } from "@/components/help/SectionHelp";
+import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions, useTransactionsPaginated } from "@/hooks/useTransactions";
@@ -218,7 +220,10 @@ export default function Transactions() {
       {/* Header */}
       <div className="pb-1">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
+            <SectionHelp content={helpData.transactions} />
+          </div>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => { setDefaultType("expense"); setFormOpen(true); }}>
             <Plus className="h-3.5 w-3.5" />
             Registrar

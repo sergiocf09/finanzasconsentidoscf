@@ -27,6 +27,7 @@ export interface DashboardSummary {
     description: string | null;
     transaction_date: string;
     created_at: string;
+    amount_in_base: number | null;
   }> | null;
   upcoming_debts: Array<{
     id: string;

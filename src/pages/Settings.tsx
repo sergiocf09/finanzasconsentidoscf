@@ -327,17 +327,17 @@ export default function Settings() {
       {/* Archived Items */}
       <ArchivedItemsSection />
 
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <HelpCircle className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Ayuda</h2>
         </div>
         <div className="divide-y divide-border">
-          <button className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50 transition-colors">
+          <button className="flex items-center justify-between w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors">
             <span className="text-sm text-foreground">Centro de ayuda</span>
             <span className="text-muted-foreground">→</span>
           </button>
-          <button className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50 transition-colors">
+          <button className="flex items-center justify-between w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors">
             <span className="text-sm text-foreground">Términos y condiciones</span>
             <span className="text-muted-foreground">→</span>
           </button>

@@ -55,10 +55,7 @@ export default function EmergencyFund() {
       {/* Header — sticky */}
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
             <h1 className="text-lg font-heading font-semibold text-foreground">Fondo de emergencia</h1>
-            <SectionHelp content={helpData.emergencyFund} />
-          </div>
         </div>
       </div>
 

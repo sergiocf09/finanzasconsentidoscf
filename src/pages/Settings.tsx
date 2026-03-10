@@ -273,7 +273,7 @@ export default function Settings() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between px-4 py-2.5">
               <span className="text-sm text-foreground">Contraseña</span>
               <button
                 className="text-sm text-primary hover:underline"

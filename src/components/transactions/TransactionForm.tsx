@@ -125,16 +125,18 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     let notes = "";
 
     if (crossCurrency && fxRate > 0) {
-      amountInBase = data.amount;
       if (data.currency === "USD" && account.currency === "MXN") {
         finalAmount = data.amount * fxRate;
+        amountInBase = finalAmount; // equivalente en MXN
         exchangeRate = fxRate;
       } else if (data.currency === "MXN" && account.currency === "USD") {
         finalAmount = data.amount / fxRate;
+        amountInBase = data.amount; // ya está en MXN
         exchangeRate = 1 / fxRate;
       }
       finalCurrency = account.currency;
-      notes = `Originalmente ${data.amount.toFixed(2)} ${data.currency} · TC: ${fxRate.toFixed(2)}`;
+      const eqMxn = amountInBase ?? finalAmount;
+      notes = `Originalmente $${data.amount.toFixed(2)} ${data.currency} · TC: $${fxRate.toFixed(2)} · Equivalente: $${eqMxn.toFixed(2)} MXN`;
     }
 
     await createTransaction.mutateAsync({

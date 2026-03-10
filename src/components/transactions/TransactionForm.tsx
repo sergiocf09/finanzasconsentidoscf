@@ -204,7 +204,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 />
                 <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
                   <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
-                <SelectContent side="bottom" avoidCollisions={false}>
+                <SelectContent side="bottom">
                     <SelectItem value="MXN">MXN</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>

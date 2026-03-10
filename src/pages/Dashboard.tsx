@@ -7,8 +7,6 @@ import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";

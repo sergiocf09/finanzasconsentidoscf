@@ -39,67 +39,158 @@ interface HelpEntry {
 const HELP_CONTENT: Record<string, HelpEntry> = {
   "/": {
     title: "Inicio",
-    description: "Tu panorama financiero completo de un vistazo",
-    actions: ["Ver el flujo de ingresos y gastos del mes", "Revisar tus 3 bloques financieros", "Detectar señales de alerta tempranas", "Ver tus cuentas activas y saldos"],
-    tip: "Revísalo cada lunes para arrancar la semana con claridad",
-    needed: "Sí, es tu punto de partida diario",
+    description: "Tu punto de partida cada día — un vistazo honesto y claro de cómo están tus finanzas en este momento",
+    actions: [
+      "Ver el flujo de ingresos y gastos del mes en curso",
+      "Revisar cómo se distribuye tu dinero en los 3 bloques financieros",
+      "Detectar señales de alerta antes de que se conviertan en problema",
+      "Registrar un ingreso, gasto o transferencia con el botón + debajo del resumen del periodo",
+      "Usar el micrófono 🎙️ flotante para registrar cualquier movimiento con tu voz desde cualquier pantalla"
+    ],
+    tip: "Revisarlo cada lunes te toma menos de dos minutos y te da claridad para toda la semana — esa claridad es lo que convierte la información en tranquilidad",
+    needed: "Sí, es tu punto de partida — todo lo demás se alimenta desde aquí"
   },
   "/transactions": {
     title: "Movimientos",
-    description: "Registro de todo lo que entra y sale de tus cuentas",
-    actions: ["Registrar ingresos, gastos y transferencias", "Filtrar por periodo, tipo o cuenta", "Buscar un movimiento específico", "Ver totales del periodo seleccionado"],
-    tip: "Registra el mismo día para no perder el hilo",
-    needed: "Esencial — sin esto nada funciona",
+    description: "El registro de todo lo que entra y sale — porque lo que no se registra no se puede entender ni mejorar",
+    actions: [
+      "Registrar ingresos, gastos y transferencias manualmente o por voz",
+      "Filtrar por periodo, tipo de movimiento o cuenta específica",
+      "Buscar cualquier movimiento por descripción o categoría",
+      "Ver los totales del periodo para saber exactamente cómo vas",
+      "Consultar el detalle completo de cualquier movimiento"
+    ],
+    tip: "Registrar el mismo día que ocurre el gasto es el hábito más poderoso que puedes desarrollar — no necesitas ser perfecto, solo consistente",
+    needed: "Esencial — es la base de todo. Sin movimientos registrados, el resto de la app no tiene información con qué trabajar"
   },
   "/accounts": {
     title: "Cuentas",
-    description: "Todas tus cuentas bancarias, tarjetas y efectivo en un lugar",
-    actions: ["Agregar y editar cuentas", "Ver el saldo actual de cada cuenta", "Consultar el historial por cuenta", "Archivar cuentas que ya no usas"],
-    tip: "Mantén solo las cuentas que usas activamente",
-    needed: "Esencial para que los movimientos tengan contexto",
+    description: "Todas tus cuentas en un solo lugar — para que siempre sepas con qué cuentas y no haya sorpresas",
+    actions: [
+      "Agregar cuentas bancarias, tarjetas de crédito, débito o efectivo",
+      "Ver el saldo actual de cada cuenta en tiempo real",
+      "Consultar el historial de movimientos de una cuenta específica",
+      "Ocultar montos si estás en un lugar público",
+      "Archivar cuentas que ya no usas sin perder su historial"
+    ],
+    tip: "Tener todas tus cuentas aquí — incluyendo las de crédito — te da la imagen completa de tu situación real. La claridad incómoda es mejor que la comodidad ciega",
+    needed: "Esencial — cada movimiento que registras necesita una cuenta de origen. Sin ellas, nada tiene contexto"
   },
   "/budgets": {
     title: "Presupuestos",
-    description: "Establece límites de gasto por categoría y monitorea si los cumples",
-    actions: ["Crear presupuestos por categoría", "Ver cuánto llevas vs tu límite", "Recibir alertas cuando te acercas al tope", "Ajustar montos cuando cambia tu situación"],
-    tip: "Empieza con las 3 categorías donde más gastas",
-    needed: "Muy recomendado si quieres controlar gastos",
+    description: "Decide con intención a dónde va tu dinero antes de que llegue — eso es lo que convierte el ingreso en tranquilidad",
+    actions: [
+      "🔵 Estabilidad — define cuánto necesitas para cubrir lo indispensable cada mes, ese es tu número de paz",
+      "🟡 Calidad de vida — ponle un límite consciente a los gastos variables para disfrutarlos sin culpa y sin sorpresas",
+      "🟢 Construcción — decide cuánto destinarás a construir tu patrimonio cada mes, trátalo con la misma seriedad que cualquier gasto fijo",
+      "Ver en tiempo real cuánto llevas vs tu límite en cada categoría",
+      "Recibir alertas que te ayudan a corregir el rumbo a tiempo, sin culpa y con claridad"
+    ],
+    tip: "Presupuestar los 3 bloques juntos te da algo que va más allá de los números: te da paz. Sabes que lo esencial está cubierto, que te permites disfrutar con conciencia, y que estás construyendo algo tuyo — eso es Finanzas con Sentido",
+    needed: "Muy recomendado — es donde la intención se convierte en acción concreta"
+  },
+  "/categories": {
+    title: "Categorías",
+    description: "El lugar donde le das nombre y orden a tu dinero — porque cuando sabes a dónde va cada peso, recuperas la calma",
+    actions: [
+      "🔵 Estabilidad — tus gastos fijos e indispensables, el piso que te da seguridad: renta, servicios, alimentación básica",
+      "🟡 Calidad de vida — gastos variables que hacen tu día a día más disfrutable y que puedes ajustar con conciencia cuando lo necesitas",
+      "🟢 Construcción — lo que decides destinar a crecer: fondo de emergencia, ahorro, inversiones o metas que te importan",
+      "💰 Ingresos — clasifica tus fuentes de ingreso para entender de dónde viene tu dinero y qué tan diversificado está",
+      "Crear y personalizar categorías dentro de cada bloque para que reflejen tu vida real, no una plantilla genérica"
+    ],
+    tip: "Clasificar bien desde el inicio es lo que hace que todo lo demás funcione — cuando cada movimiento está en su lugar, tu diagnóstico financiero es honesto y tus decisiones se vuelven más fáciles",
+    needed: "Esencial — es la base sobre la que se construye todo el análisis de la app"
   },
   "/debts": {
     title: "Deudas",
-    description: "Monitorea lo que debes y proyecta cuándo quedarás libre",
-    actions: ["Registrar deudas con tasa y plazo", "Ver tu DTI (deuda vs ingreso)", "Proyectar fecha de liquidación", "Priorizar qué deuda atacar primero"],
-    tip: "Una deuda bien registrada ya está medio pagada",
-    needed: "Importante si tienes créditos activos",
+    description: "Enfrenta tus deudas con claridad y sin drama — saber exactamente lo que debes es el primer paso para dejar de deber",
+    actions: [
+      "Registrar cada deuda con su saldo, tasa de interés y pago mínimo",
+      "Ver tu DTI (relación deuda-ingreso) para entender qué tan pesada es tu carga real",
+      "Proyectar cuándo quedarás libre si sigues tu plan actual",
+      "Identificar qué deuda atacar primero para avanzar más rápido",
+      "Monitorear tu progreso mes a mes"
+    ],
+    tip: "Una deuda registrada y entendida ya está medio resuelta — el estrés financiero viene más de lo que no vemos que de lo que sí vemos",
+    needed: "Importante si tienes créditos activos — ignorarlos no los hace desaparecer, entenderlos sí te da control"
   },
   "/construction": {
-    title: "Construcción Patrimonial",
-    description: "Construye metas de largo plazo: fondo de emergencia, inversiones y patrimonio",
-    actions: ["Crear metas de ahorro o fondo de emergencia", "Registrar avances hacia cada meta", "Ver cuántos meses de gastos tienes cubiertos", "Definir cuánto aportar cada mes"],
-    tip: "3 meses de gastos es el mínimo recomendado antes de invertir",
-    needed: "Prioritario cuando ya controlas tus gastos del mes",
+    title: "Construcción",
+    description: "El espacio donde tu dinero empieza a trabajar para tu futuro — metas concretas, avances visibles, patrimonio que crece",
+    actions: [
+      "Crear metas de ahorro: fondo de emergencia, retiro o cualquier meta que te importe",
+      "Registrar abonos y ver cómo avanza cada meta",
+      "Saber cuántos meses de gastos tienes cubiertos con tu fondo de emergencia",
+      "Definir una fecha objetivo y ver si vas en camino",
+      "Celebrar cada avance — construir patrimonio se hace paso a paso"
+    ],
+    tip: "El fondo de emergencia no es un lujo, es la base que te permite tomar mejores decisiones en todo lo demás — cuando tienes un colchón, dejas de tomar decisiones desde el miedo",
+    needed: "Prioritario en cuanto tengas estabilidad en tus gastos fijos — es lo que transforma el control financiero en libertad real"
   },
   "/financial-dashboard": {
     title: "Dashboard Financiero",
-    description: "Diagnóstico profundo de tu salud financiera con indicadores reales",
-    actions: ["Ver tu etapa financiera actual", "Revisar señales positivas y de alerta", "Entender tus 3 bloques de distribución del dinero", "Recibir recomendaciones personalizadas"],
-    tip: "Revísalo mensualmente para ver tu evolución real",
-    needed: "Complementario pero muy revelador — úsalo como espejo",
+    description: "Tu diagnóstico financiero honesto — no para juzgarte, sino para que sepas exactamente dónde estás y hacia dónde puedes ir",
+    actions: [
+      "Ver tu etapa financiera actual: Estabilizar, Equilibrar o Construir",
+      "Revisar señales positivas de lo que ya estás haciendo bien",
+      "Identificar puntos de atención antes de que se vuelvan urgentes",
+      "Entender cómo se distribuye tu gasto real en los 3 bloques",
+      "Recibir recomendaciones personalizadas basadas en tus números reales"
+    ],
+    tip: "Tu etapa no es un juicio — es un punto de partida. Cada persona está donde está, y desde ahí se avanza. Revisarlo mensualmente te permite ver la evolución que el día a día no deja ver",
+    needed: "Complementario pero muy poderoso — es el espejo que te muestra el panorama completo cuando ya tienes movimientos registrados"
   },
   "/recurring": {
     title: "Pagos Recurrentes",
-    description: "Automatiza el registro de pagos fijos que se repiten",
-    actions: ["Crear pagos con frecuencia definida", "Ver próximas ejecuciones", "Activar o pausar pagos cuando cambian", "Editar montos cuando suben"],
-    tip: "Agrega todas tus suscripciones y servicios fijos para no olvidarlos",
-    needed: "Muy útil si tienes 3 o más pagos fijos al mes",
+    description: "Tus compromisos fijos automatizados — para que no dependas de tu memoria y nada se escape sin querer",
+    actions: [
+      "Registrar pagos que se repiten: suscripciones, servicios, cuotas, membresías",
+      "Ver qué pagos vienen próximamente para anticiparte",
+      "Activar o pausar pagos cuando cambia tu situación",
+      "Editar montos cuando suben o cambian las condiciones",
+      "Evitar cargos olvidados que descuadran tu presupuesto"
+    ],
+    tip: "Lo que no ves también cuenta — muchas personas se sorprenden al sumar todas sus suscripciones activas. Tenerlas aquí te da visibilidad total de tus compromisos fijos",
+    needed: "Muy útil si tienes 3 o más pagos fijos al mes — te ahorra sorpresas y te da control sin esfuerzo"
+  },
+  "/exchange-rate": {
+    title: "Tipo de Cambio",
+    description: "La referencia que permite que todo lo que entra y sale en otra moneda se entienda siempre en pesos",
+    actions: [
+      "Ver los tipos de cambio vigentes para USD, EUR y otras divisas",
+      "Actualizar manualmente si necesitas usar una tasa específica",
+      "Elegir qué monedas quieres ver en tu pantalla de inicio",
+      "Garantizar que los totales de ingresos y gastos siempre estén valorizados en tu moneda base"
+    ],
+    tip: "Si tienes ingresos o gastos en dólares, mantener el tipo de cambio actualizado es lo que hace que tus totales en pesos sean reales y confiables",
+    needed: "Esencial si manejas más de una moneda — sin esto, las cifras en pantalla no reflejarían tu realidad financiera completa"
+  },
+  "/library": {
+    title: "Mi Biblioteca",
+    description: "Recursos para que el conocimiento financiero te acompañe — porque entender el dinero es parte de la tranquilidad que buscamos",
+    actions: [
+      "Explorar guías y materiales del programa Finanzas con Sentido",
+      "Leer sobre cómo ordenar, presupuestar y construir patrimonio",
+      "Profundizar en los conceptos que más te interesan a tu propio ritmo",
+      "Encontrar respuestas cuando algo de la app o del método no queda claro"
+    ],
+    tip: "No tienes que leerlo todo de golpe — un concepto bien entendido y aplicado vale más que diez leídos y olvidados",
+    needed: "Complementario — úsalo cuando sientas que quieres entender más el porqué detrás de lo que estás haciendo"
   },
   "/settings": {
     title: "Configuración",
-    description: "Personaliza la app según tus preferencias y perfil",
-    actions: ["Cambiar moneda base", "Gestionar categorías propias", "Ajustar notificaciones", "Archivar cuentas y categorías inactivas"],
-    tip: "Revisa las categorías para que coincidan con tu vida real",
-    needed: "Visítala al inicio y cuando algo no encaje",
-  },
+    description: "Personaliza la app para que se adapte a ti — no al revés",
+    actions: [
+      "Cambiar tu moneda base y preferencias de visualización",
+      "Gestionar y personalizar tus categorías de ingresos y gastos",
+      "Configurar notificaciones y alertas de presupuesto",
+      "Archivar cuentas o categorías que ya no uses sin perder historial",
+      "Gestionar tu perfil y datos de la cuenta"
+    ],
+    tip: "Dedica 10 minutos al inicio a configurar bien las categorías y tu moneda base — esa inversión de tiempo hace que todo lo demás fluya solo",
+    needed: "Visítala al inicio para personalizar y cuando algo no encaje con tu realidad — la app debe reflejar tu vida, no una vida genérica"
+  }
 };
 
 function getHelpForPath(pathname: string): HelpEntry | null {

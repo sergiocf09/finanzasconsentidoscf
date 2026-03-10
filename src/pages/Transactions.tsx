@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Trash2, Receipt, SlidersHorizontal, ArrowLeftRight, TrendingUp, TrendingDown, ArrowUpDown, CalendarDays, Repeat } from "lucide-react";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactions, useTransactionsPaginated } from "@/hooks/useTransactions";
@@ -64,6 +62,7 @@ interface UnifiedItem {
   description: string;
   amount: number;
   currency: string;
+  amount_in_base: number | null;
   source: "tx" | "transfer";
   accountName: string;
   secondaryInfo?: string;
@@ -139,6 +138,7 @@ export default function Transactions() {
       description: isAdjustment ? "Ajuste de saldo" : (tx.description || getCategoryName(tx.category_id)),
       amount: tx.amount,
       currency: tx.currency,
+      amount_in_base: tx.amount_in_base ?? null,
       source: "tx" as const,
       accountName: getAccountName(tx.account_id),
       isRecurring: tx.is_recurring === true,
@@ -155,6 +155,7 @@ export default function Transactions() {
     description: t.description || `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)}`,
     amount: t.amount_from,
     currency: t.currency_from,
+    amount_in_base: null,
     source: "transfer" as const,
     accountName: getAccountName(t.from_account_id),
     secondaryInfo: `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)} · ${formatDate(t.transfer_date)}`,
@@ -220,10 +221,7 @@ export default function Transactions() {
       {/* Header */}
       <div className="pb-1">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
-            <SectionHelp content={helpData.transactions} />
-          </div>
+          <h1 className="text-lg font-heading font-semibold text-foreground">Movimientos</h1>
           <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => { setDefaultType("expense"); setFormOpen(true); }}>
             <Plus className="h-3.5 w-3.5" />
             Registrar
@@ -394,6 +392,11 @@ export default function Transactions() {
                     )}>
                       {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
                     </p>
+                    {item.currency !== "MXN" && item.amount_in_base != null && (
+                      <p className="text-[10px] text-muted-foreground tabular-nums text-right">
+                        ≈ {formatAmount(item.amount_in_base, "MXN")}
+                      </p>
+                    )}
                     <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

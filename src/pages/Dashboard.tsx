@@ -7,8 +7,6 @@ import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,12 +57,9 @@ export default function Dashboard() {
 
       {/* Welcome */}
       <div className="pb-1">
-        <div className="flex items-center gap-1.5">
-          <h1 className="text-lg font-heading font-semibold text-foreground">
-            Hola, {displayName} 👋
-          </h1>
-          <SectionHelp content={helpData.dashboard} />
-        </div>
+        <h1 className="text-lg font-heading font-semibold text-foreground">
+          Hola, {displayName} 👋
+        </h1>
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{capitalizedMonth}</p>
           <FxRateWidget />

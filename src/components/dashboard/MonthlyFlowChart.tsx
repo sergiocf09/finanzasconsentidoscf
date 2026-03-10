@@ -24,12 +24,12 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
 
   const topIncome = transactions
     .filter(t => t.type === "income")
-    .sort((a, b) => b.amount - a.amount)
+    .sort((a, b) => ((b as any).amount_in_base ?? b.amount) - ((a as any).amount_in_base ?? a.amount))
     .slice(0, 10);
 
   const topExpense = transactions
     .filter(t => t.type === "expense")
-    .sort((a, b) => b.amount - a.amount)
+    .sort((a, b) => ((b as any).amount_in_base ?? b.amount) - ((a as any).amount_in_base ?? a.amount))
     .slice(0, 10);
 
   const toggleExpanded = (type: "income" | "expense") => {
@@ -103,7 +103,7 @@ export function MonthlyFlowChart({ income, expense, netFlow, transactions = [] }
                     "text-xs font-semibold tabular-nums shrink-0",
                     expanded === "income" ? "text-income" : "text-expense"
                   )}>
-                    {formatCurrency(tx.amount)}
+                    {formatCurrency((tx as any).amount_in_base ?? tx.amount)}
                   </span>
                 </div>
               ))}

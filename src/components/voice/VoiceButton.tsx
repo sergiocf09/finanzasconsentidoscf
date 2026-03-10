@@ -26,6 +26,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════
@@ -38,6 +39,7 @@ export function VoiceButton() {
   const { categories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
   const { createPayment: createRecurring } = useRecurringPayments();
+  const { rates: fxRates } = useExchangeRate();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
@@ -62,6 +64,7 @@ export function VoiceButton() {
   const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
+  const [editCurrency, setEditCurrency] = useState("MXN");
 
   // ─── ONE-TAP: selecting type immediately starts recording ────
   const handleTypeSelect = useCallback((type: "expense" | "income" | "transfer") => {
@@ -102,6 +105,7 @@ export function VoiceButton() {
       setEditAccountId(result.fromAccount?.id || "");
       setEditToAccountId(result.toAccount?.id || "");
       setEditDescription(result.concept);
+      setEditCurrency(result.currency ?? "MXN");
 
       // Log
       if (user) {
@@ -155,15 +159,27 @@ export function VoiceButton() {
         const fromCurrency = from.currency;
         const toCurrency = to.currency;
         const isCrossCurrency = fromCurrency !== toCurrency;
+        let amountTo = amount;
+        let fxRate: number | null = null;
+        if (isCrossCurrency) {
+          const usdRate = fxRates["USD"] || 1;
+          if (fromCurrency === "MXN" && toCurrency === "USD") {
+            amountTo = amount / usdRate;
+            fxRate = usdRate;
+          } else if (fromCurrency === "USD" && toCurrency === "MXN") {
+            amountTo = amount * usdRate;
+            fxRate = usdRate;
+          }
+        }
         await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: editAccountId,
           to_account_id: editToAccountId,
           amount_from: amount,
           currency_from: fromCurrency,
-          amount_to: amount,
+          amount_to: amountTo,
           currency_to: toCurrency,
-          fx_rate: isCrossCurrency ? 1 : null,
+          fx_rate: fxRate,
           transfer_date: editDate,
           description: editDescription || cleanTranscript || committedText,
           created_from: "voice",
@@ -171,13 +187,36 @@ export function VoiceButton() {
         queryClient.invalidateQueries({ queryKey: ["transfers"] });
       } else {
         const acc = accounts.find(a => a.id === editAccountId)!;
+        let finalAmount = amount;
+        let amountInBase = amount;
+        let exchangeRate = 1;
+        let notes: string | null = null;
+
+        const usdRate = fxRates["USD"] || 0;
+        if (editCurrency !== acc.currency && usdRate > 0) {
+          if (editCurrency === "MXN" && acc.currency === "USD") {
+            finalAmount = amount / usdRate;
+            amountInBase = amount;
+            exchangeRate = 1 / usdRate;
+            notes = `Registrado: $${amount.toFixed(2)} MXN · TC: $${usdRate.toFixed(2)} · En cuenta: $${finalAmount.toFixed(2)} USD`;
+          } else if (editCurrency === "USD" && acc.currency === "MXN") {
+            finalAmount = amount * usdRate;
+            amountInBase = finalAmount;
+            exchangeRate = usdRate;
+            notes = `Registrado: $${amount.toFixed(2)} USD · TC: $${usdRate.toFixed(2)} · Equivalente: $${finalAmount.toFixed(2)} MXN`;
+          }
+        }
+
         await supabase.from("transactions").insert({
           user_id: user.id,
           account_id: editAccountId,
           category_id: editCategoryId || null,
           type: editType,
-          amount,
+          amount: finalAmount,
           currency: acc.currency,
+          exchange_rate: exchangeRate,
+          amount_in_base: amountInBase,
+          notes,
           description: editDescription || cleanTranscript || committedText,
           transaction_date: editDate,
           voice_transcript: committedText,
@@ -242,6 +281,7 @@ export function VoiceButton() {
     setEditDate(format(new Date(), "yyyy-MM-dd"));
     setMakeRecurring(false);
     setRecurringFrequency("monthly");
+    setEditCurrency("MXN");
   };
 
   const handleCancel = async () => {
@@ -388,7 +428,7 @@ export function VoiceButton() {
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">Monto:</span>
-                      <span className="font-medium text-right">{editAmount ? fmt(parseFloat(editAmount)) : <span className="text-destructive">Sin monto</span>}</span>
+                      <span className="font-medium text-right">{editAmount ? `${fmt(parseFloat(editAmount), editCurrency)} ${editCurrency}` : <span className="text-destructive">Sin monto</span>}</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
@@ -415,6 +455,29 @@ export function VoiceButton() {
                       <span className="font-medium text-right">{editDate === format(new Date(), "yyyy-MM-dd") ? "Hoy" : editDate}</span>
                     </div>
                   </div>
+
+                  {/* ─── CROSS-CURRENCY INDICATOR ──── */}
+                  {(() => {
+                    const acc = editAccountId ? activeAccounts.find(a => a.id === editAccountId) : null;
+                    if (!acc || editCurrency === acc.currency || !editAmount) return null;
+                    const amount = parseFloat(editAmount);
+                    const usdRate = fxRates["USD"] || 0;
+                    if (usdRate <= 0) return null;
+                    let converted = 0;
+                    if (editCurrency === "MXN" && acc.currency === "USD") converted = amount / usdRate;
+                    else if (editCurrency === "USD" && acc.currency === "MXN") converted = amount * usdRate;
+                    else return null;
+                    return (
+                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-2">
+                        <p className="text-[11px] text-foreground text-center">
+                          Conversión: <span className="font-semibold">${amount.toFixed(2)} {editCurrency}</span>
+                          {" → "}
+                          <span className="font-semibold">${converted.toFixed(2)} {acc.currency}</span>
+                          <span className="text-muted-foreground"> · TC: ${usdRate.toFixed(2)}</span>
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   {/* ─── RECURRING PAYMENT SWITCH ──── */}
                   {editType !== "transfer" && (

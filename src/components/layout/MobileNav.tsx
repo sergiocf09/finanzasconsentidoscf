@@ -230,13 +230,18 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
             </span>
           </div>
           {!isAuthPage && helpContent && (
-            <button
-              onClick={() => setHelpOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              aria-label="Ayuda"
-            >
-              <CircleHelp className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              <Link to="/settings" onClick={() => {}}>
+                <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+              </Link>
+              <button
+                onClick={() => setHelpOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Ayuda"
+              >
+                <CircleHelp className="h-5 w-5" />
+              </button>
+            </div>
           )}
         </div>
       </header>

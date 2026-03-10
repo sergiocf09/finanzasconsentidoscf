@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Wallet, CreditCard, TrendingUp, ShieldCheck, Eye, EyeOff,

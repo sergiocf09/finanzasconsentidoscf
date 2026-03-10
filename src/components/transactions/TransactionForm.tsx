@@ -204,7 +204,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 />
                 <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
                   <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
-                <SelectContent side="bottom" avoidCollisions={false}>
+                <SelectContent side="bottom">
                     <SelectItem value="MXN">MXN</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>
@@ -219,7 +219,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             <FieldRow label="Cuenta">
               <Select value={watchedAccountId} onValueChange={(v) => form.setValue("account_id", v)}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" avoidCollisions={false} className="max-h-[35vh] overflow-y-auto">
+                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
                   {accounts.map((account) => {
                     const bal = formatCurrency(account.current_balance ?? 0, account.currency);
                     return (
@@ -257,7 +257,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             <FieldRow label="Categoría" hint="Opcional">
               <Select value={form.watch("category_id") || ""} onValueChange={(v) => form.setValue("category_id", v)}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" avoidCollisions={false} className="max-h-[35vh] overflow-y-auto">
+                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}

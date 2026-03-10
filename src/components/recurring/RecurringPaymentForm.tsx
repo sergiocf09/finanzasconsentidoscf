@@ -137,16 +137,20 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
 
-  // Calculate retroactive dates
+  // Calculate retroactive dates (for new payments: all past dates; for edits: only new past dates beyond existing payments_made)
   const retroDates = useMemo(() => {
-    if (isEdit) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const sDate = new Date(startDate);
     sDate.setHours(0, 0, 0, 0);
     if (sDate >= today) return [];
-    return getRetroactiveDates(sDate, frequency);
-  }, [startDate, frequency, isEdit]);
+    const allDates = getRetroactiveDates(sDate, frequency);
+    if (isEdit && editPayment) {
+      // Only return dates beyond what's already been paid
+      return allDates.slice(editPayment.payments_made);
+    }
+    return allDates;
+  }, [startDate, frequency, isEdit, editPayment]);
 
   const handleSave = async () => {
     const parsedAmount = parseFloat(amount);

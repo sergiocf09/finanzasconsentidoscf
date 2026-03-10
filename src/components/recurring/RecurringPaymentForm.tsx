@@ -137,23 +137,27 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
 
-  // Calculate retroactive dates
+  // Calculate retroactive dates (for new payments: all past dates; for edits: only new past dates beyond existing payments_made)
   const retroDates = useMemo(() => {
-    if (isEdit) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const sDate = new Date(startDate);
     sDate.setHours(0, 0, 0, 0);
     if (sDate >= today) return [];
-    return getRetroactiveDates(sDate, frequency);
-  }, [startDate, frequency, isEdit]);
+    const allDates = getRetroactiveDates(sDate, frequency);
+    if (isEdit && editPayment) {
+      // Only return dates beyond what's already been paid
+      return allDates.slice(editPayment.payments_made);
+    }
+    return allDates;
+  }, [startDate, frequency, isEdit, editPayment]);
 
   const handleSave = async () => {
     const parsedAmount = parseFloat(amount);
     if (!name || !parsedAmount || !accountId || !frequency) return;
 
-    // If retroactive dates exist and not editing, show confirmation
-    if (!isEdit && retroDates.length > 0) {
+    // If retroactive dates exist, show confirmation (both create and edit)
+    if (retroDates.length > 0) {
       setRetroConfirmOpen(true);
       return;
     }
@@ -197,6 +201,48 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
     if (isEdit) {
       await updatePayment.mutateAsync({ id: editPayment.id, ...payload });
+
+      // Generate retroactive transactions for edit mode too
+      if (generateRetro && retroDates.length > 0) {
+        setIsSavingRetro(true);
+        try {
+          const transactions = retroDates.map(date => ({
+            user_id: user.id,
+            account_id: accountId,
+            category_id: categoryId || null,
+            type,
+            amount: parsedAmount,
+            currency,
+            exchange_rate: 1,
+            amount_in_base: parsedAmount,
+            description: description || name,
+            transaction_date: format(date, "yyyy-MM-dd"),
+            is_recurring: true,
+            recurring_payment_id: editPayment.id,
+          }));
+
+          await supabase.from("transactions").insert(transactions);
+
+          // Update payments_made and remaining balance
+          const newPaymentsMade = (editPayment.payments_made || 0) + retroDates.length;
+          const updateData: any = { payments_made: newPaymentsMade };
+          if (originalTotal) {
+            const totalPaid = parsedAmount * newPaymentsMade;
+            updateData.remaining_balance = Math.max(0, parseFloat(originalTotal) - totalPaid);
+          }
+          await supabase
+            .from("recurring_payments" as any)
+            .update(updateData as any)
+            .eq("id", editPayment.id);
+
+          queryClient.invalidateQueries({ queryKey: ["transactions"] });
+          queryClient.invalidateQueries({ queryKey: ["accounts"] });
+          queryClient.invalidateQueries({ queryKey: ["budgets"] });
+          queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+        } finally {
+          setIsSavingRetro(false);
+        }
+      }
     } else {
       // Create the recurring payment
       const result = await createPayment.mutateAsync(payload);
@@ -345,11 +391,13 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             {/* Retroactive warning */}
-            {!isEdit && retroDates.length > 0 && (
+            {retroDates.length > 0 && (
               <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-2.5 flex items-start gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-700">
-                  <p className="font-medium">La fecha de inicio es anterior a hoy.</p>
+                  <p className="font-medium">
+                    {isEdit ? "La fecha de inicio genera pagos pendientes." : "La fecha de inicio es anterior a hoy."}
+                  </p>
                   <p>Se generarán {retroDates.length} movimientos históricos al guardar.</p>
                 </div>
               </div>

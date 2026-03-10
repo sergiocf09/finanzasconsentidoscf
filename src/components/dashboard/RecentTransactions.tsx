@@ -97,15 +97,22 @@ export function RecentTransactions({ limit = 5, summaryTransactions }: RecentTra
                 <p className="text-xs font-medium text-foreground truncate">{isAdjustment ? "Ajuste de saldo" : (transaction.description || catName)}</p>
                 <p className="text-[10px] text-muted-foreground truncate">{isAdjustment ? formatDate(transaction.transaction_date) : `${catName} · ${formatDate(transaction.transaction_date)}`}</p>
               </div>
-              <p className={cn(
-                "text-xs font-semibold tabular-nums shrink-0",
-                transaction.type === "income" && "text-income",
-                transaction.type === "expense" && "text-foreground",
-                transaction.type === "transfer" && "text-transfer",
-                isAdjustment && "text-muted-foreground"
-              )}>
-                {amountText}
-              </p>
+              <div className="text-right shrink-0">
+                <p className={cn(
+                  "text-xs font-semibold tabular-nums",
+                  transaction.type === "income" && "text-income",
+                  transaction.type === "expense" && "text-foreground",
+                  transaction.type === "transfer" && "text-transfer",
+                  isAdjustment && "text-muted-foreground"
+                )}>
+                  {amountText}
+                </p>
+                {transaction.currency !== "MXN" && (transaction as any).amount_in_base != null && (
+                  <p className="text-[10px] text-muted-foreground tabular-nums">
+                    ≈ {formatAmount((transaction as any).amount_in_base, "MXN")}
+                  </p>
+                )}
+              </div>
             </div>
           );
         })}

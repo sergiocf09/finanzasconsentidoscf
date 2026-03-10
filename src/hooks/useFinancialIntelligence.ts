@@ -136,7 +136,7 @@ export function useFinancialIntelligence() {
     txs.filter((t) => t.type === "expense").forEach((tx) => {
       const cat = tx.category_id ? catMap.get(tx.category_id) : null;
       const bucket = (cat as any)?.bucket || "lifestyle";
-      const amount = Number(tx.amount);
+      const amount = Number(tx.amount_in_base ?? tx.amount);
       total += amount;
 
       if (bucket === "stability") stability += amount;

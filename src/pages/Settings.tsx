@@ -172,7 +172,7 @@ export default function Settings() {
           </div>
 
           {/* Email */}
-          <div className="p-4">
+          <div className="px-4 py-2.5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-foreground">Email</span>
               {!isEditingEmail && (

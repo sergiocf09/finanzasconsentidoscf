@@ -154,6 +154,7 @@ export default function Transactions() {
     description: t.description || `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)}`,
     amount: t.amount_from,
     currency: t.currency_from,
+    amount_in_base: null,
     source: "transfer" as const,
     accountName: getAccountName(t.from_account_id),
     secondaryInfo: `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)} · ${formatDate(t.transfer_date)}`,

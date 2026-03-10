@@ -219,7 +219,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             <FieldRow label="Cuenta">
               <Select value={watchedAccountId} onValueChange={(v) => form.setValue("account_id", v)}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" avoidCollisions={false} className="max-h-[35vh] overflow-y-auto">
+                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
                   {accounts.map((account) => {
                     const bal = formatCurrency(account.current_balance ?? 0, account.currency);
                     return (

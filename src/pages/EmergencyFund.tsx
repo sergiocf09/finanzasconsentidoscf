@@ -1,6 +1,4 @@
 import { Plus, Target, TrendingUp, Calendar, Sparkles } from "lucide-react";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useEmergencyFund } from "@/hooks/useEmergencyFund";

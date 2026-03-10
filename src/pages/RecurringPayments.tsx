@@ -70,7 +70,10 @@ export default function RecurringPayments() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-heading font-semibold">Pagos Recurrentes</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-lg font-heading font-semibold">Pagos Recurrentes</h1>
+            <SectionHelp content={helpData.recurringPayments} />
+          </div>
           <p className="text-xs text-muted-foreground">Cargos y pagos programados automáticos</p>
         </div>
         <div className="flex gap-1.5">

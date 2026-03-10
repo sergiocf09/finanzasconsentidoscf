@@ -95,6 +95,7 @@ export default function FinancialDashboard() {
           </h1>
           <p className="text-[11px] text-muted-foreground">{capitalizedMonth}</p>
         </div>
+        <SectionHelp content={helpData.financialDashboard} />
       </div>
 
       {/* Resumen conceptual — colapsable */}

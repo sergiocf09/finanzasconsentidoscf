@@ -169,8 +169,9 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date; en
 
   const totals = transactionsQuery.data?.reduce(
     (acc, tx) => {
-      if (tx.type === 'income') acc.income += tx.amount;
-      else if (tx.type === 'expense') acc.expense += tx.amount;
+      const base = tx.amount_in_base ?? tx.amount;
+      if (tx.type === 'income') acc.income += base;
+      else if (tx.type === 'expense') acc.expense += base;
       return acc;
     },
     { income: 0, expense: 0 }

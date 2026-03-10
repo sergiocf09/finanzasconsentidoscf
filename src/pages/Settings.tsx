@@ -231,14 +231,14 @@ export default function Settings() {
       </div>
 
       {/* Security */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <Shield className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Seguridad</h2>
         </div>
         <div className="divide-y divide-border">
           {showPasswordForm ? (
-            <div className="p-4 space-y-3">
+            <div className="px-4 py-2.5 space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="new-password" className="text-xs">Nueva contraseña</Label>
                 <Input

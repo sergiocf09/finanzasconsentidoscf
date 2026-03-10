@@ -123,21 +123,21 @@ export default function Settings() {
   const displayCurrency = profile?.base_currency || "MXN";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Header — sticky */}
       <div className="bg-background -mx-1 px-1 pb-1">
         <h1 className="text-lg font-heading font-semibold text-foreground py-1">Configuración</h1>
       </div>
 
       {/* Account */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <User className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Cuenta</h2>
         </div>
         <div className="divide-y divide-border">
           {/* Name */}
-          <div className="p-4">
+          <div className="px-4 py-2.5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-foreground">Nombre</span>
               {!isEditingName && (
@@ -172,7 +172,7 @@ export default function Settings() {
           </div>
 
           {/* Email */}
-          <div className="p-4">
+          <div className="px-4 py-2.5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-foreground">Email</span>
               {!isEditingEmail && (
@@ -231,14 +231,14 @@ export default function Settings() {
       </div>
 
       {/* Security */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <Shield className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Seguridad</h2>
         </div>
         <div className="divide-y divide-border">
           {showPasswordForm ? (
-            <div className="p-4 space-y-3">
+            <div className="px-4 py-2.5 space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="new-password" className="text-xs">Nueva contraseña</Label>
                 <Input
@@ -273,7 +273,7 @@ export default function Settings() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between px-4 py-2.5">
               <span className="text-sm text-foreground">Contraseña</span>
               <button
                 className="text-sm text-primary hover:underline"
@@ -287,13 +287,13 @@ export default function Settings() {
       </div>
 
       {/* Currency */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <DollarSign className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Moneda</h2>
         </div>
         <div className="divide-y divide-border">
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <span className="text-sm text-foreground">Moneda principal</span>
             <span className="text-sm text-muted-foreground">{displayCurrency}</span>
           </div>
@@ -301,20 +301,20 @@ export default function Settings() {
       </div>
 
       {/* Notifications */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <Bell className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Notificaciones</h2>
         </div>
         <div className="divide-y divide-border">
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex-1 min-w-0 mr-3">
               <Label htmlFor="budget-alerts" className="text-sm font-normal">Alertas de presupuesto</Label>
               <p className="text-xs text-muted-foreground mt-0.5">Aviso al usar el 80% de una categoría</p>
             </div>
             <Switch id="budget-alerts" defaultChecked />
           </div>
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex-1 min-w-0 mr-3">
               <Label htmlFor="payment-reminders" className="text-sm font-normal">Recordatorios de pago</Label>
               <p className="text-xs text-muted-foreground mt-0.5">Antes de fechas de vencimiento</p>
@@ -327,17 +327,17 @@ export default function Settings() {
       {/* Archived Items */}
       <ArchivedItemsSection />
 
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <HelpCircle className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Ayuda</h2>
         </div>
         <div className="divide-y divide-border">
-          <button className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50 transition-colors">
+          <button className="flex items-center justify-between w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors">
             <span className="text-sm text-foreground">Centro de ayuda</span>
             <span className="text-muted-foreground">→</span>
           </button>
-          <button className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50 transition-colors">
+          <button className="flex items-center justify-between w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors">
             <span className="text-sm text-foreground">Términos y condiciones</span>
             <span className="text-muted-foreground">→</span>
           </button>

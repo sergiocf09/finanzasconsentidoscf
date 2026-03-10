@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   CircleHelp,
   Leaf,
+  Settings,
 } from "lucide-react";
 import {
   Sheet,
@@ -229,20 +230,25 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
             </span>
           </div>
           {!isAuthPage && helpContent && (
-            <button
-              onClick={() => setHelpOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              aria-label="Ayuda"
-            >
-              <CircleHelp className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              <Link to="/settings" onClick={() => {}}>
+                <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+              </Link>
+              <button
+                onClick={() => setHelpOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Ayuda"
+              >
+                <CircleHelp className="h-5 w-5" />
+              </button>
+            </div>
           )}
         </div>
       </header>
 
       {/* Help Sheet */}
       <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
-        <SheetContent side="bottom" className="max-h-[72vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="top" className="mt-14 rounded-b-2xl rounded-t-none border-t-0 max-h-[82vh] overflow-y-auto shadow-lg">
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-heading flex items-center gap-2">
               <CircleHelp className="h-4 w-4 text-primary" />

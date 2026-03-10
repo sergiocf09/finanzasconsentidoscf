@@ -29,7 +29,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
   const [step, setStep] = useState(0);
   const [currency, setCurrency] = useState(baseCurrency || "MXN");
   const [accountName, setAccountName] = useState("");
-  const [accountType, setAccountType] = useState("bank");
+  const [accountType, setAccountType] = useState<AccountType>("bank");
   const [accountBalance, setAccountBalance] = useState("");
   const [incomeAmount, setIncomeAmount] = useState("");
   const [incomeDesc, setIncomeDesc] = useState("");

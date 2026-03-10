@@ -1,6 +1,4 @@
 import { BarChart3, TrendingUp, TrendingDown, PieChart } from "lucide-react";
-import { SectionHelp } from "@/components/help/SectionHelp";
-import { helpData } from "@/components/help/sectionHelpData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/formatters";
 

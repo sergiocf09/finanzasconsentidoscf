@@ -137,7 +137,7 @@ export default function Settings() {
         </div>
         <div className="divide-y divide-border">
           {/* Name */}
-          <div className="p-4">
+          <div className="px-4 py-2.5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-foreground">Nombre</span>
               {!isEditingName && (

@@ -64,6 +64,7 @@ export function VoiceButton() {
   const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
+  const [editCurrency, setEditCurrency] = useState("MXN");
 
   // ─── ONE-TAP: selecting type immediately starts recording ────
   const handleTypeSelect = useCallback((type: "expense" | "income" | "transfer") => {

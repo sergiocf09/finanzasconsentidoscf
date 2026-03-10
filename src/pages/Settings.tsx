@@ -301,20 +301,20 @@ export default function Settings() {
       </div>
 
       {/* Notifications */}
-      <div className="rounded-2xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <Bell className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Notificaciones</h2>
         </div>
         <div className="divide-y divide-border">
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex-1 min-w-0 mr-3">
               <Label htmlFor="budget-alerts" className="text-sm font-normal">Alertas de presupuesto</Label>
               <p className="text-xs text-muted-foreground mt-0.5">Aviso al usar el 80% de una categoría</p>
             </div>
             <Switch id="budget-alerts" defaultChecked />
           </div>
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex-1 min-w-0 mr-3">
               <Label htmlFor="payment-reminders" className="text-sm font-normal">Recordatorios de pago</Label>
               <p className="text-xs text-muted-foreground mt-0.5">Antes de fechas de vencimiento</p>

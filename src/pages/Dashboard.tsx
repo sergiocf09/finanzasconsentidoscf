@@ -57,12 +57,9 @@ export default function Dashboard() {
 
       {/* Welcome */}
       <div className="pb-1">
-        <div className="flex items-center gap-1.5">
-          <h1 className="text-lg font-heading font-semibold text-foreground">
-            Hola, {displayName} 👋
-          </h1>
-          <SectionHelp content={helpData.dashboard} />
-        </div>
+        <h1 className="text-lg font-heading font-semibold text-foreground">
+          Hola, {displayName} 👋
+        </h1>
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{capitalizedMonth}</p>
           <FxRateWidget />

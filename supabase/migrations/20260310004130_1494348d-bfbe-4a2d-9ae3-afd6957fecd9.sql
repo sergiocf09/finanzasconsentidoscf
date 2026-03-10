@@ -1,0 +1,2 @@
+ALTER TABLE public.accounts DROP CONSTRAINT accounts_type_check;
+ALTER TABLE public.accounts ADD CONSTRAINT accounts_type_check CHECK (type = ANY (ARRAY['cash','bank','savings','investment','credit_card','payable','mortgage','auto_loan','personal_loan','caucion_bursatil']));

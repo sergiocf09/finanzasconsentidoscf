@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   CircleHelp,
   Leaf,
+  Settings,
 } from "lucide-react";
 import {
   Sheet,

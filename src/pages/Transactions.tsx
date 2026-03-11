@@ -131,11 +131,12 @@ export default function Transactions() {
   // Build unified list
   const txItems: UnifiedItem[] = transactions.map((tx) => {
     const isAdjustment = tx.type === "adjustment_income" || tx.type === "adjustment_expense";
+    const catName = getCategoryName(tx.category_id);
     return {
       id: tx.id,
       date: tx.transaction_date,
       type: tx.type,
-      description: isAdjustment ? "Ajuste de saldo" : (tx.description || getCategoryName(tx.category_id)),
+      description: isAdjustment ? "Ajuste de saldo" : (tx.description || catName),
       amount: tx.amount,
       currency: tx.currency,
       amount_in_base: tx.amount_in_base ?? null,
@@ -144,7 +145,9 @@ export default function Transactions() {
       isRecurring: tx.is_recurring === true,
       secondaryInfo: isAdjustment
         ? `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`
-        : `${getCategoryName(tx.category_id)} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`,
+        : catName && catName !== "Sin categoría"
+          ? `${catName} · ${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`
+          : `${getAccountName(tx.account_id)} · ${formatDate(tx.transaction_date)}`,
     };
   });
 
@@ -173,15 +176,10 @@ export default function Transactions() {
     if (typeFilter === "transfer" && item.type !== "transfer") return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    // Also search by category name
-    const catName = item.source === "tx"
-      ? getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null).toLowerCase()
-      : "";
     return (
       item.description.toLowerCase().includes(q) ||
       item.accountName.toLowerCase().includes(q) ||
-      (item.secondaryInfo || "").toLowerCase().includes(q) ||
-      catName.includes(q)
+      (item.secondaryInfo || "").toLowerCase().includes(q)
     );
   });
 

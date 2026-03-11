@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -9,6 +9,8 @@ import { BudgetSummary } from "@/components/budgets/BudgetSummary";
 import { BudgetBlockCard } from "@/components/budgets/BudgetBlockCard";
 import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail";
 import { BudgetCreationWizard } from "@/components/budgets/BudgetCreationWizard";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";

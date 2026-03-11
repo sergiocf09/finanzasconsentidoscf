@@ -13,6 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -225,8 +232,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           ignoreDuplicates: false,
         });
         if (error) throw error;
+
+        // Recalculate spent from actual transactions
+        await supabase.rpc("recalculate_budget_spent", { p_year: year, p_month: month });
       }
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
       onOpenChange(false);
     } catch (err: any) {
@@ -238,11 +249,72 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const handleMethodSelect = (m: Method) => { setMethod(m); setStep("period"); };
 
-  const handlePeriodNext = async () => {
+  const [existingBudgetDialog, setExistingBudgetDialog] = useState(false);
+  const [existingCount, setExistingCount] = useState(0);
+
+  const proceedAfterPeriod = async () => {
     if (method === "manual") { initManualBudgets(); setStep("configure"); }
     else if (method === "historical") { await fetchHistoricalData(); setStep("configure"); }
     else if (method === "template") { setStep("configure"); }
     else if (method === "smart") { await runSmartAnalysis(); setStep("configure"); }
+  };
+
+  const handlePeriodNext = async () => {
+    if (!user) return;
+    // Check for existing budgets
+    const { count } = await supabase
+      .from("budgets")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .eq("month", month)
+      .eq("is_active", true);
+
+    if ((count ?? 0) > 0) {
+      setExistingCount(count ?? 0);
+      setExistingBudgetDialog(true);
+    } else {
+      await proceedAfterPeriod();
+    }
+  };
+
+  const handleReplaceExisting = async () => {
+    if (!user) return;
+    setExistingBudgetDialog(false);
+    await supabase
+      .from("budgets")
+      .update({ is_active: false })
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .eq("month", month)
+      .eq("is_active", true);
+    await proceedAfterPeriod();
+  };
+
+  const handleCopyAsBase = async () => {
+    if (!user) return;
+    setExistingBudgetDialog(false);
+    const { data: existing } = await supabase
+      .from("budgets")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .eq("month", month)
+      .eq("is_active", true);
+
+    if (existing && existing.length > 0) {
+      const budgets = existing.map((b) => {
+        const cat = expenseCategories.find((c) => c.id === b.category_id);
+        return {
+          category_id: b.category_id || "",
+          name: b.name,
+          bucket: (cat as any)?.bucket || "lifestyle",
+          amount: b.amount,
+        };
+      });
+      setCategoryBudgets(budgets);
+    }
+    setStep("configure");
   };
 
   const renderMethodStep = () => (
@@ -429,31 +501,63 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[calc(100vw-2rem)]">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            {step !== "method" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => {
-                  if (step === "configure") setStep("period");
-                  else if (step === "period") setStep("method");
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            )}
-            <DialogTitle>{stepTitle[step]}</DialogTitle>
-          </div>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              {step !== "method" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => {
+                    if (step === "configure") setStep("period");
+                    else if (step === "period") setStep("method");
+                  }}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <DialogTitle>{stepTitle[step]}</DialogTitle>
+            </div>
+          </DialogHeader>
 
-        {step === "method" && renderMethodStep()}
-        {step === "period" && renderPeriodStep()}
-        {step === "configure" && renderConfigureStep()}
-      </DialogContent>
-    </Dialog>
+          {step === "method" && renderMethodStep()}
+          {step === "period" && renderPeriodStep()}
+          {step === "configure" && renderConfigureStep()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing budget confirmation dialog */}
+      <AlertDialog open={existingBudgetDialog} onOpenChange={setExistingBudgetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ya existe un presupuesto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes {existingCount} categoría(s) presupuestada(s) para {months.find(m => m.value === String(month))?.label} {year}. ¿Qué deseas hacer?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setExistingBudgetDialog(false); onOpenChange(false); }}
+            >
+              Editar el actual
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={handleReplaceExisting}
+            >
+              Reemplazar (desactivar anterior)
+            </Button>
+            <Button onClick={handleCopyAsBase}>
+              Copiar como base y ajustar
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -9,6 +9,8 @@ import { BudgetSummary } from "@/components/budgets/BudgetSummary";
 import { BudgetBlockCard } from "@/components/budgets/BudgetBlockCard";
 import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail";
 import { BudgetCreationWizard } from "@/components/budgets/BudgetCreationWizard";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
@@ -32,6 +34,7 @@ const monthNames = [
 ];
 
 export default function Budgets() {
+  const { user } = useAuth();
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
@@ -49,6 +52,26 @@ export default function Budgets() {
     spent: number;
     category_id: string | null;
   } | null>(null);
+
+  // Previous month budget check for suggestion banner
+  const [prevMonthHasBudgets, setPrevMonthHasBudgets] = useState(false);
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+  useEffect(() => {
+    if (!user) return;
+    const checkPrev = async () => {
+      const { count } = await supabase
+        .from("budgets")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("year", prevYear)
+        .eq("month", prevMonth)
+        .eq("is_active", true);
+      setPrevMonthHasBudgets((count ?? 0) > 0);
+    };
+    checkPrev();
+  }, [user, currentYear, currentMonth, prevYear, prevMonth]);
 
   // Period navigation
   const goNextMonth = () => {
@@ -195,7 +218,22 @@ export default function Budgets() {
           ))}
         </div>
       ) : budgets.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground rounded-2xl bg-card border border-border p-8 animate-fade-in-up">
+      <div className="text-center py-12 text-muted-foreground rounded-2xl bg-card border border-border p-8 animate-fade-in-up">
+          {prevMonthHasBudgets && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-left">
+              <p className="text-sm text-foreground font-medium">
+                Tienes un presupuesto en {monthNames[prevMonth]} {prevYear}. ¿Quieres usarlo como base para {monthNames[currentMonth]}?
+              </p>
+              <Button
+                size="sm"
+                className="mt-3 gap-1.5"
+                onClick={() => setWizardOpen(true)}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Sí, copiar como base
+              </Button>
+            </div>
+          )}
           <Activity className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
           <p className="font-heading font-medium">Sin presupuestos activos</p>
           <p className="text-sm mt-1 mb-4">

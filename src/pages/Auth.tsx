@@ -153,21 +153,20 @@ export default function Auth() {
 
               <CardContent>
                 <TabsContent value="login" className="mt-0">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <CardTitle className="text-lg">Bienvenido de nuevo</CardTitle>
-                    <CardDescription>Tu dinero con calma. Tu vida con sentido.</CardDescription>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Correo electrónico</Label>
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <p className="text-center text-lg font-heading font-semibold text-gold">Bienvenido de nuevo</p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="login-email" className="text-gold font-medium">Correo electrónico</Label>
                       <Input id="login-email" type="email" placeholder="tu@correo.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-password">Contraseña</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="login-password" className="text-gold font-medium">Contraseña</Label>
                       <Input id="login-password" type="password" placeholder="••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-gold-foreground font-semibold" disabled={isSubmitting}>
                       {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando...</>) : "Iniciar sesión"}
                     </Button>
-                    <button type="button" className="w-full text-sm text-primary hover:underline text-center" onClick={() => setShowForgotPassword(true)}>
+                    <button type="button" className="w-full text-sm text-gold/80 hover:text-gold hover:underline text-center" onClick={() => setShowForgotPassword(true)}>
                       ¿Olvidaste tu contraseña?
                     </button>
                   </form>
@@ -175,23 +174,25 @@ export default function Auth() {
 
                 <TabsContent value="register" className="mt-0">
                   <form onSubmit={handleRegister} className="space-y-4">
-                    <CardTitle className="text-lg">Crea tu cuenta</CardTitle>
-                    <CardDescription>Comienza a ordenar tus finanzas hoy.</CardDescription>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-name">Tu nombre</Label>
+                    <div className="text-center">
+                      <p className="text-lg font-heading font-semibold text-gold">Crea tu cuenta</p>
+                      <p className="text-sm text-white/90 mt-1">Comienza a ordenar tus finanzas hoy.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-name" className="text-gold font-medium">Tu nombre</Label>
                       <Input id="register-name" type="text" placeholder="¿Cómo te llamamos?" value={registerName} onChange={(e) => setRegisterName(e.target.value)} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-email">Correo electrónico</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-email" className="text-gold font-medium">Correo electrónico</Label>
                       <Input id="register-email" type="email" placeholder="tu@correo.com" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-password">Contraseña</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-password" className="text-gold font-medium">Contraseña</Label>
                       <Input id="register-password" type="password" placeholder="Mínimo 8 caracteres" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} required />
                       <PasswordRequirements password={registerPassword} />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-confirm">Confirmar contraseña</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-confirm" className="text-gold font-medium">Confirmar contraseña</Label>
                       <Input id="register-confirm" type="password" placeholder="Repite tu contraseña" value={registerConfirmPassword} onChange={(e) => setRegisterConfirmPassword(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-gold-foreground font-semibold" disabled={isSubmitting}>

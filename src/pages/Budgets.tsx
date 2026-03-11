@@ -34,6 +34,7 @@ const monthNames = [
 ];
 
 export default function Budgets() {
+  const { user } = useAuth();
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
@@ -51,6 +52,26 @@ export default function Budgets() {
     spent: number;
     category_id: string | null;
   } | null>(null);
+
+  // Previous month budget check for suggestion banner
+  const [prevMonthHasBudgets, setPrevMonthHasBudgets] = useState(false);
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+  useEffect(() => {
+    if (!user) return;
+    const checkPrev = async () => {
+      const { count } = await supabase
+        .from("budgets")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("year", prevYear)
+        .eq("month", prevMonth)
+        .eq("is_active", true);
+      setPrevMonthHasBudgets((count ?? 0) > 0);
+    };
+    checkPrev();
+  }, [user, currentYear, currentMonth, prevYear, prevMonth]);
 
   // Period navigation
   const goNextMonth = () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Trash2, Check, Tag } from "lucide-react";
+import { Sparkles, Trash2, Check, Tag, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -35,6 +35,8 @@ function findSimilar(userCat: Category, systemCats: Category[]): Category | unde
   });
 }
 
+type ActionType = "unify" | "delete";
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,22 +47,49 @@ interface Props {
 export default function CategoryReviewSheet({ open, onOpenChange, userCategories, systemCategories }: Props) {
   const queryClient = useQueryClient();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [actionTarget, setActionTarget] = useState<{ cat: Category; type: ActionType; systemCat?: Category } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
+  const handleConfirm = async () => {
+    if (!actionTarget) return;
+    setLoading(true);
     try {
-      const { error } = await supabase.from("categories").delete().eq("id", deleteTarget.id);
-      if (error) throw error;
+      if (actionTarget.type === "unify" && actionTarget.systemCat) {
+        // Reassign transactions then delete
+        const { error: updateError } = await supabase
+          .from("transactions")
+          .update({ category_id: actionTarget.systemCat.id })
+          .eq("category_id", actionTarget.cat.id);
+        if (updateError) throw updateError;
+
+        const { error: deleteError } = await supabase
+          .from("categories")
+          .delete()
+          .eq("id", actionTarget.cat.id);
+        if (deleteError) throw deleteError;
+
+        toast.success(`Transacciones reasignadas a "${actionTarget.systemCat.name}" y categoría eliminada`);
+      } else {
+        // Delete only
+        const { error } = await supabase.from("categories").delete().eq("id", actionTarget.cat.id);
+        if (error) throw error;
+        toast.success(`"${actionTarget.cat.name}" eliminada`);
+      }
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success(`"${deleteTarget.name}" eliminada`);
-      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      setActionTarget(null);
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const dismiss = (id: string) => setDismissed(prev => new Set(prev).add(id));
+
+  const confirmMessage = actionTarget?.type === "unify" && actionTarget.systemCat
+    ? `Se reasignarán todas tus transacciones a "${actionTarget.systemCat.name}" y se eliminará tu categoría "${actionTarget.cat.name}". ¿Confirmar?`
+    : `Los movimientos con "${actionTarget?.cat.name}" quedarán sin categoría asignada. ¿Eliminar?`;
 
   return (
     <>
@@ -72,7 +101,7 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
               Revisión de tus categorías
             </SheetTitle>
             <SheetDescription>
-              Compara tus categorías personales con las del sistema y decide qué conservar.
+              Compara tus categorías personales con las del sistema y decide qué hacer con cada una.
             </SheetDescription>
           </SheetHeader>
 
@@ -100,27 +129,30 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
                     </div>
 
                     {similar && !isDismissed ? (
-                      <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 space-y-2">
+                      <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 space-y-2">
                         <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                          ⚠️ Posible duplicado con categoría del sistema: <strong>{similar.name}</strong>
-                          {(similar as any).bucket && ` — bloque: ${bucketLabels[(similar as any).bucket] || (similar as any).bucket}`}
+                          ⚠️ Posible duplicado con: <strong>{similar.name}</strong>
+                          {(similar as any).bucket && ` (bloque: ${bucketLabels[(similar as any).bucket] || (similar as any).bucket})`}
                         </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="destructive" className="h-7 text-xs gap-1" onClick={() => setDeleteTarget(cat)}>
-                            <Trash2 className="h-3 w-3" /> Eliminar la mía
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="default" className="h-7 text-xs gap-1" onClick={() => setActionTarget({ cat, type: "unify", systemCat: similar })}>
+                            <ArrowRightLeft className="h-3 w-3" /> Unificar y eliminar la mía
                           </Button>
                           <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => dismiss(cat.id)}>
                             <Check className="h-3 w-3" /> Conservar separada
                           </Button>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive" onClick={() => setActionTarget({ cat, type: "delete" })}>
+                            <Trash2 className="h-3 w-3" /> Solo eliminar
+                          </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-2 flex items-center justify-between">
+                      <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center justify-between">
                         <p className="text-xs text-green-800 dark:text-green-200">
-                          ✅ {isDismissed ? "Conservada como separada" : "Sin duplicado detectado — categoría única tuya"}
+                          ✅ {isDismissed ? "Conservada como separada" : "Categoría única — no tiene duplicado en el sistema"}
                         </p>
                         {!isDismissed && (
-                          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive" onClick={() => setActionTarget({ cat, type: "delete" })}>
                             <Trash2 className="h-3 w-3" /> Eliminar
                           </Button>
                         )}
@@ -133,22 +165,24 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
           </div>
 
           <p className="text-xs text-muted-foreground pb-2">
-            Las categorías del sistema no se pueden eliminar. Tus transacciones existentes no se verán afectadas al eliminar una categoría personal — solo perderán esa clasificación.
+            Las categorías del sistema son permanentes y visibles para todos los usuarios. La opción "Unificar" es la recomendada cuando hay duplicados — mantiene tus transacciones correctamente clasificadas.
           </p>
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!actionTarget} onOpenChange={(open) => !open && setActionTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar "{deleteTarget?.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Los movimientos con esta categoría quedarán sin categoría asignada.
-            </AlertDialogDescription>
+            <AlertDialogTitle>
+              {actionTarget?.type === "unify" ? "¿Unificar y eliminar?" : `¿Eliminar "${actionTarget?.cat.name}"?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{confirmMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+            <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm} disabled={loading}>
+              {loading ? "Procesando…" : "Confirmar"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

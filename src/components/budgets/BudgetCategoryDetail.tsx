@@ -167,7 +167,7 @@ export function BudgetCategoryDetail({
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Gastado</span>
               <span className={cn("text-sm font-semibold", textColorClass)}>
-                {fmt(budget.spent)}
+                {fmt(spent)}
               </span>
             </div>
             <div className="flex justify-between items-center">

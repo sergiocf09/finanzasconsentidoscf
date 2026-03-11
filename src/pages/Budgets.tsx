@@ -46,6 +46,37 @@ export default function Budgets() {
   const { categories } = useCategories();
   const { signals, recommendations } = useFinancialIntelligence();
 
+  // Fetch transactions for the current budget period
+  const periodStart = useMemo(() => new Date(currentYear, currentMonth - 1, 1), [currentYear, currentMonth]);
+  const periodEnd = useMemo(() => endOfMonth(periodStart), [periodStart]);
+  const { transactions: monthTransactions } = useTransactions({
+    startDate: periodStart,
+    endDate: periodEnd,
+    enabled: !isLoading && budgets.length > 0,
+  });
+
+  // Compute unbudgeted expenses
+  const budgetedCategoryIds = useMemo(
+    () => new Set(budgets.filter(b => b.category_id).map(b => b.category_id!)),
+    [budgets]
+  );
+
+  const unbudgetedExpenses = useMemo(() => {
+    const expenseTxs = monthTransactions.filter(tx => tx.type === "expense" && tx.category_id && !budgetedCategoryIds.has(tx.category_id));
+    const byCat: Record<string, { name: string; total: number }> = {};
+    expenseTxs.forEach(tx => {
+      const catId = tx.category_id!;
+      if (!byCat[catId]) {
+        const cat = categories.find(c => c.id === catId);
+        byCat[catId] = { name: cat?.name || "Sin categoría", total: 0 };
+      }
+      byCat[catId].total += (tx.amount_in_base ?? tx.amount);
+    });
+    return Object.entries(byCat).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.total - a.total);
+  }, [monthTransactions, budgetedCategoryIds, categories]);
+
+  const unbudgetedTotal = unbudgetedExpenses.reduce((s, e) => s + e.total, 0);
+  const adjustedTotalSpent = totalSpent + unbudgetedTotal;
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detailBudget, setDetailBudget] = useState<{
     id: string;

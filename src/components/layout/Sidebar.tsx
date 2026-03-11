@@ -89,17 +89,5 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         </ul>
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-sidebar-border p-3">
-        <Link
-          to="/settings"
-          onClick={handleClick}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors"
-        >
-          <Settings className="h-5 w-5" />
-          Configuración
-        </Link>
-      </div>
-    </aside>
   );
 }

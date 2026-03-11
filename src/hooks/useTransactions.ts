@@ -216,7 +216,7 @@ export function useTransactionsPaginated(options?: {
       format(endDate, 'yyyy-MM-dd'),
       typeFilter,
       sortAsc,
-      searchQuery,
+      // searchQuery excluded — filtering is client-side to support category name search
     ],
     queryFn: async ({ pageParam }) => {
       let query = supabase
@@ -231,11 +231,6 @@ export function useTransactionsPaginated(options?: {
       // Type filter at DB level
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
-
-      // Search filter at DB level for description
-      if (searchQuery) {
-        query = query.or(`description.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
-      }
 
       // Cursor-based pagination: use offset from pageParam
       if (pageParam > 0) {
@@ -259,13 +254,14 @@ export function useTransactionsPaginated(options?: {
   // Flatten all pages into a single array
   const allTransactions = infiniteQuery.data?.pages.flat() ?? [];
 
-  // Client-side search filter for category names (DB doesn't know category names)
+  // Client-side search filter including category names
   const filtered = searchQuery
     ? allTransactions.filter(tx => {
-        const descMatch = (tx.description || "").toLowerCase().includes(searchQuery);
-        const notesMatch = (tx.notes || "").toLowerCase().includes(searchQuery);
+        const q = searchQuery;
+        const descMatch = (tx.description || "").toLowerCase().includes(q);
+        const notesMatch = (tx.notes || "").toLowerCase().includes(q);
         const categoryName = categories.find(c => c.id === tx.category_id)?.name || "";
-        const categoryMatch = categoryName.toLowerCase().includes(searchQuery);
+        const categoryMatch = categoryName.toLowerCase().includes(q);
         return descMatch || notesMatch || categoryMatch;
       })
     : allTransactions;

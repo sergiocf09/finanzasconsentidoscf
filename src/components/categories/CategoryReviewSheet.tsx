@@ -132,18 +132,18 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
     setLoading(true);
     try {
       if (actionTarget.type === "unify" && actionTarget.systemCat) {
-        await reassignTransactions(actionTarget.cat.id, actionTarget.systemCat.id);
+        await reassignAllReferences(actionTarget.cat.id, actionTarget.systemCat.id);
         const { error } = await supabase.from("categories").delete().eq("id", actionTarget.cat.id);
         if (error) throw error;
         toast.success(`Transacciones reasignadas a "${actionTarget.systemCat.name}" y categoría eliminada`);
       } else if (actionTarget.type === "reassign" && actionTarget.systemCat) {
-        await reassignTransactions(actionTarget.cat.id, actionTarget.systemCat.id);
+        await reassignAllReferences(actionTarget.cat.id, actionTarget.systemCat.id);
         const { error } = await supabase.from("categories").delete().eq("id", actionTarget.cat.id);
         if (error) throw error;
         toast.success(`Transacciones reasignadas a "${actionTarget.systemCat.name}" y categoría eliminada`);
       } else {
-        // Delete only — reassign transactions to null first
-        await reassignTransactions(actionTarget.cat.id, null);
+        // Delete only — reassign all references to null first
+        await reassignAllReferences(actionTarget.cat.id, null);
         const { error } = await supabase.from("categories").delete().eq("id", actionTarget.cat.id);
         if (error) throw error;
         toast.success(`"${actionTarget.cat.name}" eliminada`);

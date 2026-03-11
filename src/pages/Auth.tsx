@@ -100,15 +100,15 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--gradient-hero)" }}>
       {/* Hero section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm mb-6 border border-white/15">
+      <div className="flex flex-col items-center justify-center px-6 pt-14 pb-6 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm mb-5 border border-white/15">
           <Leaf className="h-7 w-7 text-gold" />
         </div>
         
         <h1 className="font-heading text-3xl font-bold text-white leading-tight mb-1">
           Tu dinero con calma.
         </h1>
-        <p className="text-2xl font-heading font-semibold text-gold leading-tight mb-4">
+        <p className="text-2xl font-heading font-semibold text-gold leading-tight mb-3">
           Tu vida con sentido.
         </p>
         <p className="text-sm text-white/70 max-w-xs">
@@ -117,8 +117,8 @@ export default function Auth() {
       </div>
 
       {/* Form card */}
-      <div className="px-4 pb-6">
-        <Card className="w-full max-w-md mx-auto border-0 shadow-2xl bg-card/98 backdrop-blur-sm rounded-2xl">
+      <div className="flex-1 px-4 pb-6">
+        <Card className="w-full max-w-md mx-auto border-0 shadow-2xl bg-white/10 backdrop-blur-md rounded-2xl border border-white/15">
           {showForgotPassword ? (
             <>
               <CardHeader className="pb-3">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Tag, DollarSign, Shield, Sparkles, TrendingUp } from "lucide-react";
+import CategoryReviewSheet from "@/components/categories/CategoryReviewSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCategories, Category } from "@/hooks/useCategories";
@@ -43,6 +44,10 @@ export default function Categories() {
   const [formOpen, setFormOpen] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const userCategories = categories.filter(c => !c.is_system);
+  const systemCategories = categories.filter(c => c.is_system);
 
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("expense");
@@ -124,13 +129,21 @@ export default function Categories() {
     <div className="pb-4">
       {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-background pb-2 pt-2 -mx-1 px-1 border-b border-border">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-heading font-semibold text-foreground">Categorías</h1>
-          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={openCreate}>
-            <Plus className="h-3.5 w-3.5" />
-            Nueva categoría
-          </Button>
-        </div>
+         <div className="flex items-center justify-between">
+           <h1 className="text-lg font-heading font-semibold text-foreground">Categorías</h1>
+           <div className="flex gap-1.5">
+             {userCategories.length > 0 && (
+               <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs" onClick={() => setReviewOpen(true)}>
+                 <Sparkles className="h-3.5 w-3.5" />
+                 Revisar mis categorías
+               </Button>
+             )}
+             <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={openCreate}>
+               <Plus className="h-3.5 w-3.5" />
+               Nueva
+             </Button>
+           </div>
+         </div>
       </div>
 
       {isLoading ? (
@@ -270,6 +283,13 @@ export default function Categories() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CategoryReviewSheet
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        userCategories={userCategories}
+        systemCategories={systemCategories}
+      />
     </div>
   );
 }

@@ -218,7 +218,22 @@ export default function Budgets() {
           ))}
         </div>
       ) : budgets.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground rounded-2xl bg-card border border-border p-8 animate-fade-in-up">
+      <div className="text-center py-12 text-muted-foreground rounded-2xl bg-card border border-border p-8 animate-fade-in-up">
+          {prevMonthHasBudgets && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-left">
+              <p className="text-sm text-foreground font-medium">
+                Tienes un presupuesto en {monthNames[prevMonth]} {prevYear}. ¿Quieres usarlo como base para {monthNames[currentMonth]}?
+              </p>
+              <Button
+                size="sm"
+                className="mt-3 gap-1.5"
+                onClick={() => setWizardOpen(true)}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Sí, copiar como base
+              </Button>
+            </div>
+          )}
           <Activity className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
           <p className="font-heading font-medium">Sin presupuestos activos</p>
           <p className="text-sm mt-1 mb-4">

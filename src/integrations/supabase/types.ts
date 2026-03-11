@@ -1057,6 +1057,10 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
+      recalculate_budget_spent: {
+        Args: { p_month: number; p_year: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

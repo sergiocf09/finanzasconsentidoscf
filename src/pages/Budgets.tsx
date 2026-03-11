@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
 import { useDiagnostic } from "@/hooks/useDiagnostic";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
+import { useTransactions } from "@/hooks/useTransactions";
 import { BudgetSummary } from "@/components/budgets/BudgetSummary";
 import { BudgetBlockCard } from "@/components/budgets/BudgetBlockCard";
 import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail";
@@ -14,6 +15,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
+import { startOfMonth, endOfMonth } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Select,
   SelectContent,

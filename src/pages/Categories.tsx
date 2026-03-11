@@ -283,6 +283,13 @@ export default function Categories() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CategoryReviewSheet
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        userCategories={userCategories}
+        systemCategories={systemCategories}
+      />
     </div>
   );
 }

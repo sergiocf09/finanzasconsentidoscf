@@ -220,7 +220,10 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
         period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
       }));
       if (inserts.length > 0) {
-        const { error } = await supabase.from("budgets").insert(inserts);
+        const { error } = await supabase.from("budgets").upsert(inserts, {
+          onConflict: "user_id,category_id,period,month,year",
+          ignoreDuplicates: false,
+        });
         if (error) throw error;
       }
       queryClient.invalidateQueries({ queryKey: ["budgets"] });

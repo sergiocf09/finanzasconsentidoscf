@@ -43,7 +43,7 @@ const HELP_CONTENT: Record<string, HelpEntry> = {
     description: "Tu punto de partida cada día — un vistazo honesto y claro de cómo están tus finanzas en este momento",
     actions: [
       "Ver el flujo de ingresos y gastos del mes en curso",
-      "Revisar cómo se distribuye tu dinero en los 3 bloques financieros",
+      "Revisar cómo se distribuyen tus recursos entre activos y pasivos",
       "Detectar señales de alerta antes de que se conviertan en problema",
       "Registrar un ingreso, gasto o transferencia con el botón + debajo del resumen del periodo",
       "Usar el micrófono 🎙️ flotante para registrar cualquier movimiento con tu voz desde cualquier pantalla"
@@ -69,7 +69,8 @@ const HELP_CONTENT: Record<string, HelpEntry> = {
     description: "Todas tus cuentas en un solo lugar — para que siempre sepas con qué cuentas y no haya sorpresas",
     actions: [
       "Agregar cuentas bancarias, tarjetas de crédito, débito o efectivo",
-      "Ver el saldo actual de cada cuenta en tiempo real",
+      "Ver el saldo de cada cuenta actualizado con cada movimiento que registras",
+      "Ajustar el balance manualmente cuando necesites reflejar tu saldo real, aunque no hayas registrado todos los movimientos",
       "Consultar el historial de movimientos de una cuenta específica",
       "Ocultar montos si estás en un lugar público",
       "Archivar cuentas que ya no usas sin perder su historial"

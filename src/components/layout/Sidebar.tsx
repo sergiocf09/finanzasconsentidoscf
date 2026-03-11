@@ -9,7 +9,6 @@ import {
   Repeat,
   Target,
   BookOpen,
-  Settings,
   Leaf,
   Tag,
   Gauge,
@@ -19,10 +18,10 @@ import {
 const navigation = [
   { name: "Inicio", href: "/", icon: LayoutDashboard },
   { name: "Movimientos", href: "/transactions", icon: Receipt },
-  { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
   { name: "Cuentas", href: "/accounts", icon: Wallet },
-  { name: "Categorías", href: "/categories", icon: Tag },
+  { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
   { name: "Deudas", href: "/debts", icon: CreditCard },
+  { name: "Categorías", href: "/categories", icon: Tag },
   { name: "Pagos Recurrentes", href: "/recurring", icon: Repeat },
   { name: "Construcción", href: "/construction", icon: Target },
   { name: "Dashboard", href: "/financial-dashboard", icon: Gauge },
@@ -89,18 +88,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           })}
         </ul>
       </nav>
-
-      {/* Footer */}
-      <div className="border-t border-sidebar-border p-3">
-        <Link
-          to="/settings"
-          onClick={handleClick}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors"
-        >
-          <Settings className="h-5 w-5" />
-          Configuración
-        </Link>
-      </div>
     </aside>
   );
 }

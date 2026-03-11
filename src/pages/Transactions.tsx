@@ -106,6 +106,7 @@ export default function Transactions() {
     typeFilter: typeFilter === "transfer" ? "all" : typeFilter,
     searchQuery,
     sortAsc,
+    categories: categories.map(c => ({ id: c.id, name: c.name })),
   });
   const { transfers, isLoading: transfersLoading, totalTransferAmount, deleteTransfer } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();

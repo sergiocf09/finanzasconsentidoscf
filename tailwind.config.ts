@@ -69,6 +69,12 @@ export default {
           warning: "hsl(var(--status-warning))",
           danger: "hsl(var(--status-danger))",
         },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
+        "header-bg": "hsl(var(--header-bg))",
+        "header-foreground": "hsl(var(--header-foreground))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

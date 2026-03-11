@@ -242,11 +242,72 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const handleMethodSelect = (m: Method) => { setMethod(m); setStep("period"); };
 
-  const handlePeriodNext = async () => {
+  const [existingBudgetDialog, setExistingBudgetDialog] = useState(false);
+  const [existingCount, setExistingCount] = useState(0);
+
+  const proceedAfterPeriod = async () => {
     if (method === "manual") { initManualBudgets(); setStep("configure"); }
     else if (method === "historical") { await fetchHistoricalData(); setStep("configure"); }
     else if (method === "template") { setStep("configure"); }
     else if (method === "smart") { await runSmartAnalysis(); setStep("configure"); }
+  };
+
+  const handlePeriodNext = async () => {
+    if (!user) return;
+    // Check for existing budgets
+    const { count } = await supabase
+      .from("budgets")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .eq("month", month)
+      .eq("is_active", true);
+
+    if ((count ?? 0) > 0) {
+      setExistingCount(count ?? 0);
+      setExistingBudgetDialog(true);
+    } else {
+      await proceedAfterPeriod();
+    }
+  };
+
+  const handleReplaceExisting = async () => {
+    if (!user) return;
+    setExistingBudgetDialog(false);
+    await supabase
+      .from("budgets")
+      .update({ is_active: false })
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .eq("month", month)
+      .eq("is_active", true);
+    await proceedAfterPeriod();
+  };
+
+  const handleCopyAsBase = async () => {
+    if (!user) return;
+    setExistingBudgetDialog(false);
+    const { data: existing } = await supabase
+      .from("budgets")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("year", year)
+      .eq("month", month)
+      .eq("is_active", true);
+
+    if (existing && existing.length > 0) {
+      const budgets = existing.map((b) => {
+        const cat = expenseCategories.find((c) => c.id === b.category_id);
+        return {
+          category_id: b.category_id || "",
+          name: b.name,
+          bucket: (cat as any)?.bucket || "lifestyle",
+          amount: b.amount,
+        };
+      });
+      setCategoryBudgets(budgets);
+    }
+    setStep("configure");
   };
 
   const renderMethodStep = () => (

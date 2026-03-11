@@ -173,10 +173,15 @@ export default function Transactions() {
     if (typeFilter === "transfer" && item.type !== "transfer") return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    // Also search by category name
+    const catName = item.source === "tx"
+      ? getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null).toLowerCase()
+      : "";
     return (
       item.description.toLowerCase().includes(q) ||
       item.accountName.toLowerCase().includes(q) ||
-      (item.secondaryInfo || "").toLowerCase().includes(q)
+      (item.secondaryInfo || "").toLowerCase().includes(q) ||
+      catName.includes(q)
     );
   });
 

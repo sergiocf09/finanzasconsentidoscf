@@ -51,10 +51,10 @@ export function BudgetSummary({ totalBudgeted, totalSpent, currency = "MXN" }: B
         />
       </div>
       {remaining > 0 && (
-        <p className="text-xs font-bold text-primary-foreground mt-2">Te quedan {fmt(remaining)} este mes</p>
+        <p className="text-xs font-bold text-white mt-2">Te quedan {fmt(remaining)} este mes</p>
       )}
       {remaining < 0 && (
-        <p className="text-xs font-bold text-primary-foreground mt-2">Excedido por {fmt(Math.abs(remaining))}</p>
+        <p className="text-xs font-bold text-white mt-2 bg-destructive/40 rounded-lg px-2 py-1 inline-block">Excedido por {fmt(Math.abs(remaining))}</p>
       )}
     </div>
   );

@@ -44,6 +44,10 @@ export default function Categories() {
   const [formOpen, setFormOpen] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const userCategories = categories.filter(c => !c.is_system);
+  const systemCategories = categories.filter(c => c.is_system);
 
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("expense");

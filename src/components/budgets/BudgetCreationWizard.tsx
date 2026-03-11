@@ -225,8 +225,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           ignoreDuplicates: false,
         });
         if (error) throw error;
+
+        // Recalculate spent from actual transactions
+        await supabase.rpc("recalculate_budget_spent", { p_year: year, p_month: month });
       }
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
       onOpenChange(false);
     } catch (err: any) {

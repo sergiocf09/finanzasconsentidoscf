@@ -198,6 +198,7 @@ export function useTransactionsPaginated(options?: {
   typeFilter?: string;
   searchQuery?: string;
   sortAsc?: boolean;
+  categories?: { id: string; name: string }[];
 }) {
   const { user } = useAuth();
   const startDate = options?.startDate ?? startOfMonth(new Date());
@@ -205,6 +206,7 @@ export function useTransactionsPaginated(options?: {
   const typeFilter = options?.typeFilter ?? "all";
   const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
   const sortAsc = options?.sortAsc ?? false;
+  const categories = options?.categories ?? [];
 
   const infiniteQuery = useInfiniteQuery({
     queryKey: [
@@ -214,7 +216,7 @@ export function useTransactionsPaginated(options?: {
       format(endDate, 'yyyy-MM-dd'),
       typeFilter,
       sortAsc,
-      // Don't include searchQuery in key — we filter client-side for responsiveness
+      searchQuery,
     ],
     queryFn: async ({ pageParam }) => {
       let query = supabase
@@ -229,6 +231,11 @@ export function useTransactionsPaginated(options?: {
       // Type filter at DB level
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
+
+      // Search filter at DB level for description
+      if (searchQuery) {
+        query = query.or(`description.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`);
+      }
 
       // Cursor-based pagination: use offset from pageParam
       if (pageParam > 0) {
@@ -252,12 +259,15 @@ export function useTransactionsPaginated(options?: {
   // Flatten all pages into a single array
   const allTransactions = infiniteQuery.data?.pages.flat() ?? [];
 
-  // Client-side search filter for instant responsiveness
+  // Client-side search filter for category names (DB doesn't know category names)
   const filtered = searchQuery
-    ? allTransactions.filter(tx =>
-        (tx.description || "").toLowerCase().includes(searchQuery) ||
-        (tx.notes || "").toLowerCase().includes(searchQuery)
-      )
+    ? allTransactions.filter(tx => {
+        const descMatch = (tx.description || "").toLowerCase().includes(searchQuery);
+        const notesMatch = (tx.notes || "").toLowerCase().includes(searchQuery);
+        const categoryName = categories.find(c => c.id === tx.category_id)?.name || "";
+        const categoryMatch = categoryName.toLowerCase().includes(searchQuery);
+        return descMatch || notesMatch || categoryMatch;
+      })
     : allTransactions;
 
   return {

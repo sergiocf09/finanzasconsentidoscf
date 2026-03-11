@@ -93,6 +93,10 @@ export default function Transactions() {
 
   // Totals query (lightweight, full period)
   const { totals, deleteTransaction } = useTransactions({ startDate, endDate });
+  const { transfers, isLoading: transfersLoading, totalTransferAmount, deleteTransfer } = useTransfers(undefined, { startDate, endDate });
+  const { categories } = useCategories();
+  const { accounts } = useAccounts();
+
   // Paginated query for the list
   const {
     transactions,
@@ -106,10 +110,8 @@ export default function Transactions() {
     typeFilter: typeFilter === "transfer" ? "all" : typeFilter,
     searchQuery,
     sortAsc,
+    categories: categories.map(c => ({ id: c.id, name: c.name })),
   });
-  const { transfers, isLoading: transfersLoading, totalTransferAmount, deleteTransfer } = useTransfers(undefined, { startDate, endDate });
-  const { categories } = useCategories();
-  const { accounts } = useAccounts();
 
   // Sync type filter from URL params
   useEffect(() => {

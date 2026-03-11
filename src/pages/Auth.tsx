@@ -100,15 +100,15 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--gradient-hero)" }}>
       {/* Hero section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm mb-6 border border-white/15">
+      <div className="flex flex-col items-center justify-center px-6 pt-14 pb-6 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm mb-5 border border-white/15">
           <Leaf className="h-7 w-7 text-gold" />
         </div>
         
         <h1 className="font-heading text-3xl font-bold text-white leading-tight mb-1">
           Tu dinero con calma.
         </h1>
-        <p className="text-2xl font-heading font-semibold text-gold leading-tight mb-4">
+        <p className="text-2xl font-heading font-semibold text-gold leading-tight mb-3">
           Tu vida con sentido.
         </p>
         <p className="text-sm text-white/70 max-w-xs">
@@ -117,26 +117,26 @@ export default function Auth() {
       </div>
 
       {/* Form card */}
-      <div className="px-4 pb-6">
-        <Card className="w-full max-w-md mx-auto border-0 shadow-2xl bg-card/98 backdrop-blur-sm rounded-2xl">
+      <div className="flex-1 px-4 pb-6">
+        <Card className="w-full max-w-md mx-auto border-0 shadow-2xl bg-white/10 backdrop-blur-md rounded-2xl border border-white/15">
           {showForgotPassword ? (
             <>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Recuperar contraseña</CardTitle>
-                <CardDescription>
+                <p className="text-lg font-heading font-semibold text-gold text-center">Recuperar contraseña</p>
+                <p className="text-sm text-white/80 text-center">
                   Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
-                </CardDescription>
+                </p>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleForgotPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Correo electrónico</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="forgot-email" className="text-gold font-medium">Correo electrónico</Label>
                     <Input id="forgot-email" type="email" placeholder="tu@correo.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                   </div>
                   <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-gold-foreground" disabled={isSendingReset}>
                     {isSendingReset ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</>) : "Enviar enlace"}
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full" onClick={() => setShowForgotPassword(false)}>
+                  <Button type="button" variant="ghost" className="w-full text-white/70 hover:text-white" onClick={() => setShowForgotPassword(false)}>
                     Volver a iniciar sesión
                   </Button>
                 </form>
@@ -153,21 +153,20 @@ export default function Auth() {
 
               <CardContent>
                 <TabsContent value="login" className="mt-0">
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <CardTitle className="text-lg">Bienvenido de nuevo</CardTitle>
-                    <CardDescription>Tu dinero con calma. Tu vida con sentido.</CardDescription>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Correo electrónico</Label>
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <p className="text-center text-lg font-heading font-semibold text-gold">Bienvenido de nuevo</p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="login-email" className="text-gold font-medium">Correo electrónico</Label>
                       <Input id="login-email" type="email" placeholder="tu@correo.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-password">Contraseña</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="login-password" className="text-gold font-medium">Contraseña</Label>
                       <Input id="login-password" type="password" placeholder="••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-gold-foreground font-semibold" disabled={isSubmitting}>
                       {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando...</>) : "Iniciar sesión"}
                     </Button>
-                    <button type="button" className="w-full text-sm text-primary hover:underline text-center" onClick={() => setShowForgotPassword(true)}>
+                    <button type="button" className="w-full text-sm text-gold/80 hover:text-gold hover:underline text-center" onClick={() => setShowForgotPassword(true)}>
                       ¿Olvidaste tu contraseña?
                     </button>
                   </form>
@@ -175,23 +174,25 @@ export default function Auth() {
 
                 <TabsContent value="register" className="mt-0">
                   <form onSubmit={handleRegister} className="space-y-4">
-                    <CardTitle className="text-lg">Crea tu cuenta</CardTitle>
-                    <CardDescription>Comienza a ordenar tus finanzas hoy.</CardDescription>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-name">Tu nombre</Label>
+                    <div className="text-center">
+                      <p className="text-lg font-heading font-semibold text-gold">Crea tu cuenta</p>
+                      <p className="text-sm text-white/90 mt-1">Comienza a ordenar tus finanzas hoy.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-name" className="text-gold font-medium">Tu nombre</Label>
                       <Input id="register-name" type="text" placeholder="¿Cómo te llamamos?" value={registerName} onChange={(e) => setRegisterName(e.target.value)} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-email">Correo electrónico</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-email" className="text-gold font-medium">Correo electrónico</Label>
                       <Input id="register-email" type="email" placeholder="tu@correo.com" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} required />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-password">Contraseña</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-password" className="text-gold font-medium">Contraseña</Label>
                       <Input id="register-password" type="password" placeholder="Mínimo 8 caracteres" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} required />
                       <PasswordRequirements password={registerPassword} />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="register-confirm">Confirmar contraseña</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="register-confirm" className="text-gold font-medium">Confirmar contraseña</Label>
                       <Input id="register-confirm" type="password" placeholder="Repite tu contraseña" value={registerConfirmPassword} onChange={(e) => setRegisterConfirmPassword(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-gold-foreground font-semibold" disabled={isSubmitting}>

@@ -122,21 +122,21 @@ export default function Auth() {
           {showForgotPassword ? (
             <>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Recuperar contraseña</CardTitle>
-                <CardDescription>
+                <p className="text-lg font-heading font-semibold text-gold text-center">Recuperar contraseña</p>
+                <p className="text-sm text-white/80 text-center">
                   Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
-                </CardDescription>
+                </p>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleForgotPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Correo electrónico</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="forgot-email" className="text-gold font-medium">Correo electrónico</Label>
                     <Input id="forgot-email" type="email" placeholder="tu@correo.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
                   </div>
                   <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-gold-foreground" disabled={isSendingReset}>
                     {isSendingReset ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</>) : "Enviar enlace"}
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full" onClick={() => setShowForgotPassword(false)}>
+                  <Button type="button" variant="ghost" className="w-full text-white/70 hover:text-white" onClick={() => setShowForgotPassword(false)}>
                     Volver a iniciar sesión
                   </Button>
                 </form>

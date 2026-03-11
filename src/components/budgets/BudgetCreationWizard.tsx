@@ -494,31 +494,63 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[calc(100vw-2rem)]">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            {step !== "method" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => {
-                  if (step === "configure") setStep("period");
-                  else if (step === "period") setStep("method");
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            )}
-            <DialogTitle>{stepTitle[step]}</DialogTitle>
-          </div>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              {step !== "method" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => {
+                    if (step === "configure") setStep("period");
+                    else if (step === "period") setStep("method");
+                  }}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <DialogTitle>{stepTitle[step]}</DialogTitle>
+            </div>
+          </DialogHeader>
 
-        {step === "method" && renderMethodStep()}
-        {step === "period" && renderPeriodStep()}
-        {step === "configure" && renderConfigureStep()}
-      </DialogContent>
-    </Dialog>
+          {step === "method" && renderMethodStep()}
+          {step === "period" && renderPeriodStep()}
+          {step === "configure" && renderConfigureStep()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing budget confirmation dialog */}
+      <AlertDialog open={existingBudgetDialog} onOpenChange={setExistingBudgetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ya existe un presupuesto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes {existingCount} categoría(s) presupuestada(s) para {months.find(m => m.value === String(month))?.label} {year}. ¿Qué deseas hacer?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setExistingBudgetDialog(false); onOpenChange(false); }}
+            >
+              Editar el actual
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={handleReplaceExisting}
+            >
+              Reemplazar (desactivar anterior)
+            </Button>
+            <Button onClick={handleCopyAsBase}>
+              Copiar como base y ajustar
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

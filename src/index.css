@@ -133,6 +133,11 @@ body {
     --input: 220 15% 22%;
     --ring: 150 30% 55%;
 
+    --gold: 38 55% 55%;
+    --gold-foreground: 220 15% 10%;
+    --header-bg: 150 20% 18%;
+    --header-foreground: 40 20% 88%;
+
     --income: 150 40% 50%;
     --expense: 0 50% 50%;
     --transfer: 210 40% 55%;

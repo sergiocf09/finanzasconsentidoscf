@@ -69,8 +69,8 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
     return orderDiff !== 0 ? orderDiff : a.name.localeCompare(b.name);
   });
 
-  const reassignTransactions = async (userCatId: string, newCategoryId: string | null) => {
-    // Fetch all transactions with this category
+  const reassignAllReferences = async (userCatId: string, newCategoryId: string | null) => {
+    // 1. Reassign transactions using atomic_update_transaction RPC
     const { data: txs, error: fetchError } = await supabase
       .from("transactions")
       .select("*")
@@ -78,7 +78,6 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
 
     if (fetchError) throw fetchError;
 
-    // Reassign each using atomic_update_transaction RPC
     for (const tx of txs ?? []) {
       const { error } = await supabase.rpc("atomic_update_transaction", {
         p_old_id: tx.id,
@@ -98,6 +97,34 @@ export default function CategoryReviewSheet({ open, onOpenChange, userCategories
       });
       if (error) throw error;
     }
+
+    // 2. Reassign recurring_payments
+    const { error: rpError } = await supabase
+      .from("recurring_payments")
+      .update({ category_id: newCategoryId })
+      .eq("category_id", userCatId);
+    if (rpError) throw rpError;
+
+    // 3. Reassign budgets
+    const { error: budgetError } = await supabase
+      .from("budgets")
+      .update({ category_id: newCategoryId })
+      .eq("category_id", userCatId);
+    if (budgetError) throw budgetError;
+
+    // 4. Reassign budget_lines
+    const { error: blError } = await supabase
+      .from("budget_lines")
+      .update({ category_id: newCategoryId })
+      .eq("category_id", userCatId);
+    if (blError) throw blError;
+
+    // 5. Reassign voice_rules
+    const { error: vrError } = await supabase
+      .from("voice_rules")
+      .update({ category_id: newCategoryId })
+      .eq("category_id", userCatId);
+    if (vrError) throw vrError;
   };
 
   const handleConfirm = async () => {

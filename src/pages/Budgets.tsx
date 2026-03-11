@@ -190,7 +190,33 @@ export default function Budgets() {
       {isLoading ? (
         <Skeleton className="h-28 rounded-2xl" />
       ) : (
-        <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={totalSpent} />
+        <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={adjustedTotalSpent} />
+      )}
+
+      {/* Unbudgeted expenses alert */}
+      {!isLoading && unbudgetedExpenses.length > 0 && budgets.length > 0 && (
+        <div className="rounded-xl border border-[hsl(var(--block-lifestyle)/0.3)] bg-[hsl(var(--block-lifestyle)/0.06)] p-4 space-y-2 animate-fade-in-up">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-[hsl(var(--block-lifestyle))] shrink-0" />
+            <h3 className="text-sm font-heading font-semibold text-foreground">Gastos sin presupuesto</h3>
+          </div>
+          <div className="space-y-1.5">
+            {unbudgetedExpenses.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-lg px-3 py-2 text-xs bg-[hsl(var(--block-lifestyle)/0.08)]"
+              >
+                <span className="font-medium truncate">{item.name}</span>
+                <span className="text-foreground font-bold tabular-nums shrink-0">
+                  {formatCurrency(item.total)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Estos gastos ({formatCurrency(unbudgetedTotal)}) están incluidos en el total pero no tienen presupuesto asignado.
+          </p>
+        </div>
       )}
 
       {/* Alert Banner for budgets over threshold */}

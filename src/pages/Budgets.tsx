@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
 import { useDiagnostic } from "@/hooks/useDiagnostic";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
+import { useTransactions } from "@/hooks/useTransactions";
 import { BudgetSummary } from "@/components/budgets/BudgetSummary";
 import { BudgetBlockCard } from "@/components/budgets/BudgetBlockCard";
 import { BudgetCategoryDetail } from "@/components/budgets/BudgetCategoryDetail";
@@ -14,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
+import { startOfMonth, endOfMonth } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -44,6 +46,37 @@ export default function Budgets() {
   const { categories } = useCategories();
   const { signals, recommendations } = useFinancialIntelligence();
 
+  // Fetch transactions for the current budget period
+  const periodStart = useMemo(() => new Date(currentYear, currentMonth - 1, 1), [currentYear, currentMonth]);
+  const periodEnd = useMemo(() => endOfMonth(periodStart), [periodStart]);
+  const { transactions: monthTransactions } = useTransactions({
+    startDate: periodStart,
+    endDate: periodEnd,
+    enabled: !isLoading && budgets.length > 0,
+  });
+
+  // Compute unbudgeted expenses
+  const budgetedCategoryIds = useMemo(
+    () => new Set(budgets.filter(b => b.category_id).map(b => b.category_id!)),
+    [budgets]
+  );
+
+  const unbudgetedExpenses = useMemo(() => {
+    const expenseTxs = monthTransactions.filter(tx => tx.type === "expense" && tx.category_id && !budgetedCategoryIds.has(tx.category_id));
+    const byCat: Record<string, { name: string; total: number }> = {};
+    expenseTxs.forEach(tx => {
+      const catId = tx.category_id!;
+      if (!byCat[catId]) {
+        const cat = categories.find(c => c.id === catId);
+        byCat[catId] = { name: cat?.name || "Sin categoría", total: 0 };
+      }
+      byCat[catId].total += (tx.amount_in_base ?? tx.amount);
+    });
+    return Object.entries(byCat).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.total - a.total);
+  }, [monthTransactions, budgetedCategoryIds, categories]);
+
+  const unbudgetedTotal = unbudgetedExpenses.reduce((s, e) => s + e.total, 0);
+  const adjustedTotalSpent = totalSpent + unbudgetedTotal;
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
@@ -157,7 +190,33 @@ export default function Budgets() {
       {isLoading ? (
         <Skeleton className="h-28 rounded-2xl" />
       ) : (
-        <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={totalSpent} />
+        <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={adjustedTotalSpent} />
+      )}
+
+      {/* Unbudgeted expenses alert */}
+      {!isLoading && unbudgetedExpenses.length > 0 && budgets.length > 0 && (
+        <div className="rounded-xl border border-[hsl(var(--block-lifestyle)/0.3)] bg-[hsl(var(--block-lifestyle)/0.06)] p-4 space-y-2 animate-fade-in-up">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-[hsl(var(--block-lifestyle))] shrink-0" />
+            <h3 className="text-sm font-heading font-semibold text-foreground">Gastos sin presupuesto</h3>
+          </div>
+          <div className="space-y-1.5">
+            {unbudgetedExpenses.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-lg px-3 py-2 text-xs bg-[hsl(var(--block-lifestyle)/0.08)]"
+              >
+                <span className="font-medium truncate">{item.name}</span>
+                <span className="text-foreground font-bold tabular-nums shrink-0">
+                  {formatCurrency(item.total)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Estos gastos ({formatCurrency(unbudgetedTotal)}) están incluidos en el total pero no tienen presupuesto asignado.
+          </p>
+        </div>
       )}
 
       {/* Alert Banner for budgets over threshold */}

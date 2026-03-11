@@ -54,8 +54,10 @@ export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = 
       {remaining > 0 && (
         <p className="text-xs font-bold text-white mt-2">Te quedan {fmt(remaining)} este mes</p>
       )}
-      {remaining < 0 && (
-        <p className="text-xs font-bold text-white mt-2 bg-destructive/40 rounded-lg px-2 py-1 inline-block">Excedido por {fmt(Math.abs(remaining))}</p>
+      {remaining <= 0 && (
+        <p className="text-xs font-bold mt-2 bg-[hsl(var(--status-danger)/0.5)] text-white rounded-lg px-2 py-1 inline-block">
+          {remaining === 0 ? "Justo en presupuesto" : `Excedido por ${fmt(Math.abs(remaining))}`}
+        </p>
       )}
     </div>
   );

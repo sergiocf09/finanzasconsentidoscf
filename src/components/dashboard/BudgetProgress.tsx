@@ -12,11 +12,12 @@ interface BudgetProgressProps {
 
 export function BudgetProgress({
   category,
-  spent,
+  spent: rawSpent,
   budgeted,
   currency = "MXN",
   compact = false,
 }: BudgetProgressProps) {
+  const spent = Math.max(0, rawSpent);
   const percentage = budgeted > 0 ? Math.min((spent / budgeted) * 100, 120) : 0;
   const displayPercentage = Math.min(percentage, 100);
   const remaining = budgeted - spent;

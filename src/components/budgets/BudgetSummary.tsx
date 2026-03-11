@@ -7,7 +7,8 @@ interface BudgetSummaryProps {
   currency?: string;
 }
 
-export function BudgetSummary({ totalBudgeted, totalSpent, currency = "MXN" }: BudgetSummaryProps) {
+export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = "MXN" }: BudgetSummaryProps) {
+  const totalSpent = Math.max(0, rawSpent);
   const percentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
   const remaining = totalBudgeted - totalSpent;
 

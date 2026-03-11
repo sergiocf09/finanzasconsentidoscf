@@ -41,6 +41,12 @@ export function useBudgets(year?: number, month?: number) {
   const budgetsQuery = useQuery({
     queryKey: ['budgets', user?.id, currentYear, currentMonth],
     queryFn: async () => {
+      // Recalculate spent from actual transactions before fetching
+      await supabase.rpc('recalculate_budget_spent', {
+        p_year: currentYear,
+        p_month: currentMonth,
+      });
+
       let query = supabase
         .from('budgets')
         .select('*')

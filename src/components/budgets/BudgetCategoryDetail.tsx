@@ -80,8 +80,9 @@ export function BudgetCategoryDetail({
 
   if (!budget) return null;
 
-  const percentage = budget.amount > 0 ? (budget.spent / budget.amount) * 100 : 0;
-  const remaining = budget.amount - budget.spent;
+  const spent = Math.max(0, budget.spent);
+  const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+  const remaining = budget.amount - spent;
 
   const getStatus = (pct: number) => {
     if (pct > 100) return "over";
@@ -166,7 +167,7 @@ export function BudgetCategoryDetail({
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Gastado</span>
               <span className={cn("text-sm font-semibold", textColorClass)}>
-                {fmt(budget.spent)}
+                {fmt(spent)}
               </span>
             </div>
             <div className="flex justify-between items-center">

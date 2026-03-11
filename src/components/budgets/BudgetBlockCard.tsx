@@ -67,7 +67,7 @@ export function BudgetBlockCard({
   const colors = blockColorMap[block];
 
   const totalPlanned = items.reduce((s, b) => s + b.amount, 0);
-  const totalSpent = items.reduce((s, b) => s + (b.spent ?? 0), 0);
+  const totalSpent = Math.max(0, items.reduce((s, b) => s + Math.max(0, b.spent ?? 0), 0));
   const percentage = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
   const remaining = totalPlanned - totalSpent;
 

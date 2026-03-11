@@ -88,6 +88,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           })}
         </ul>
       </nav>
-
+    </aside>
   );
 }

@@ -173,6 +173,7 @@ export default function AccountDetail() {
               amount: t.from_account_id === id ? -t.amount_from : t.amount_to,
               currency: t.from_account_id === id ? t.currency_from : t.currency_to,
               source: "transfer",
+              categoryName: "",
             }))}
           </div>
         </TabsContent>

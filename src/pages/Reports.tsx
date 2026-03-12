@@ -97,99 +97,188 @@ export default function Reports() {
       const jsPDF = jsPDFModule.default;
 
       const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const w = doc.internal.pageSize.getWidth();
-      let y = 20;
 
-      // Header
-      doc.setFontSize(18);
+      const DARK: [number, number, number] = [30, 30, 30];
+      const MID: [number, number, number] = [90, 90, 90];
+      const LIGHT: [number, number, number] = [200, 200, 200];
+      const INCOME_GREEN: [number, number, number] = [34, 139, 84];
+      const EXPENSE_RED: [number, number, number] = [185, 28, 28];
+      const ACCENT: [number, number, number] = [99, 102, 241];
+      const PAGE_W = doc.internal.pageSize.getWidth();
+      const PAGE_H = doc.internal.pageSize.getHeight();
+      const MARGIN = 14;
+      const COL_W = (PAGE_W - MARGIN * 2 - 6) / 2;
+
+      // === SECTION 1 — Dark header ===
+      doc.setFillColor(...DARK);
+      doc.rect(0, 0, PAGE_W, 26, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-      doc.text("Finanzas con Sentido™", w / 2, y, { align: "center" });
-      y += 8;
-      doc.setFontSize(11);
+      doc.text("FINANZAS CON SENTIDO™", PAGE_W / 2, 11, { align: "center" });
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text(`Reporte: ${periodLabel}`, w / 2, y, { align: "center" });
-      y += 5;
-      doc.setFontSize(9);
-      doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, w / 2, y, { align: "center" });
-      y += 4;
-      doc.setDrawColor(200);
-      doc.line(15, y, w - 15, y);
-      y += 10;
+      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
+      doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), PAGE_W / 2, 17, { align: "center" });
+      doc.setTextColor(180, 180, 180);
+      doc.setFontSize(7);
+      doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, PAGE_W / 2, 23, { align: "center" });
 
-      // Summary row
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      const colW = (w - 30) / 3;
-      const summaryItems = [
-        { label: "Ingresos", value: formatCurrency(totals.income, "MXN", { decimals: 2 }) },
-        { label: "Gastos", value: formatCurrency(totals.expense, "MXN", { decimals: 2 }) },
-        { label: "Balance", value: formatCurrency(totals.income - totals.expense, "MXN", { decimals: 2 }) },
+      // === SECTION 2 — Summary cards ===
+      let y = 34;
+      const cardW = 56;
+      const cardH = 18;
+      const gap = (PAGE_W - MARGIN * 2 - cardW * 3) / 2;
+      const balance = totals.income - totals.expense;
+
+      const cards = [
+        { label: "INGRESOS", value: formatCurrency(totals.income, "MXN", { decimals: 2 }), color: INCOME_GREEN },
+        { label: "GASTOS", value: formatCurrency(totals.expense, "MXN", { decimals: 2 }), color: EXPENSE_RED },
+        { label: "BALANCE", value: formatCurrency(balance, "MXN", { decimals: 2 }), color: balance >= 0 ? ACCENT : EXPENSE_RED },
       ];
-      summaryItems.forEach((item, i) => {
-        const x = 15 + i * colW + colW / 2;
-        doc.setFontSize(10);
+
+      cards.forEach((card, i) => {
+        const x = MARGIN + i * (cardW + gap);
+        doc.setDrawColor(...card.color);
+        doc.setLineWidth(0.6);
+        doc.roundedRect(x, y, cardW, cardH, 2, 2, "S");
+        doc.setTextColor(...MID);
+        doc.setFontSize(7);
         doc.setFont("helvetica", "normal");
-        doc.text(item.label, x, y, { align: "center" });
-        doc.setFontSize(14);
+        doc.text(card.label, x + cardW / 2, y + 6, { align: "center" });
+        doc.setTextColor(...card.color);
+        doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
-        doc.text(item.value, x, y + 7, { align: "center" });
+        doc.text(card.value, x + cardW / 2, y + 13, { align: "center" });
       });
-      y += 20;
 
-      // Block distribution
+      // === SECTION 3 — Block distribution ===
+      y = 58;
+      doc.setTextColor(...DARK);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("DISTRIBUCIÓN POR BLOQUES", MARGIN, y);
+      y += 2;
+      doc.setDrawColor(...LIGHT);
+      doc.setLineWidth(0.3);
+      doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+      y += 6;
+
       if (blockSummariesList.length > 0) {
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("Distribución por bloques", 15, y);
-        y += 6;
-
-        const blockRows = blockSummariesList.map((b) => [
-          b.label,
-          formatCurrency(b.amount, "MXN", { decimals: 2 }),
-          `${b.percent.toFixed(1)}%`,
-        ]);
-
-        autoTable(doc, {
-          startY: y,
-          head: [["Bloque", "Monto", "% del gasto"]],
-          body: blockRows,
-          margin: { left: 15, right: 15 },
-          styles: { fontSize: 10 },
-          headStyles: { fillColor: [60, 60, 60] },
+        const blockColW = (PAGE_W - MARGIN * 2) / blockSummariesList.length;
+        blockSummariesList.forEach((b, i) => {
+          const x = MARGIN + i * blockColW;
+          doc.setTextColor(...MID);
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          doc.text(b.label, x + 2, y);
+          doc.setTextColor(...DARK);
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.text(formatCurrency(b.amount, "MXN", { decimals: 2 }), x + 2, y + 5);
+          doc.setTextColor(...MID);
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          doc.text(`${b.percent.toFixed(1)}%`, x + 2, y + 10);
         });
-        y = (doc as any).lastAutoTable.finalY + 10;
       }
 
-      // Top 5 categories
-      if (topCategories.length > 0) {
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("Top 5 categorías de gasto", 15, y);
-        y += 6;
+      // === SECTION 4 — Income table (full width) ===
+      y = 82;
+      doc.setTextColor(...DARK);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("INGRESOS DEL PERIODO", MARGIN, y);
+      y += 2;
+      doc.setDrawColor(...LIGHT);
+      doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+      y += 3;
 
-        const catRows = topCategories.map((c) => [
-          c.name,
-          formatCurrency(c.amount, "MXN", { decimals: 2 }),
-          `${c.pct.toFixed(1)}%`,
-        ]);
+      const incomeTxs = transactions
+        .filter((t) => t.type === "income")
+        .sort((a, b) => (b.amount_in_base ?? b.amount) - (a.amount_in_base ?? a.amount));
 
-        autoTable(doc, {
-          startY: y,
-          head: [["Categoría", "Monto", "% del gasto"]],
-          body: catRows,
-          margin: { left: 15, right: 15 },
-          styles: { fontSize: 10 },
-          headStyles: { fillColor: [60, 60, 60] },
-        });
-        y = (doc as any).lastAutoTable.finalY + 15;
-      }
+      const incomeRows = incomeTxs.length > 0
+        ? incomeTxs.map((tx) => [
+            tx.transaction_date,
+            tx.description || categoryMap[tx.category_id ?? ""] || "—",
+            accountMap[tx.account_id] || "",
+            formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
+          ])
+        : [["", "Sin ingresos en este periodo", "", ""]];
 
-      // Footer
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "italic");
-      doc.text("Tu dinero con calma. Tu vida con sentido.", w / 2, doc.internal.pageSize.getHeight() - 15, {
-        align: "center",
+      autoTable(doc, {
+        startY: y,
+        head: [["Fecha", "Descripción", "Cuenta", "Monto"]],
+        body: incomeRows,
+        margin: { left: MARGIN, right: MARGIN },
+        styles: { fontSize: 7, textColor: MID },
+        headStyles: { fillColor: INCOME_GREEN, textColor: [255, 255, 255] as [number, number, number], fontSize: 7 },
+        alternateRowStyles: { fillColor: [245, 250, 247] as [number, number, number] },
+        columnStyles: { 0: { cellWidth: 22 }, 2: { cellWidth: 40 }, 3: { cellWidth: 35, halign: "right" } },
       });
+      y = (doc as any).lastAutoTable.finalY + 8;
+
+      // === SECTION 5 — Top 20 expenses in two columns ===
+      doc.setTextColor(...DARK);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("TOP GASTOS DEL PERIODO", MARGIN, y);
+      y += 2;
+      doc.setDrawColor(...LIGHT);
+      doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+      y += 3;
+
+      const expenseTxs = transactions
+        .filter((t) => t.type === "expense")
+        .sort((a, b) => (b.amount_in_base ?? b.amount) - (a.amount_in_base ?? a.amount))
+        .slice(0, 20);
+
+      const leftExpenses = expenseTxs.slice(0, 10);
+      const rightExpenses = expenseTxs.slice(10, 20);
+
+      const expenseTableOpts = (rows: typeof leftExpenses, marginLeft: number, marginRight: number) => ({
+        startY: y,
+        head: [["#", "Descripción", "Monto"]],
+        body: rows.map((tx, i) => [
+          String(i + 1),
+          tx.description || categoryMap[tx.category_id ?? ""] || "—",
+          formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
+        ]),
+        margin: { left: marginLeft, right: marginRight },
+        styles: { fontSize: 7, textColor: MID },
+        headStyles: { fillColor: EXPENSE_RED, textColor: [255, 255, 255] as [number, number, number], fontSize: 7 },
+        alternateRowStyles: { fillColor: [252, 245, 245] as [number, number, number] },
+        columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 22, halign: "right" as const } },
+        tableWidth: COL_W as number,
+      });
+
+      if (leftExpenses.length > 0) {
+        autoTable(doc, expenseTableOpts(leftExpenses, MARGIN, PAGE_W - MARGIN - COL_W - 3));
+      }
+      if (rightExpenses.length > 0) {
+        autoTable(doc, {
+          ...expenseTableOpts(rightExpenses, MARGIN + COL_W + 6, MARGIN),
+          body: rightExpenses.map((tx, i) => [
+            String(i + 11),
+            tx.description || categoryMap[tx.category_id ?? ""] || "—",
+            formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
+          ]),
+        });
+      }
+
+      // === Footer ===
+      doc.setDrawColor(...LIGHT);
+      doc.setLineWidth(0.3);
+      doc.line(MARGIN, PAGE_H - 14, PAGE_W - MARGIN, PAGE_H - 14);
+      doc.setTextColor(...MID);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "italic");
+      doc.text("Tu dinero con calma. Tu vida con sentido.", PAGE_W / 2, PAGE_H - 10, { align: "center" });
+      doc.setTextColor(...LIGHT);
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.text("finanzas con sentido™", PAGE_W - MARGIN, PAGE_H - 10, { align: "right" });
 
       const monthStr = format(startDate, "yyyy-MM");
       doc.save(`finanzas-${monthStr}.pdf`);
@@ -220,19 +309,41 @@ export default function Reports() {
 
       const ws1 = XLSX.utils.json_to_sheet(txRows);
 
-      // Sheet 2 — Summary
-      const summaryRows = [
-        { Concepto: "Ingresos", Monto: totals.income },
-        { Concepto: "Gastos", Monto: totals.expense },
-        { Concepto: "Balance", Monto: totals.income - totals.expense },
-        { Concepto: "", Monto: "" },
-        ...blockSummariesList.map((b) => ({
-          Concepto: `Bloque: ${b.label}`,
-          Monto: b.amount,
-          Porcentaje: `${b.percent.toFixed(1)}%`,
-        })),
+      // Auto-fit column widths
+      const headers = ["Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"];
+      const colWidths = headers.map((h) => {
+        const maxDataLen = txRows.reduce((max, row) => {
+          const val = String((row as any)[h] ?? "");
+          return Math.max(max, val.length);
+        }, h.length);
+        return { wch: Math.min(maxDataLen + 2, 50) };
+      });
+      ws1["!cols"] = colWidths;
+
+      // Sheet 2 — Summary (editorial layout with aoa_to_sheet)
+      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
+      const summaryAoa: (string | number)[][] = [
+        ["FINANZAS CON SENTIDO™ — Resumen " + mesLabel],
+        [""],
+        ["RESUMEN DEL PERIODO", ""],
+        ["Ingresos", totals.income],
+        ["Gastos", totals.expense],
+        ["Balance", totals.income - totals.expense],
+        [""],
+        ["DISTRIBUCIÓN POR BLOQUES", "", "% del gasto"],
+        ...blockSummariesList.map((b) => [b.label, b.amount, `${b.percent.toFixed(1)}%`]),
+        [""],
+        ["TOP CATEGORÍAS DE GASTO", "", "% del gasto"],
+        ...topCategories.map((c) => [c.name, c.amount, `${c.pct.toFixed(1)}%`]),
+        [""],
+        ["Periodo:", periodLabel],
+        ["Movimientos totales:", transactions.length],
+        ["Generado:", format(new Date(), "d MMM yyyy, HH:mm", { locale: es })],
       ];
-      const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+
+      const ws2 = XLSX.utils.aoa_to_sheet(summaryAoa);
+      ws2["!cols"] = [{ wch: 35 }, { wch: 20 }, { wch: 15 }];
+      ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws1, "Movimientos");

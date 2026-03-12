@@ -264,14 +264,14 @@ export function useFinancialIntelligence() {
     const income = currentTotals.income;
 
     if (currentBlocks.lifestylePct > 35 && currentBlocks.buildPct < 15) {
-      r.push({ id: "shift-to-build", priority: 1, message: "Podrías mover una pequeña parte de tu gasto de Calidad de Vida hacia Construcción para fortalecer tu futuro financiero." });
+      r.push({ id: "shift-to-build", priority: 1, message: "Hay un pequeño espacio en tu Calidad de Vida que, si lo movieras a Construcción, empezaría a trabajar para tu futuro. Sin prisa — solo una posibilidad." });
     }
 
     // Budget alerts
     budgets.forEach((b) => {
       const pct = b.amount > 0 ? ((b.spent ?? 0) / b.amount) * 100 : 0;
       if (pct >= 80 && pct < 100) {
-        r.push({ id: `budget-alert-${b.id}`, priority: 2, message: `Tu presupuesto de "${b.name}" está al ${pct.toFixed(0)}%. Un pequeño ajuste puede ayudarte a cerrar el mes bajo control.` });
+        r.push({ id: `budget-alert-${b.id}`, priority: 2, message: `Tu presupuesto de "${b.name}" lleva el ${pct.toFixed(0)}%. Aún hay margen para cerrar el mes sin sorpresas.` });
       }
     });
 
@@ -286,29 +286,29 @@ export function useFinancialIntelligence() {
     const minDTI = income > 0 ? (totalMinPayments / income) * 100 : 0;
 
     if (plannedDTI > 35) {
-      r.push({ id: "dti-critical", priority: 1, message: `Tu endeudamiento planeado (DTI ${plannedDTI.toFixed(0)}%) es crítico. Tus pagos de deuda consumen más del 35% de tu ingreso.` });
+      r.push({ id: "dti-critical", priority: 1, message: `Tus pagos de deuda planeados representan el ${plannedDTI.toFixed(0)}% de tu ingreso. Es una carga alta. Entenderla es el primer paso para reducirla.` });
     } else if (plannedDTI > 25) {
-      r.push({ id: "dti-elevated", priority: 2, message: `Tu DTI planeado está al ${plannedDTI.toFixed(0)}%. Busca reducir deudas para bajar del 25%.` });
+      r.push({ id: "dti-elevated", priority: 2, message: `Tu relación deuda-ingreso está al ${plannedDTI.toFixed(0)}%. No es crítico, pero sí vale la pena tenerlo presente y buscar reducirlo gradualmente.` });
     } else if (income > 0 && totalMinPayments > income * 0.2) {
-      r.push({ id: "debt-pressure", priority: 2, message: "Tus pagos mínimos de deuda absorben una parte importante de tu flujo. Considera si puedes renegociar condiciones." });
+      r.push({ id: "debt-pressure", priority: 2, message: "Tus pagos mínimos de deuda absorben una parte importante de tu flujo mensual. Revisar si hay condiciones que se puedan mejorar puede hacer una diferencia real." });
     }
 
     // Minimum-only trap warning
     if (minDTI > 0 && plannedDTI - minDTI > 5) {
-      r.push({ id: "min-trap", priority: 3, message: `Si solo pagaras mínimos (DTI ${minDTI.toFixed(0)}%), parecerías libre pero pagarías mucho más en intereses a largo plazo.` });
+      r.push({ id: "min-trap", priority: 3, message: `Pagando solo mínimos, tu situación parece estable — pero el costo en intereses a largo plazo es alto. Hay una diferencia entre parecer libre y estarlo.` });
     }
 
     // Emergency fund
     if (fund && emergencyProgress < 30) {
-      r.push({ id: "emergency-low", priority: 3, message: "Tu fondo de emergencia aún es pequeño. Sería buena idea aportar un poco más este mes." });
+      r.push({ id: "emergency-low", priority: 3, message: "Tu fondo de emergencia todavía está construyéndose. No hay prisa, pero cada aportación — por pequeña que sea — cuenta." });
     }
 
     if (currentBlocks.stabilityPct > 70) {
-      r.push({ id: "stability-review", priority: 3, message: "Revisa tus gastos fijos de Estabilidad. A veces hay servicios o suscripciones que se pueden optimizar." });
+      r.push({ id: "stability-review", priority: 3, message: "A veces entre los gastos fijos hay servicios o suscripciones que ya no usamos o que podemos ajustar. Vale la pena revisarlos con calma." });
     }
 
     if (income > 0 && currentTotals.expense < income * 0.7) {
-      r.push({ id: "good-margin", priority: 4, message: "Tienes un buen margen este mes. Aprovéchalo para fortalecer tu fondo de emergencia o aumentar Construcción." });
+      r.push({ id: "good-margin", priority: 4, message: "Tienes un margen real este mes. Podría ser una buena oportunidad para fortalecer tu fondo de emergencia o sumar algo a Construcción." });
     }
 
     return r.sort((a, b) => a.priority - b.priority);

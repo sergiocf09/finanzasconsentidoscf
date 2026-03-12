@@ -163,7 +163,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
     <div key="income" className="space-y-3 py-2">
       <h2 className="text-base font-heading font-semibold text-foreground">Tu primer ingreso</h2>
       <p className="text-xs text-muted-foreground">
-        Registra tu ingreso principal para que el dashboard muestre datos reales.
+        Registra tu ingreso principal para que tu dashboard empiece a reflejar tu realidad financiera.
       </p>
       {accounts.length === 0 ? (
         <p className="text-xs text-muted-foreground italic">Crea una cuenta primero para registrar un ingreso.</p>

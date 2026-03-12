@@ -26,6 +26,7 @@ const navigation = [
   { name: "Pagos Recurrentes", href: "/recurring", icon: Repeat },
   { name: "Construcción", href: "/construction", icon: Target },
   { name: "Dashboard", href: "/financial-dashboard", icon: Gauge },
+  { name: "Exportar", href: "/reports", icon: FileDown },
   { name: "Tipo de cambio", href: "/exchange-rate", icon: ArrowRightLeft },
   { name: "Mi Biblioteca", href: "/library", icon: BookOpen },
 ];

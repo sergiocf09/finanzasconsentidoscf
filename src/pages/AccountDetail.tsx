@@ -52,6 +52,7 @@ export default function AccountDetail() {
       amount: t.type === "expense" ? -t.amount : t.amount,
       currency: t.currency,
       source: "tx" as const,
+      categoryName: getCategoryName(t.category_id),
     })),
     ...transfers.map((t) => ({
       id: t.id,
@@ -63,6 +64,7 @@ export default function AccountDetail() {
       amount: t.from_account_id === id ? -t.amount_from : t.amount_to,
       currency: t.from_account_id === id ? t.currency_from : t.currency_to,
       source: "transfer" as const,
+      categoryName: "",
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -94,7 +96,12 @@ export default function AccountDetail() {
       >
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground line-clamp-2">{item.description || item.type}</p>
-          <p className="text-xs text-muted-foreground">{format(new Date(item.date), "d MMM yyyy", { locale: es })}</p>
+          <p className="text-xs text-muted-foreground">
+            {item.categoryName
+              ? `${format(new Date(item.date), "d MMM yyyy", { locale: es })} · ${item.categoryName}`
+              : format(new Date(item.date), "d MMM yyyy", { locale: es })
+            }
+          </p>
         </div>
         <p className={cn("font-semibold tabular-nums text-sm shrink-0", amt < 0 ? "text-expense" : "text-income")}>
           {amt < 0 ? "-" : "+"}{fmt(Math.abs(amt), item.currency)}
@@ -147,6 +154,7 @@ export default function AccountDetail() {
               amount: t.type === "expense" ? -t.amount : t.amount,
               currency: t.currency,
               source: "tx",
+              categoryName: getCategoryName(t.category_id),
             }))}
           </div>
         </TabsContent>
@@ -165,6 +173,7 @@ export default function AccountDetail() {
               amount: t.from_account_id === id ? -t.amount_from : t.amount_to,
               currency: t.from_account_id === id ? t.currency_from : t.currency_to,
               source: "transfer",
+              categoryName: "",
             }))}
           </div>
         </TabsContent>

@@ -335,8 +335,7 @@ export default function Reports() {
       const XLSX = await import("xlsx");
       const fmtNum = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
-      const mesCapitalized = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+      const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
       const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
 
       // === Sheet 1 — Movimientos ===

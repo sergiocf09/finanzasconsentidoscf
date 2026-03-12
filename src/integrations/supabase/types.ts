@@ -628,7 +628,10 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          last_active_at: string | null
           onboarding_dismissed: boolean | null
+          push_enabled: boolean | null
+          push_subscription: Json | null
           updated_at: string | null
           weekly_summary_last_seen: string | null
         }
@@ -639,7 +642,10 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          last_active_at?: string | null
           onboarding_dismissed?: boolean | null
+          push_enabled?: boolean | null
+          push_subscription?: Json | null
           updated_at?: string | null
           weekly_summary_last_seen?: string | null
         }
@@ -650,9 +656,39 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          last_active_at?: string | null
           onboarding_dismissed?: boolean | null
+          push_enabled?: boolean | null
+          push_subscription?: Json | null
           updated_at?: string | null
           weekly_summary_last_seen?: string | null
+        }
+        Relationships: []
+      }
+      push_logs: {
+        Row: {
+          id: string
+          payload: Json
+          sent_at: string | null
+          success: boolean | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          payload: Json
+          sent_at?: string | null
+          success?: boolean | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          success?: boolean | null
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }

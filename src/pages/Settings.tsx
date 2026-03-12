@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { User, Bell, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun } from "lucide-react";
+import { User, Bell, BellOff, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun } from "lucide-react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useTheme } from "@/hooks/useTheme";
 import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +21,7 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isDark, toggle } = useTheme();
+  const pushNotifications = usePushNotifications();
 
   // Scroll to top on mount
   useEffect(() => {
@@ -320,27 +322,64 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* Push Notifications */}
       <div className="rounded-xl bg-card border border-border overflow-hidden">
         <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <Bell className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">Notificaciones</h2>
         </div>
         <div className="divide-y divide-border">
-          <div className="flex items-center justify-between px-4 py-2.5">
-            <div className="flex-1 min-w-0 mr-3">
-              <Label htmlFor="budget-alerts" className="text-sm font-normal">Alertas de presupuesto</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Aviso al usar el 80% de una categoría</p>
+          {!pushNotifications.isSupported ? (
+            <div className="px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Tu navegador no soporta notificaciones push. Prueba desde Chrome en Android.
+              </p>
             </div>
-            <Switch id="budget-alerts" defaultChecked />
-          </div>
-          <div className="flex items-center justify-between px-4 py-2.5">
-            <div className="flex-1 min-w-0 mr-3">
-              <Label htmlFor="payment-reminders" className="text-sm font-normal">Recordatorios de pago</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Antes de fechas de vencimiento</p>
+          ) : pushNotifications.permission === "denied" ? (
+            <div className="px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Las notificaciones están bloqueadas en tu navegador. Actívalas desde la configuración del sitio.
+              </p>
             </div>
-            <Switch id="payment-reminders" defaultChecked />
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-3 flex-1 min-w-0 mr-3">
+                  {pushNotifications.isSubscribed
+                    ? <Bell className="h-4 w-4 text-primary" />
+                    : <BellOff className="h-4 w-4 text-muted-foreground" />
+                  }
+                  <div>
+                    <p className="text-sm text-foreground">
+                      {pushNotifications.isSubscribed ? "Notificaciones activas" : "Notificaciones desactivadas"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {pushNotifications.isSubscribed
+                        ? "Recibirás alertas de presupuesto y resúmenes semanales"
+                        : "Actívalas para saber cómo va tu dinero sin abrir la app"
+                      }
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={pushNotifications.isSubscribed}
+                  onCheckedChange={() =>
+                    pushNotifications.isSubscribed
+                      ? pushNotifications.unsubscribe()
+                      : pushNotifications.subscribe()
+                  }
+                  disabled={pushNotifications.isLoading}
+                />
+              </div>
+              {pushNotifications.isSubscribed && (
+                <div className="px-4 py-2.5 space-y-1">
+                  <p className="text-[11px] text-muted-foreground">· Alerta cuando un presupuesto llega al 80%</p>
+                  <p className="text-[11px] text-muted-foreground">· Recordatorio si llevas 3+ días sin registrar</p>
+                  <p className="text-[11px] text-muted-foreground">· Resumen de cierre el primer día de cada mes</p>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

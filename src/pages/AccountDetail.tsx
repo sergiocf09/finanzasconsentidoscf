@@ -154,6 +154,7 @@ export default function AccountDetail() {
               amount: t.type === "expense" ? -t.amount : t.amount,
               currency: t.currency,
               source: "tx",
+              categoryName: getCategoryName(t.category_id),
             }))}
           </div>
         </TabsContent>

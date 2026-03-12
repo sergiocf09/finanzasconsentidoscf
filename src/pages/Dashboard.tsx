@@ -1,27 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FinancialSummaryCards } from "@/components/dashboard/FinancialSummaryCards";
 import { PeriodSummaryCards } from "@/components/dashboard/PeriodSummaryCards";
 import { FxRateWidget } from "@/components/dashboard/FxRateWidget";
 import { UpcomingDueDates } from "@/components/dashboard/UpcomingDueDates";
+import { WeeklySummary } from "@/components/dashboard/WeeklySummary";
+import { WeeklySummaryModal } from "@/components/dashboard/WeeklySummaryModal";
 import { useProfile } from "@/hooks/useProfile";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
-import { format } from "date-fns";
+import { format, getISODay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
-  const { profile } = useProfile();
+  const { profile, updateWeeklySummarySeen } = useProfile();
   const displayName = profile?.display_name || "bienvenido";
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const [wizardDismissed, setWizardDismissed] = useState(false);
+  const [weeklyModalOpen, setWeeklyModalOpen] = useState(false);
 
   useBudgetAlerts();
 
   const now = new Date();
   const currentMonth = format(now, "MMMM yyyy", { locale: es });
   const capitalizedMonth = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
+
+  const today = format(now, "yyyy-MM-dd");
+  const isMonday = getISODay(now) === 1;
+  const alreadySeenThisMonday = profile?.weekly_summary_last_seen === today;
+
+  useEffect(() => {
+    if (profile && isMonday && !alreadySeenThisMonday && !summaryLoading) {
+      const t = setTimeout(() => setWeeklyModalOpen(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, [profile, isMonday, alreadySeenThisMonday, summaryLoading]);
+
+  const handleCloseWeeklyModal = async () => {
+    setWeeklyModalOpen(false);
+    await updateWeeklySummarySeen();
+  };
 
   const showWizard = profile && !profile.onboarding_dismissed && !wizardDismissed;
 
@@ -77,6 +96,16 @@ export default function Dashboard() {
           initialTransferTotal={summary?.transfer_total}
         />
       </div>
+
+      {/* Resumen semanal */}
+      <WeeklySummary onOpenModal={() => setWeeklyModalOpen(true)} />
+
+      {/* Popup lunes */}
+      <WeeklySummaryModal
+        open={weeklyModalOpen}
+        onClose={handleCloseWeeklyModal}
+        displayName={displayName}
+      />
 
       {/* Upcoming Due Dates — from RPC */}
       <UpcomingDueDates

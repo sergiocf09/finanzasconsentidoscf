@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye } from "lucide-react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -90,6 +90,7 @@ export default function Budgets() {
   const [prevMonthHasBudgets, setPrevMonthHasBudgets] = useState(false);
   const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
   const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const { budgets: prevBudgets } = useBudgets(prevYear, prevMonth);
 
   useEffect(() => {
     if (!user) return;
@@ -141,6 +142,18 @@ export default function Budgets() {
     unassigned: budgets.filter((b) => !b.category_id || !getBucket(b.category_id)),
   };
 
+  const blockComparison = useMemo(() => {
+    if (!prevMonthHasBudgets || budgets.length === 0) return null;
+    return (["stability", "lifestyle", "build"] as const).map((block) => {
+      const currentSpent = budgetsByBlock[block].reduce((s, b) => s + (b.spent ?? 0), 0);
+      const prevSpent = prevBudgets
+        .filter((b) => getBucket(b.category_id) === block)
+        .reduce((s, b) => s + (b.spent ?? 0), 0);
+      const spentDiff = prevSpent > 0 ? ((currentSpent - prevSpent) / prevSpent) * 100 : null;
+      return { block, label: blockConfig[block].label, emoji: blockConfig[block].emoji, currentSpent, prevSpent, spentDiff };
+    });
+  }, [budgets, prevBudgets, budgetsByBlock, prevMonthHasBudgets]);
+
   const mapBudgetItems = (items: typeof budgets) =>
     items.map((b) => ({
       id: b.id,
@@ -191,6 +204,65 @@ export default function Budgets() {
         <Skeleton className="h-28 rounded-2xl" />
       ) : (
         <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={adjustedTotalSpent} />
+      )}
+
+      {/* Comparativa vs mes anterior */}
+      {!isLoading && blockComparison && budgets.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3 animate-fade-in-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              <h3 className="text-sm font-heading font-semibold text-foreground">
+                vs {monthNames[prevMonth]} {prevYear}
+              </h3>
+            </div>
+            <span className="text-[10px] text-muted-foreground">Gasto real por bloque</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {blockComparison.map(({ block, label, emoji, currentSpent, prevSpent, spentDiff }) => (
+              <div key={block} className="rounded-lg bg-secondary/50 p-2.5 space-y-1 text-center">
+                <p className="text-[11px] text-muted-foreground font-medium">{emoji} {label}</p>
+                <p className="text-sm font-bold font-heading tabular-nums">{formatCurrency(currentSpent)}</p>
+                {spentDiff !== null && (
+                  <p className={cn(
+                    "text-[10px] font-semibold flex items-center justify-center gap-0.5",
+                    Math.abs(spentDiff) < 1 ? "text-muted-foreground" :
+                    spentDiff < 0 ? "text-income" : "text-expense"
+                  )}>
+                    {Math.abs(spentDiff) < 1 ? "= Sin cambio" : spentDiff < 0 ? `▼ ${Math.abs(spentDiff).toFixed(0)}%` : `▲ ${spentDiff.toFixed(0)}%`}
+                  </p>
+                )}
+                {prevSpent > 0 && (
+                  <p className="text-[9px] text-muted-foreground tabular-nums">ant. {formatCurrency(prevSpent)}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {(() => {
+            const totalCurrent = blockComparison.reduce((s, b) => s + b.currentSpent, 0);
+            const totalPrev = blockComparison.reduce((s, b) => s + b.prevSpent, 0);
+            const totalDiff = totalPrev > 0 ? ((totalCurrent - totalPrev) / totalPrev) * 100 : null;
+            return (
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <span className="text-[11px] text-muted-foreground">Total gasto presupuestado</span>
+                <div className="flex items-center gap-2">
+                  {totalDiff !== null && (
+                    <span className={cn(
+                      "text-[10px] font-semibold",
+                      Math.abs(totalDiff) < 1 ? "text-muted-foreground" :
+                      totalDiff < 0 ? "text-income" : "text-expense"
+                    )}>
+                      {totalDiff > 0 ? "+" : ""}{totalDiff.toFixed(0)}%
+                    </span>
+                  )}
+                  <span className="text-xs font-bold tabular-nums">{formatCurrency(totalCurrent)}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       )}
 
       {/* Unbudgeted expenses alert */}

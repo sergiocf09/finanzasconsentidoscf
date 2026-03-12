@@ -109,7 +109,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
     <div key="currency" className="space-y-4 py-2">
       <h2 className="text-base font-heading font-semibold text-foreground">Tu moneda base</h2>
       <p className="text-xs text-muted-foreground">
-        Todos los totales y reportes se mostrarán en esta moneda. Puedes usar otras monedas en tus cuentas.
+        Elige la moneda en la que quieres ver tus totales. Puedes registrar movimientos en otras monedas y se convertirán automáticamente.
       </p>
       <Select value={currency} onValueChange={setCurrency}>
         <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>

@@ -317,55 +317,78 @@ export default function Reports() {
     setGeneratingExcel(true);
     try {
       const XLSX = await import("xlsx");
+      const fmtNum = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-      // Sheet 1 — Transactions
-      const txRows = transactions.map((tx) => ({
-        Fecha: tx.transaction_date,
-        Tipo: tx.type === "income" ? "Ingreso" : tx.type === "expense" ? "Gasto" : tx.type === "transfer" ? "Transferencia" : tx.type,
-        Descripción: tx.description || "",
-        Categoría: tx.category_id ? categoryMap[tx.category_id] || "" : "",
-        Cuenta: accountMap[tx.account_id] || "",
-        Monto: tx.amount_in_base ?? tx.amount,
-        Moneda: tx.currency,
-      }));
+      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
+      const mesCapitalized = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+      const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
 
-      const ws1 = XLSX.utils.json_to_sheet(txRows);
+      // === Sheet 1 — Movimientos ===
+      // Header rows at the top
+      const headerAoa: (string | number)[][] = [
+        ["FINANZAS CON SENTIDO™ — Movimientos " + mesCapitalized],
+        ["Periodo:", periodLabel, "", "Movimientos:", transactions.length, "Generado:", generatedDate],
+        [], // blank row before data
+        ["#", "Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"],
+      ];
 
-      // Auto-fit column widths
-      const headers = ["Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"];
-      const colWidths = headers.map((h) => {
-        const maxDataLen = txRows.reduce((max, row) => {
-          const val = String((row as any)[h] ?? "");
+      // Transaction data rows with row numbers and formatted amounts
+      const txDataRows: (string | number)[][] = transactions.map((tx, i) => [
+        i + 1,
+        tx.transaction_date,
+        tx.type === "income" ? "Ingreso" : tx.type === "expense" ? "Gasto" : tx.type === "transfer" ? "Transferencia" : tx.type,
+        tx.description || "",
+        tx.category_id ? categoryMap[tx.category_id] || "" : "",
+        accountMap[tx.account_id] || "",
+        fmtNum(tx.amount_in_base ?? tx.amount),
+        tx.currency,
+      ]);
+
+      const allRows = [...headerAoa, ...txDataRows];
+      const ws1 = XLSX.utils.aoa_to_sheet(allRows);
+
+      // Column widths (now with # column)
+      const colHeaders = ["#", "Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"];
+      const colWidths = colHeaders.map((h, ci) => {
+        const maxDataLen = txDataRows.reduce((max, row) => {
+          const val = String(row[ci] ?? "");
           return Math.max(max, val.length);
         }, h.length);
         return { wch: Math.min(maxDataLen + 2, 50) };
       });
       ws1["!cols"] = colWidths;
 
-      // Sheet 2 — Summary (editorial layout with aoa_to_sheet)
-      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
-      const summaryAoa: (string | number)[][] = [
-        ["FINANZAS CON SENTIDO™ — Resumen " + mesLabel],
-        [""],
-        ["RESUMEN DEL PERIODO", ""],
-        ["Ingresos", totals.income],
-        ["Gastos", totals.expense],
-        ["Balance", totals.income - totals.expense],
-        [""],
-        ["DISTRIBUCIÓN POR BLOQUES", "", "% del gasto"],
-        ...blockSummariesList.map((b) => [b.label, b.amount, `${b.percent.toFixed(1)}%`]),
-        [""],
-        ["TOP CATEGORÍAS DE GASTO", "", "% del gasto"],
-        ...topCategories.map((c) => [c.name, c.amount, `${c.pct.toFixed(1)}%`]),
-        [""],
+      // Merge title row (A1:H1)
+      ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+
+      // === Sheet 2 — Resumen (redesigned: info at top, not bottom) ===
+      const summaryAoa: (string | number | string)[][] = [
+        ["FINANZAS CON SENTIDO™"],
+        ["Resumen financiero — " + mesCapitalized],
+        [],
         ["Periodo:", periodLabel],
         ["Movimientos totales:", transactions.length],
-        ["Generado:", format(new Date(), "d MMM yyyy, HH:mm", { locale: es })],
+        ["Generado:", generatedDate],
+        [],
+        ["RESUMEN DEL PERIODO", "", ""],
+        ["Ingresos", fmtNum(totals.income), ""],
+        ["Gastos", fmtNum(totals.expense), ""],
+        ["Balance", fmtNum(totals.income - totals.expense), ""],
+        [],
+        ["DISTRIBUCIÓN POR BLOQUES", "Monto", "% del gasto"],
+        ...blockSummariesList.map((b) => [b.label, fmtNum(b.amount), `${b.percent.toFixed(1)}%`]),
+        [],
+        ["TOP CATEGORÍAS DE GASTO", "Monto", "% del gasto"],
+        ...topCategories.map((c) => [c.name, fmtNum(c.amount), `${c.pct.toFixed(1)}%`]),
       ];
 
       const ws2 = XLSX.utils.aoa_to_sheet(summaryAoa);
-      ws2["!cols"] = [{ wch: 35 }, { wch: 20 }, { wch: 15 }];
-      ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+      ws2["!cols"] = [{ wch: 35 }, { wch: 22 }, { wch: 15 }];
+      // Merge title across columns
+      ws2["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
+      ];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws1, "Movimientos");

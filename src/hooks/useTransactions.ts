@@ -110,7 +110,22 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date; en
       if (fetchErr) throw fetchErr;
 
       const merged = { ...oldTx, ...data };
-      merged.amount_in_base = merged.amount * (merged.exchange_rate ?? 1);
+
+      // Only recalculate amount_in_base if amount or exchange_rate actually changed
+      const amountChanged = data.amount !== undefined && data.amount !== oldTx.amount;
+      const rateChanged = data.exchange_rate !== undefined && data.exchange_rate !== oldTx.exchange_rate;
+
+      if (amountChanged || rateChanged) {
+        const rate = merged.exchange_rate ?? 1;
+        // When rate < 1, it means the original was MXN→USD (rate = 1/fxRate)
+        // so amount_in_base = amount / rate to get back MXN
+        if (rate > 0 && rate < 1) {
+          merged.amount_in_base = merged.amount / rate;
+        } else {
+          merged.amount_in_base = merged.amount * rate;
+        }
+      }
+      // else: keep the existing amount_in_base from the DB
 
       const { data: result, error } = await supabase.rpc('atomic_update_transaction', {
         p_old_id: id,

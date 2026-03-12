@@ -108,6 +108,26 @@ export default function AccountDetail() {
         <p className={cn("font-semibold tabular-nums text-sm shrink-0", amt < 0 ? "text-expense" : "text-income")}>
           {amt < 0 ? "-" : "+"}{fmt(Math.abs(amt), item.currency)}
         </p>
+        {item.source === "tx" &&
+          item.amount_in_base != null &&
+          item.exchange_rate != null &&
+          item.exchange_rate !== 1 && (() => {
+            if (item.currency !== "MXN") {
+              return (
+                <p className="text-[10px] text-muted-foreground tabular-nums text-right">
+                  ≈ {formatCurrency(item.amount_in_base as number, "MXN")}
+                </p>
+              );
+            } else {
+              const usdAmount = Math.abs(item.amount) / (item.exchange_rate as number);
+              return (
+                <p className="text-[10px] text-muted-foreground tabular-nums text-right">
+                  ≈ {formatCurrency(usdAmount, "USD")}
+                </p>
+              );
+            }
+          })()
+        }
       </div>
     );
   };

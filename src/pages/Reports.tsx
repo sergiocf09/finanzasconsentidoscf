@@ -249,11 +249,7 @@ export default function Reports() {
         blockSummariesList.forEach((b, i) => {
           const x = MARGIN + i * (blockCardW + gap);
           const bColor = blockColors[i] || MID;
-          // Light fill for distinction
-          doc.setFillColor(...bColor);
-          doc.setGlobalAlpha?.(0.06);
-          doc.roundedRect(x, blockCardsY, blockCardW, blockCardH, 10, 10, "F");
-          doc.setGlobalAlpha?.(1);
+          // Oval shape with border only (no fill alpha in jsPDF)
           doc.setDrawColor(...bColor);
           doc.setLineWidth(0.5);
           doc.roundedRect(x, blockCardsY, blockCardW, blockCardH, 10, 10, "S");

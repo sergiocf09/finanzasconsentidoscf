@@ -90,6 +90,7 @@ export default function Budgets() {
   const [prevMonthHasBudgets, setPrevMonthHasBudgets] = useState(false);
   const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
   const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const { budgets: prevBudgets } = useBudgets(prevYear, prevMonth);
 
   useEffect(() => {
     if (!user) return;

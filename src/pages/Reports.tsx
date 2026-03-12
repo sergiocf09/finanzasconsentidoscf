@@ -96,38 +96,54 @@ export default function Reports() {
       const autoTable = (await import("jspdf-autotable")).default;
       const jsPDF = jsPDFModule.default;
 
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      // Letter size instead of A4
+      const doc = new jsPDF({ unit: "mm", format: "letter" });
 
       const DARK: [number, number, number] = [30, 30, 30];
-      const MID: [number, number, number] = [90, 90, 90];
+      const MID: [number, number, number] = [70, 70, 70];
       const LIGHT: [number, number, number] = [200, 200, 200];
+      // Brand colors — sage green + gold
+      const SAGE_DARK: [number, number, number] = [58, 90, 64];
+      const SAGE_MID: [number, number, number] = [85, 120, 90];
+      const GOLD: [number, number, number] = [180, 155, 90];
       const INCOME_GREEN: [number, number, number] = [34, 139, 84];
-      const EXPENSE_RED: [number, number, number] = [185, 28, 28];
+      const EXPENSE_RED: [number, number, number] = [165, 42, 42];
       const ACCENT: [number, number, number] = [99, 102, 241];
+      // Block colors
+      const STABILITY_COLOR: [number, number, number] = [58, 90, 64];
+      const LIFESTYLE_COLOR: [number, number, number] = [99, 102, 241];
+      const BUILD_COLOR: [number, number, number] = [180, 155, 90];
       const PAGE_W = doc.internal.pageSize.getWidth();
       const PAGE_H = doc.internal.pageSize.getHeight();
-      const MARGIN = 14;
+      const MARGIN = 16;
       const COL_W = (PAGE_W - MARGIN * 2 - 6) / 2;
 
-      // === SECTION 1 — Dark header ===
-      doc.setFillColor(...DARK);
-      doc.rect(0, 0, PAGE_W, 26, "F");
+      // === SECTION 1 — Branded header (rounded, centered, not full width) ===
+      const headerW = PAGE_W - MARGIN * 2;
+      const headerH = 24;
+      const headerY = 10;
+      doc.setFillColor(...SAGE_DARK);
+      doc.roundedRect(MARGIN, headerY, headerW, headerH, 4, 4, "F");
+      // Title
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(13);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("FINANZAS CON SENTIDO™", PAGE_W / 2, 11, { align: "center" });
+      doc.text("FINANZAS CON SENTIDO™", PAGE_W / 2, headerY + 9, { align: "center" });
+      // Period
+      doc.setTextColor(...GOLD);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
-      doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), PAGE_W / 2, 17, { align: "center" });
-      doc.setTextColor(180, 180, 180);
+      doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), PAGE_W / 2, headerY + 15, { align: "center" });
+      // Generated date
+      doc.setTextColor(200, 210, 200);
       doc.setFontSize(7);
-      doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, PAGE_W / 2, 23, { align: "center" });
+      doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, PAGE_W / 2, headerY + 21, { align: "center" });
 
-      // === SECTION 2 — Summary cards ===
-      let y = 34;
+      // === SECTION 2 — Summary cards (Ingresos, Gastos, Balance) ===
+      let y = headerY + headerH + 8;
       const cardW = 56;
-      const cardH = 18;
+      const cardH = 20;
       const gap = (PAGE_W - MARGIN * 2 - cardW * 3) / 2;
       const balance = totals.income - totals.expense;
 
@@ -145,52 +161,58 @@ export default function Reports() {
         doc.setTextColor(...MID);
         doc.setFontSize(7);
         doc.setFont("helvetica", "normal");
-        doc.text(card.label, x + cardW / 2, y + 6, { align: "center" });
+        doc.text(card.label, x + cardW / 2, y + 7, { align: "center" });
         doc.setTextColor(...card.color);
-        doc.setFontSize(13);
+        doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
-        doc.text(card.value, x + cardW / 2, y + 13, { align: "center" });
+        doc.text(card.value, x + cardW / 2, y + 15, { align: "center" });
       });
 
-      // === SECTION 3 — Block distribution ===
-      y = 58;
+      // === SECTION 3 — Block distribution as cards with color ===
+      y += cardH + 6;
       doc.setTextColor(...DARK);
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.text("DISTRIBUCIÓN POR BLOQUES", MARGIN, y);
-      y += 2;
-      doc.setDrawColor(...LIGHT);
-      doc.setLineWidth(0.3);
-      doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-      y += 6;
+      y += 3;
+
+      const blockColors: [number, number, number][] = [STABILITY_COLOR, LIFESTYLE_COLOR, BUILD_COLOR];
 
       if (blockSummariesList.length > 0) {
-        const blockColW = (PAGE_W - MARGIN * 2) / blockSummariesList.length;
+        const blockCardW = cardW;
+        const blockCardH = 20;
         blockSummariesList.forEach((b, i) => {
-          const x = MARGIN + i * blockColW;
-          doc.setTextColor(...MID);
+          const x = MARGIN + i * (blockCardW + gap);
+          const bColor = blockColors[i] || MID;
+          doc.setDrawColor(...bColor);
+          doc.setLineWidth(0.6);
+          doc.roundedRect(x, y, blockCardW, blockCardH, 2, 2, "S");
+          doc.setTextColor(...bColor);
           doc.setFontSize(7);
           doc.setFont("helvetica", "normal");
-          doc.text(b.label, x + 2, y);
+          doc.text(b.label, x + blockCardW / 2, y + 6, { align: "center" });
           doc.setTextColor(...DARK);
-          doc.setFontSize(9);
+          doc.setFontSize(13);
           doc.setFont("helvetica", "bold");
-          doc.text(formatCurrency(b.amount, "MXN", { decimals: 2 }), x + 2, y + 5);
-          doc.setTextColor(...MID);
-          doc.setFontSize(7);
+          doc.text(formatCurrency(b.amount, "MXN", { decimals: 2 }), x + blockCardW / 2, y + 13, { align: "center" });
+          doc.setTextColor(...bColor);
+          doc.setFontSize(8);
           doc.setFont("helvetica", "normal");
-          doc.text(`${b.percent.toFixed(1)}%`, x + 2, y + 10);
+          doc.text(`${b.percent.toFixed(1)}%`, x + blockCardW / 2, y + 18, { align: "center" });
         });
+        y += blockCardH + 6;
+      } else {
+        y += 4;
       }
 
-      // === SECTION 4 — Income table (full width) ===
-      y = 82;
+      // === SECTION 4 — Income table ===
       doc.setTextColor(...DARK);
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.text("INGRESOS DEL PERIODO", MARGIN, y);
       y += 2;
       doc.setDrawColor(...LIGHT);
+      doc.setLineWidth(0.3);
       doc.line(MARGIN, y, PAGE_W - MARGIN, y);
       y += 3;
 
@@ -212,16 +234,16 @@ export default function Reports() {
         head: [["Fecha", "Descripción", "Cuenta", "Monto"]],
         body: incomeRows,
         margin: { left: MARGIN, right: MARGIN },
-        styles: { fontSize: 7, textColor: MID },
-        headStyles: { fillColor: INCOME_GREEN, textColor: [255, 255, 255] as [number, number, number], fontSize: 7 },
+        styles: { fontSize: 8, textColor: DARK },
+        headStyles: { fillColor: INCOME_GREEN, textColor: [255, 255, 255] as [number, number, number], fontSize: 8, fontStyle: "bold" },
         alternateRowStyles: { fillColor: [245, 250, 247] as [number, number, number] },
-        columnStyles: { 0: { cellWidth: 22 }, 2: { cellWidth: 40 }, 3: { cellWidth: 35, halign: "right" } },
+        columnStyles: { 0: { cellWidth: 24 }, 2: { cellWidth: 38 }, 3: { cellWidth: 35, halign: "right" } },
       });
       y = (doc as any).lastAutoTable.finalY + 8;
 
       // === SECTION 5 — Top 20 expenses in two columns ===
       doc.setTextColor(...DARK);
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.text("TOP GASTOS DEL PERIODO", MARGIN, y);
       y += 2;
@@ -246,10 +268,10 @@ export default function Reports() {
           formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
         ]),
         margin: { left: marginLeft, right: marginRight },
-        styles: { fontSize: 7, textColor: MID },
-        headStyles: { fillColor: EXPENSE_RED, textColor: [255, 255, 255] as [number, number, number], fontSize: 7 },
+        styles: { fontSize: 8, textColor: DARK },
+        headStyles: { fillColor: EXPENSE_RED, textColor: [255, 255, 255] as [number, number, number], fontSize: 8, fontStyle: "bold" as const },
         alternateRowStyles: { fillColor: [252, 245, 245] as [number, number, number] },
-        columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 22, halign: "right" as const } },
+        columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 24, halign: "right" as const } },
         tableWidth: COL_W as number,
       });
 
@@ -268,14 +290,14 @@ export default function Reports() {
       }
 
       // === Footer ===
-      doc.setDrawColor(...LIGHT);
+      doc.setDrawColor(...SAGE_MID);
       doc.setLineWidth(0.3);
       doc.line(MARGIN, PAGE_H - 14, PAGE_W - MARGIN, PAGE_H - 14);
-      doc.setTextColor(...MID);
+      doc.setTextColor(...SAGE_DARK);
       doc.setFontSize(7);
       doc.setFont("helvetica", "italic");
       doc.text("Tu dinero con calma. Tu vida con sentido.", PAGE_W / 2, PAGE_H - 10, { align: "center" });
-      doc.setTextColor(...LIGHT);
+      doc.setTextColor(...GOLD);
       doc.setFontSize(6);
       doc.setFont("helvetica", "normal");
       doc.text("finanzas con sentido™", PAGE_W - MARGIN, PAGE_H - 10, { align: "right" });

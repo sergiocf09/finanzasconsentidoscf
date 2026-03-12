@@ -47,6 +47,11 @@ export function WeeklySummary({ onOpenModal }: { onOpenModal: () => void }) {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl bg-income/5 border border-income/15 p-2.5 space-y-0.5">
+          <p className="text-[10px] text-muted-foreground">Ingresos</p>
+          <p className="text-sm font-bold tabular-nums text-income">{formatCurrency(weekIncome)}</p>
+          <p className="text-[10px] text-muted-foreground">esta semana</p>
+        </div>
         <div className="rounded-xl bg-expense/5 border border-expense/15 p-2.5 space-y-0.5">
           <p className="text-[10px] text-muted-foreground">Gastos</p>
           <p className="text-sm font-bold tabular-nums text-expense">{formatCurrency(weekExpense)}</p>
@@ -60,11 +65,6 @@ export function WeeklySummary({ onOpenModal }: { onOpenModal: () => void }) {
               {Math.abs(expenseDiff) < 2 ? "Similar" : `${Math.abs(expenseDiff).toFixed(0)}% vs ant.`}
             </p>
           )}
-        </div>
-        <div className="rounded-xl bg-income/5 border border-income/15 p-2.5 space-y-0.5">
-          <p className="text-[10px] text-muted-foreground">Ingresos</p>
-          <p className="text-sm font-bold tabular-nums text-income">{formatCurrency(weekIncome)}</p>
-          <p className="text-[10px] text-muted-foreground">esta semana</p>
         </div>
         <div className="rounded-xl bg-secondary p-2.5 space-y-0.5">
           <p className="text-[10px] text-muted-foreground">Registros</p>

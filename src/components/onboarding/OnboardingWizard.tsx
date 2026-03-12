@@ -128,7 +128,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
     <div key="account" className="space-y-3 py-2">
       <h2 className="text-base font-heading font-semibold text-foreground">Tu primera cuenta</h2>
       <p className="text-xs text-muted-foreground">
-        Agrega tu cuenta principal para empezar a registrar movimientos.
+        Agrega la cuenta que más usas. No necesitas agregarlas todas ahora — puedes hacerlo cuando quieras desde Cuentas.
       </p>
       <div className="space-y-2">
         <Label className="text-xs">Nombre</Label>

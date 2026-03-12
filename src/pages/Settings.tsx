@@ -21,6 +21,7 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isDark, toggle } = useTheme();
+  const pushNotifications = usePushNotifications();
 
   // Scroll to top on mount
   useEffect(() => {

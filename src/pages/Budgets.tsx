@@ -142,6 +142,18 @@ export default function Budgets() {
     unassigned: budgets.filter((b) => !b.category_id || !getBucket(b.category_id)),
   };
 
+  const blockComparison = useMemo(() => {
+    if (!prevMonthHasBudgets || budgets.length === 0) return null;
+    return (["stability", "lifestyle", "build"] as const).map((block) => {
+      const currentSpent = budgetsByBlock[block].reduce((s, b) => s + (b.spent ?? 0), 0);
+      const prevSpent = prevBudgets
+        .filter((b) => getBucket(b.category_id) === block)
+        .reduce((s, b) => s + (b.spent ?? 0), 0);
+      const spentDiff = prevSpent > 0 ? ((currentSpent - prevSpent) / prevSpent) * 100 : null;
+      return { block, label: blockConfig[block].label, emoji: blockConfig[block].emoji, currentSpent, prevSpent, spentDiff };
+    });
+  }, [budgets, prevBudgets, budgetsByBlock, prevMonthHasBudgets]);
+
   const mapBudgetItems = (items: typeof budgets) =>
     items.map((b) => ({
       id: b.id,

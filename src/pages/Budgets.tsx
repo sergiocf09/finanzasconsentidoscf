@@ -194,6 +194,65 @@ export default function Budgets() {
         <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={adjustedTotalSpent} />
       )}
 
+      {/* Comparativa vs mes anterior */}
+      {!isLoading && blockComparison && budgets.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3 animate-fade-in-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              <h3 className="text-sm font-heading font-semibold text-foreground">
+                vs {monthNames[prevMonth]} {prevYear}
+              </h3>
+            </div>
+            <span className="text-[10px] text-muted-foreground">Gasto real por bloque</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {blockComparison.map(({ block, label, emoji, currentSpent, prevSpent, spentDiff }) => (
+              <div key={block} className="rounded-lg bg-secondary/50 p-2.5 space-y-1 text-center">
+                <p className="text-[11px] text-muted-foreground font-medium">{emoji} {label}</p>
+                <p className="text-sm font-bold font-heading tabular-nums">{formatCurrency(currentSpent)}</p>
+                {spentDiff !== null && (
+                  <p className={cn(
+                    "text-[10px] font-semibold flex items-center justify-center gap-0.5",
+                    Math.abs(spentDiff) < 1 ? "text-muted-foreground" :
+                    spentDiff < 0 ? "text-income" : "text-expense"
+                  )}>
+                    {Math.abs(spentDiff) < 1 ? "= Sin cambio" : spentDiff < 0 ? `▼ ${Math.abs(spentDiff).toFixed(0)}%` : `▲ ${spentDiff.toFixed(0)}%`}
+                  </p>
+                )}
+                {prevSpent > 0 && (
+                  <p className="text-[9px] text-muted-foreground tabular-nums">ant. {formatCurrency(prevSpent)}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {(() => {
+            const totalCurrent = blockComparison.reduce((s, b) => s + b.currentSpent, 0);
+            const totalPrev = blockComparison.reduce((s, b) => s + b.prevSpent, 0);
+            const totalDiff = totalPrev > 0 ? ((totalCurrent - totalPrev) / totalPrev) * 100 : null;
+            return (
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <span className="text-[11px] text-muted-foreground">Total gasto presupuestado</span>
+                <div className="flex items-center gap-2">
+                  {totalDiff !== null && (
+                    <span className={cn(
+                      "text-[10px] font-semibold",
+                      Math.abs(totalDiff) < 1 ? "text-muted-foreground" :
+                      totalDiff < 0 ? "text-income" : "text-expense"
+                    )}>
+                      {totalDiff > 0 ? "+" : ""}{totalDiff.toFixed(0)}%
+                    </span>
+                  )}
+                  <span className="text-xs font-bold tabular-nums">{formatCurrency(totalCurrent)}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Unbudgeted expenses alert */}
       {!isLoading && unbudgetedExpenses.length > 0 && budgets.length > 0 && (
         <div className="rounded-xl border border-[hsl(var(--block-lifestyle)/0.3)] bg-[hsl(var(--block-lifestyle)/0.06)] p-4 space-y-2 animate-fade-in-up">

@@ -140,12 +140,12 @@ export default function Construction() {
       ) : goals.length === 0 ? (
         <div className="text-center py-12">
           <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">Sin metas de construcción todavía</p>
+          <p className="text-muted-foreground">Aún no tienes metas de construcción</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Crea tu primera meta para empezar a construir tu patrimonio.
+            Construir patrimonio empieza con una decisión pequeña: ponerle nombre y número a lo que quieres proteger o alcanzar.
           </p>
           <Button variant="outline" className="mt-4" onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Crear primera meta
+            <Plus className="h-4 w-4 mr-1" /> Crear mi primera meta
           </Button>
         </div>
       ) : (

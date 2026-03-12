@@ -294,13 +294,13 @@ export default function Budgets() {
             </div>
           )}
           <Activity className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
-          <p className="font-heading font-medium">Sin presupuestos activos</p>
+          <p className="font-heading font-medium">Aún no tienes un presupuesto activo</p>
           <p className="text-sm mt-1 mb-4">
-            Crea tu primer presupuesto para ver cómo avanzas cada mes.
+            Un presupuesto no es una restricción — es una decisión sobre a dónde quieres que vaya tu dinero antes de que llegue.
           </p>
           <Button onClick={() => setWizardOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Crear presupuesto
+            Crear mi presupuesto
           </Button>
         </div>
       ) : (

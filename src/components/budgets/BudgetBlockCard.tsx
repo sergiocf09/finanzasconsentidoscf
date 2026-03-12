@@ -123,7 +123,7 @@ export function BudgetBlockCard({
           <BudgetBlockInsights block={block} signals={signals} recommendations={recommendations} />
           {items.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-2">
-              Sin presupuestos en este bloque
+              Este bloque aún no tiene presupuesto asignado
             </p>
           ) : (
             items.map((item) => (

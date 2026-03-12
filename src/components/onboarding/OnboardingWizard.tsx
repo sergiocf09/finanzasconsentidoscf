@@ -95,10 +95,10 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
         <Sparkles className="h-7 w-7 text-primary" />
       </div>
       <h2 className="text-lg font-heading font-semibold text-foreground">
-        ¡Bienvenido a Finanzas con Sentido!
+        Bienvenido a Finanzas con Sentido
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs">
-        Tu dinero con calma. Tu vida con sentido. Vamos a configurar lo básico en menos de 2 minutos.
+        Tu dinero con calma. Tu vida con sentido. En dos minutos dejamos todo listo para empezar.
       </p>
       <Button onClick={() => setStep(1)} className="w-full mt-2">
         Comenzar <ArrowRight className="ml-2 h-4 w-4" />
@@ -109,7 +109,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
     <div key="currency" className="space-y-4 py-2">
       <h2 className="text-base font-heading font-semibold text-foreground">Tu moneda base</h2>
       <p className="text-xs text-muted-foreground">
-        Todos los totales y reportes se mostrarán en esta moneda. Puedes usar otras monedas en tus cuentas.
+        Elige la moneda en la que quieres ver tus totales. Puedes registrar movimientos en otras monedas y se convertirán automáticamente.
       </p>
       <Select value={currency} onValueChange={setCurrency}>
         <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
@@ -128,7 +128,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
     <div key="account" className="space-y-3 py-2">
       <h2 className="text-base font-heading font-semibold text-foreground">Tu primera cuenta</h2>
       <p className="text-xs text-muted-foreground">
-        Agrega tu cuenta principal para empezar a registrar movimientos.
+        Agrega la cuenta que más usas. No necesitas agregarlas todas ahora — puedes hacerlo cuando quieras desde Cuentas.
       </p>
       <div className="space-y-2">
         <Label className="text-xs">Nombre</Label>
@@ -163,7 +163,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
     <div key="income" className="space-y-3 py-2">
       <h2 className="text-base font-heading font-semibold text-foreground">Tu primer ingreso</h2>
       <p className="text-xs text-muted-foreground">
-        Registra tu ingreso principal para que el dashboard muestre datos reales.
+        Registra tu ingreso principal para que tu dashboard empiece a reflejar tu realidad financiera.
       </p>
       {accounts.length === 0 ? (
         <p className="text-xs text-muted-foreground italic">Crea una cuenta primero para registrar un ingreso.</p>
@@ -193,10 +193,10 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
         <CheckCircle2 className="h-7 w-7 text-income" />
       </div>
       <h2 className="text-lg font-heading font-semibold text-foreground">
-        ¡Tu tablero está listo para trabajar contigo!
+        Ya estás adentro.
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs">
-        Explora las secciones con el ícono <span className="font-medium">?</span> para aprender más sobre cada herramienta.
+        Tu espacio está listo. Empieza por donde quieras — no hay un orden obligatorio. Finanzas con Sentido se va adaptando a ti.
       </p>
       <div className="flex items-center gap-3 rounded-lg border border-border p-3 w-full">
         <Switch checked={dontShowAgain} onCheckedChange={setDontShowAgain} />

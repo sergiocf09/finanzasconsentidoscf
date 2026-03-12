@@ -61,15 +61,15 @@ function determineStage(_stability: number, _lifestyle: number, build: number): 
 const stageLabels: Record<FinancialStage, { name: string; message: string }> = {
   stabilize: {
     name: "Estabilizar",
-    message: "Estás priorizando sostener tus obligaciones. Vamos paso a paso hacia un balance más equilibrado.",
+    message: "Estás sosteniendo lo esencial. Eso ya es mucho. Desde aquí, todo lo que construyas tiene base real.",
   },
   balance: {
     name: "Equilibrar",
-    message: "Ya sostienes lo básico y empiezas a construir con calma. Buen camino.",
+    message: "Lo básico ya está sostenido y empiezas a crear espacio para algo más. Ese equilibrio no es pequeño — es el puente hacia lo que sigue.",
   },
   build: {
     name: "Construir",
-    message: "Tu dinero ya tiene espacio para crecer contigo. Sigue así.",
+    message: "Tu dinero tiene espacio para crecer contigo. Lo que estás haciendo hoy tiene nombre: patrimonio.",
   },
 };
 
@@ -211,33 +211,33 @@ export function useFinancialIntelligence() {
 
     // Positive signals
     if (currentBlocks.buildPct > 20) {
-      s.push({ id: "build-strong", type: "positive", title: "Construcción sólida", message: `Estás destinando ${currentBlocks.buildPct.toFixed(0)}% a Construcción. Excelente ritmo.`, block: "build" });
+      s.push({ id: "build-strong", type: "positive", title: "Construcción con ritmo", message: `Estás destinando el ${currentBlocks.buildPct.toFixed(0)}% a construir tu futuro. Eso no es un número — es una decisión.`, block: "build" });
     }
     if (income > 0 && expense < income * 0.85) {
-      s.push({ id: "savings-good", type: "positive", title: "Margen de ahorro", message: "Tus gastos están por debajo del 85% de tus ingresos. Buen equilibrio." });
+      s.push({ id: "savings-good", type: "positive", title: "Margen saludable", message: "Tus gastos están por debajo de tus ingresos. Ese espacio que guardas es más valioso de lo que parece." });
     }
     if (prevBlocks.total > 0 && currentBlocks.total < prevBlocks.total * 0.95) {
-      s.push({ id: "expense-down", type: "positive", title: "Gasto a la baja", message: "Tu gasto total es menor que el mes anterior. Buen progreso." });
+      s.push({ id: "expense-down", type: "positive", title: "Menos gasto, más claridad", message: "Gastaste menos que el mes pasado. No siempre es fácil. Vale la pena notarlo." });
     }
     if (fund && emergencyProgress >= 50) {
-      s.push({ id: "emergency-good", type: "positive", title: "Fondo de emergencia avanzando", message: `Tu fondo de emergencia va al ${emergencyProgress.toFixed(0)}% de la meta.` });
+      s.push({ id: "emergency-good", type: "positive", title: "Fondo creciendo", message: `Tu fondo de emergencia lleva el ${emergencyProgress.toFixed(0)}% del camino. Cada aportación es una decisión de protegerte.` });
     }
 
     // Attention signals
     if (currentBlocks.buildPct < 5 && income > 0) {
-      s.push({ id: "build-low", type: "attention", title: "Construcción baja", message: "Tu bloque de Construcción está por debajo del 5%. Considera destinar un poco más.", block: "build" });
+      s.push({ id: "build-low", type: "attention", title: "Construcción en pausa", message: "Tu bloque de Construcción está muy bajo este mes. No hay urgencia, pero cuando puedas, vale la pena retomarlo.", block: "build" });
     }
     if (currentBlocks.stabilityPct > 75) {
-      s.push({ id: "stability-high", type: "attention", title: "Estabilidad presionada", message: `El ${currentBlocks.stabilityPct.toFixed(0)}% de tu gasto va a obligaciones fijas. Es alto, pero puedes ajustar poco a poco.`, block: "stability" });
+      s.push({ id: "stability-high", type: "attention", title: "Estabilidad muy ajustada", message: `El ${currentBlocks.stabilityPct.toFixed(0)}% de tu gasto va a compromisos fijos. Es un número alto. Revisarlo con calma puede abrir espacio.`, block: "stability" });
     }
     if (prevBlocks.lifestylePct > 0 && currentBlocks.lifestylePct > prevBlocks.lifestylePct + 10) {
-      s.push({ id: "lifestyle-rising", type: "attention", title: "Calidad de Vida en aumento", message: "Tu bloque de Calidad de Vida creció más de 10 puntos respecto al mes pasado.", block: "lifestyle" });
+      s.push({ id: "lifestyle-rising", type: "attention", title: "Calidad de Vida subiendo", message: "Este bloque creció más de 10 puntos respecto al mes pasado. No es un juicio — solo información útil para decidir con más conciencia.", block: "lifestyle" });
     }
     if (totalBudgeted > 0 && totalSpent > totalBudgeted * 0.9) {
-      s.push({ id: "budget-near", type: "attention", title: "Presupuesto cerca del límite", message: `Ya usaste el ${((totalSpent / totalBudgeted) * 100).toFixed(0)}% de tu presupuesto mensual.` });
+      s.push({ id: "budget-near", type: "attention", title: "Presupuesto casi completo", message: `Llevas el ${((totalSpent / totalBudgeted) * 100).toFixed(0)}% de tu presupuesto usado. Queda poco margen para lo que resta del mes.` });
     }
     if (income > 0 && expense > income) {
-      s.push({ id: "deficit", type: "attention", title: "Gastos superan ingresos", message: "Este mes tus gastos han superado tus ingresos. Revisa si hay algo que puedas ajustar." });
+      s.push({ id: "deficit", type: "attention", title: "Gastos mayores que ingresos", message: "Este mes los gastos superaron los ingresos. Pasa. Lo importante es verlo y decidir qué hacer desde aquí." });
     }
 
     // Category-level signals
@@ -248,7 +248,7 @@ export function useFinancialIntelligence() {
           id: `cat-spike-${catId}`,
           type: "attention",
           title: `Aumento en ${curr.name}`,
-          message: `Tu gasto en ${curr.name} subió considerablemente respecto al mes anterior.`,
+          message: `Tu gasto en ${curr.name} creció significativamente respecto al mes pasado. Puede ser algo puntual — vale la pena revisarlo.`,
           category: curr.name,
           block: curr.block,
         });
@@ -264,14 +264,14 @@ export function useFinancialIntelligence() {
     const income = currentTotals.income;
 
     if (currentBlocks.lifestylePct > 35 && currentBlocks.buildPct < 15) {
-      r.push({ id: "shift-to-build", priority: 1, message: "Podrías mover una pequeña parte de tu gasto de Calidad de Vida hacia Construcción para fortalecer tu futuro financiero." });
+      r.push({ id: "shift-to-build", priority: 1, message: "Hay un pequeño espacio en tu Calidad de Vida que, si lo movieras a Construcción, empezaría a trabajar para tu futuro. Sin prisa — solo una posibilidad." });
     }
 
     // Budget alerts
     budgets.forEach((b) => {
       const pct = b.amount > 0 ? ((b.spent ?? 0) / b.amount) * 100 : 0;
       if (pct >= 80 && pct < 100) {
-        r.push({ id: `budget-alert-${b.id}`, priority: 2, message: `Tu presupuesto de "${b.name}" está al ${pct.toFixed(0)}%. Un pequeño ajuste puede ayudarte a cerrar el mes bajo control.` });
+        r.push({ id: `budget-alert-${b.id}`, priority: 2, message: `Tu presupuesto de "${b.name}" lleva el ${pct.toFixed(0)}%. Aún hay margen para cerrar el mes sin sorpresas.` });
       }
     });
 
@@ -286,29 +286,29 @@ export function useFinancialIntelligence() {
     const minDTI = income > 0 ? (totalMinPayments / income) * 100 : 0;
 
     if (plannedDTI > 35) {
-      r.push({ id: "dti-critical", priority: 1, message: `Tu endeudamiento planeado (DTI ${plannedDTI.toFixed(0)}%) es crítico. Tus pagos de deuda consumen más del 35% de tu ingreso.` });
+      r.push({ id: "dti-critical", priority: 1, message: `Tus pagos de deuda planeados representan el ${plannedDTI.toFixed(0)}% de tu ingreso. Es una carga alta. Entenderla es el primer paso para reducirla.` });
     } else if (plannedDTI > 25) {
-      r.push({ id: "dti-elevated", priority: 2, message: `Tu DTI planeado está al ${plannedDTI.toFixed(0)}%. Busca reducir deudas para bajar del 25%.` });
+      r.push({ id: "dti-elevated", priority: 2, message: `Tu relación deuda-ingreso está al ${plannedDTI.toFixed(0)}%. No es crítico, pero sí vale la pena tenerlo presente y buscar reducirlo gradualmente.` });
     } else if (income > 0 && totalMinPayments > income * 0.2) {
-      r.push({ id: "debt-pressure", priority: 2, message: "Tus pagos mínimos de deuda absorben una parte importante de tu flujo. Considera si puedes renegociar condiciones." });
+      r.push({ id: "debt-pressure", priority: 2, message: "Tus pagos mínimos de deuda absorben una parte importante de tu flujo mensual. Revisar si hay condiciones que se puedan mejorar puede hacer una diferencia real." });
     }
 
     // Minimum-only trap warning
     if (minDTI > 0 && plannedDTI - minDTI > 5) {
-      r.push({ id: "min-trap", priority: 3, message: `Si solo pagaras mínimos (DTI ${minDTI.toFixed(0)}%), parecerías libre pero pagarías mucho más en intereses a largo plazo.` });
+      r.push({ id: "min-trap", priority: 3, message: `Pagando solo mínimos, tu situación parece estable — pero el costo en intereses a largo plazo es alto. Hay una diferencia entre parecer libre y estarlo.` });
     }
 
     // Emergency fund
     if (fund && emergencyProgress < 30) {
-      r.push({ id: "emergency-low", priority: 3, message: "Tu fondo de emergencia aún es pequeño. Sería buena idea aportar un poco más este mes." });
+      r.push({ id: "emergency-low", priority: 3, message: "Tu fondo de emergencia todavía está construyéndose. No hay prisa, pero cada aportación — por pequeña que sea — cuenta." });
     }
 
     if (currentBlocks.stabilityPct > 70) {
-      r.push({ id: "stability-review", priority: 3, message: "Revisa tus gastos fijos de Estabilidad. A veces hay servicios o suscripciones que se pueden optimizar." });
+      r.push({ id: "stability-review", priority: 3, message: "A veces entre los gastos fijos hay servicios o suscripciones que ya no usamos o que podemos ajustar. Vale la pena revisarlos con calma." });
     }
 
     if (income > 0 && currentTotals.expense < income * 0.7) {
-      r.push({ id: "good-margin", priority: 4, message: "Tienes un buen margen este mes. Aprovéchalo para fortalecer tu fondo de emergencia o aumentar Construcción." });
+      r.push({ id: "good-margin", priority: 4, message: "Tienes un margen real este mes. Podría ser una buena oportunidad para fortalecer tu fondo de emergencia o sumar algo a Construcción." });
     }
 
     return r.sort((a, b) => a.priority - b.priority);
@@ -348,14 +348,14 @@ export function useFinancialIntelligence() {
 
     // Positive recognition
     if (currentBlocks.stabilityPct > 0 && currentBlocks.stabilityPct <= 60) {
-      opp.push({ id: "stability-ordered", type: "positive", title: "Estabilidad ordenada", message: "Tu bloque de Estabilidad se mantiene en un rango saludable." });
+      opp.push({ id: "stability-ordered", type: "positive", title: "Estabilidad en orden", message: "Tu bloque de Estabilidad está en un rango saludable. Eso es la base de todo lo demás." });
     }
 
     // Categories with reduction
     Object.entries(currentBlocks.byCat).forEach(([catId, curr]) => {
       const prev = prevBlocks.byCat[catId];
       if (prev && curr.amount < prev.amount * 0.8 && prev.amount > 300) {
-        opp.push({ id: `cat-improve-${catId}`, type: "positive", title: `Mejora en ${curr.name}`, message: `Redujiste tu gasto en ${curr.name} respecto al mes anterior.` });
+        opp.push({ id: `cat-improve-${catId}`, type: "positive", title: `Mejora en ${curr.name}`, message: `Redujiste tu gasto en ${curr.name} este mes. Ese ajuste, aunque parezca pequeño, tiene impacto.` });
       }
     });
 
@@ -368,15 +368,14 @@ export function useFinancialIntelligence() {
         .forEach(([catId, v]) => {
           const catPct = (v.amount / currentBlocks.lifestyle) * 100;
           if (catPct > 30) {
-            opp.push({ id: `cut-${catId}`, type: "neutral", title: `${v.name} concentra gasto`, message: `${v.name} representa el ${catPct.toFixed(0)}% de tu Calidad de Vida. Podrías revisarlo.` });
+            opp.push({ id: `cut-${catId}`, type: "neutral", title: `${v.name} concentra gasto`, message: `${v.name} representa el ${catPct.toFixed(0)}% de tu Calidad de Vida. Es solo información — útil para decidir con más consciencia.` });
           }
         });
     }
 
     // Build potential
     if (currentBlocks.buildPct < 15 && currentTotals.income > currentTotals.expense) {
-      const surplus = currentTotals.income - currentTotals.expense;
-      opp.push({ id: "surplus-to-build", type: "neutral", title: "Oportunidad en Construcción", message: `Tienes un excedente que podrías canalizar a ahorro o inversión.` });
+      opp.push({ id: "surplus-to-build", type: "neutral", title: "Espacio para construir", message: "Tienes un excedente este mes. Podría encontrar un buen lugar en tu fondo de emergencia o en Construcción." });
     }
 
     return opp;

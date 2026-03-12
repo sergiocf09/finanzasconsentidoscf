@@ -319,12 +319,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const renderMethodStep = () => (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground mb-4">¿Cómo quieres construir tu presupuesto?</p>
+      <p className="text-sm text-muted-foreground mb-4">¿Desde dónde quieres construir tu presupuesto?</p>
       {[
-        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Asigna monto por categoría" },
-        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Usa tu gasto promedio como guía" },
-        { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige un modelo predefinido" },
-        { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Análisis y sugerencia optimizada" },
+        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría" },
+        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores" },
+        { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida" },
+        { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada" },
       ].map((m) => (
         <button
           key={m.id}
@@ -345,7 +345,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const renderPeriodStep = () => (
     <div className="space-y-1.5">
-      <p className="text-sm text-muted-foreground mb-3">Selecciona el periodo para tu presupuesto.</p>
+      <p className="text-sm text-muted-foreground mb-3">¿Para qué mes quieres construir este presupuesto?</p>
 
       <FieldRow label="Mes">
         <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
@@ -533,9 +533,9 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       <AlertDialog open={existingBudgetDialog} onOpenChange={setExistingBudgetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ya existe un presupuesto</AlertDialogTitle>
+            <AlertDialogTitle>Ya tienes un presupuesto para este mes</AlertDialogTitle>
             <AlertDialogDescription>
-              Tienes {existingCount} categoría(s) presupuestada(s) para {months.find(m => m.value === String(month))?.label} {year}. ¿Qué deseas hacer?
+              Puedes editarlo, reemplazarlo por uno nuevo, o usarlo como base para ajustar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2">

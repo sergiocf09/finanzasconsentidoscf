@@ -92,8 +92,9 @@ export default function Reports() {
   const handleExportPDF = async () => {
     setGeneratingPdf(true);
     try {
-      const { default: jsPDF } = await import("jspdf");
-      await import("jspdf-autotable");
+      const jsPDFModule = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const jsPDF = jsPDFModule.default;
 
       const doc = new jsPDF({ unit: "mm", format: "a4" });
       const w = doc.internal.pageSize.getWidth();
@@ -148,7 +149,7 @@ export default function Reports() {
           `${b.percent.toFixed(1)}%`,
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: y,
           head: [["Bloque", "Monto", "% del gasto"]],
           body: blockRows,
@@ -172,7 +173,7 @@ export default function Reports() {
           `${c.pct.toFixed(1)}%`,
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: y,
           head: [["Categoría", "Monto", "% del gasto"]],
           body: catRows,

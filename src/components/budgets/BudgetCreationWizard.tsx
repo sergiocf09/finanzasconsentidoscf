@@ -533,9 +533,9 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       <AlertDialog open={existingBudgetDialog} onOpenChange={setExistingBudgetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ya existe un presupuesto</AlertDialogTitle>
+            <AlertDialogTitle>Ya tienes un presupuesto para este mes</AlertDialogTitle>
             <AlertDialogDescription>
-              Tienes {existingCount} categoría(s) presupuestada(s) para {months.find(m => m.value === String(month))?.label} {year}. ¿Qué deseas hacer?
+              Puedes editarlo, reemplazarlo por uno nuevo, o usarlo como base para ajustar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2">

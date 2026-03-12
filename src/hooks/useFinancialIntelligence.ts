@@ -348,14 +348,14 @@ export function useFinancialIntelligence() {
 
     // Positive recognition
     if (currentBlocks.stabilityPct > 0 && currentBlocks.stabilityPct <= 60) {
-      opp.push({ id: "stability-ordered", type: "positive", title: "Estabilidad ordenada", message: "Tu bloque de Estabilidad se mantiene en un rango saludable." });
+      opp.push({ id: "stability-ordered", type: "positive", title: "Estabilidad en orden", message: "Tu bloque de Estabilidad está en un rango saludable. Eso es la base de todo lo demás." });
     }
 
     // Categories with reduction
     Object.entries(currentBlocks.byCat).forEach(([catId, curr]) => {
       const prev = prevBlocks.byCat[catId];
       if (prev && curr.amount < prev.amount * 0.8 && prev.amount > 300) {
-        opp.push({ id: `cat-improve-${catId}`, type: "positive", title: `Mejora en ${curr.name}`, message: `Redujiste tu gasto en ${curr.name} respecto al mes anterior.` });
+        opp.push({ id: `cat-improve-${catId}`, type: "positive", title: `Mejora en ${curr.name}`, message: `Redujiste tu gasto en ${curr.name} este mes. Ese ajuste, aunque parezca pequeño, tiene impacto.` });
       }
     });
 
@@ -368,15 +368,14 @@ export function useFinancialIntelligence() {
         .forEach(([catId, v]) => {
           const catPct = (v.amount / currentBlocks.lifestyle) * 100;
           if (catPct > 30) {
-            opp.push({ id: `cut-${catId}`, type: "neutral", title: `${v.name} concentra gasto`, message: `${v.name} representa el ${catPct.toFixed(0)}% de tu Calidad de Vida. Podrías revisarlo.` });
+            opp.push({ id: `cut-${catId}`, type: "neutral", title: `${v.name} concentra gasto`, message: `${v.name} representa el ${catPct.toFixed(0)}% de tu Calidad de Vida. Es solo información — útil para decidir con más consciencia.` });
           }
         });
     }
 
     // Build potential
     if (currentBlocks.buildPct < 15 && currentTotals.income > currentTotals.expense) {
-      const surplus = currentTotals.income - currentTotals.expense;
-      opp.push({ id: "surplus-to-build", type: "neutral", title: "Oportunidad en Construcción", message: `Tienes un excedente que podrías canalizar a ahorro o inversión.` });
+      opp.push({ id: "surplus-to-build", type: "neutral", title: "Espacio para construir", message: "Tienes un excedente este mes. Podría encontrar un buen lugar en tu fondo de emergencia o en Construcción." });
     }
 
     return opp;

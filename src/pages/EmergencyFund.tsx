@@ -37,7 +37,7 @@ export default function EmergencyFund() {
           <div className="text-center space-y-1">
             <p className="font-heading font-semibold text-foreground">Sin fondo de emergencia</p>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Crea tu fondo de emergencia para tener un colchón financiero ante imprevistos. Las aportaciones se realizan mediante transferencias entre tus cuentas.
+              El fondo de emergencia no es un lujo — es lo que te permite tomar decisiones desde la calma y no desde el miedo. Las aportaciones se hacen mediante transferencias desde tus cuentas.
             </p>
           </div>
         </div>

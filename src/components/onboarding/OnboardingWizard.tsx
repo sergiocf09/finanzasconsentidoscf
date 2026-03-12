@@ -193,10 +193,10 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
         <CheckCircle2 className="h-7 w-7 text-income" />
       </div>
       <h2 className="text-lg font-heading font-semibold text-foreground">
-        ¡Tu tablero está listo para trabajar contigo!
+        Ya estás adentro.
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs">
-        Explora las secciones con el ícono <span className="font-medium">?</span> para aprender más sobre cada herramienta.
+        Tu espacio está listo. Empieza por donde quieras — no hay un orden obligatorio. Finanzas con Sentido se va adaptando a ti.
       </p>
       <div className="flex items-center gap-3 rounded-lg border border-border p-3 w-full">
         <Switch checked={dontShowAgain} onCheckedChange={setDontShowAgain} />

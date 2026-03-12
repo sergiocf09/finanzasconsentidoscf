@@ -463,17 +463,24 @@ export function VoiceButton() {
                     const amount = parseFloat(editAmount);
                     const usdRate = fxRates["USD"] || 0;
                     if (usdRate <= 0) return null;
-                    let converted = 0;
-                    if (editCurrency === "MXN" && acc.currency === "USD") converted = amount / usdRate;
-                    else if (editCurrency === "USD" && acc.currency === "MXN") converted = amount * usdRate;
-                    else return null;
+
+                    let convertedAmount = 0;
+                    let label = "";
+
+                    if (editCurrency === "USD" && acc.currency === "MXN") {
+                      convertedAmount = amount * usdRate;
+                      label = `$${amount.toFixed(2)} USD → $${convertedAmount.toFixed(2)} MXN · TC: $${usdRate.toFixed(2)}`;
+                    } else if (editCurrency === "MXN" && acc.currency === "USD") {
+                      convertedAmount = amount / usdRate;
+                      label = `$${amount.toFixed(2)} MXN → $${convertedAmount.toFixed(4)} USD · TC: $${usdRate.toFixed(2)}`;
+                    } else {
+                      return null;
+                    }
+
                     return (
-                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-2">
+                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5">
                         <p className="text-[11px] text-foreground text-center">
-                          Conversión: <span className="font-semibold">${amount.toFixed(2)} {editCurrency}</span>
-                          {" → "}
-                          <span className="font-semibold">${converted.toFixed(2)} {acc.currency}</span>
-                          <span className="text-muted-foreground"> · TC: ${usdRate.toFixed(2)}</span>
+                          <span className="font-semibold">{label}</span>
                         </p>
                       </div>
                     );

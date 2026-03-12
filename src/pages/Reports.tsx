@@ -213,7 +213,7 @@ export default function Reports() {
         body: incomeRows,
         margin: { left: MARGIN, right: MARGIN },
         styles: { fontSize: 7, textColor: MID },
-        headStyles: { fillColor: INCOME_GREEN, textColor: [255, 255, 255], fontSize: 7 },
+        headStyles: { fillColor: INCOME_GREEN, textColor: [255, 255, 255] as [number, number, number], fontSize: 7 },
         alternateRowStyles: { fillColor: [245, 250, 247] },
         columnStyles: { 0: { cellWidth: 22 }, 2: { cellWidth: 40 }, 3: { cellWidth: 35, halign: "right" } },
       });

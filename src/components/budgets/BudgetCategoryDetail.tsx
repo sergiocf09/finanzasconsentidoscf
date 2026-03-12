@@ -223,7 +223,7 @@ export function BudgetCategoryDetail({
                         </span>
                         {isMultiCurrency && (
                           <p className="text-[10px] text-muted-foreground tabular-nums">
-                            {tx.currency} {formatCurrency(tx.amount, tx.currency)}
+                            {formatCurrency(tx.amount, tx.currency)}
                           </p>
                         )}
                       </div>

@@ -225,7 +225,7 @@ export default function Reports() {
         { Concepto: "Gastos", Monto: totals.expense },
         { Concepto: "Balance", Monto: totals.income - totals.expense },
         { Concepto: "", Monto: "" },
-        ...(blockSummaries || []).map((b) => ({
+        ...blockSummariesList.map((b) => ({
           Concepto: `Bloque: ${b.label}`,
           Monto: b.amount,
           Porcentaje: `${b.percent.toFixed(1)}%`,

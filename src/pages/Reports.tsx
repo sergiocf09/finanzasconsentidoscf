@@ -247,7 +247,7 @@ export default function Reports() {
         ]),
         margin: { left: marginLeft, right: marginRight },
         styles: { fontSize: 7, textColor: MID },
-        headStyles: { fillColor: EXPENSE_RED, textColor: [255, 255, 255], fontSize: 7 },
+        headStyles: { fillColor: EXPENSE_RED, textColor: [255, 255, 255] as [number, number, number], fontSize: 7 },
         alternateRowStyles: { fillColor: [252, 245, 245] },
         columnStyles: { 0: { cellWidth: 8 }, 2: { cellWidth: 22, halign: "right" as const } },
         tableWidth: COL_W as number,

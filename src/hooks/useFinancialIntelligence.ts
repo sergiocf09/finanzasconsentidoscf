@@ -115,7 +115,7 @@ export function useFinancialIntelligence() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("category_id, amount, type, transaction_date")
+        .select("category_id, amount, amount_in_base, type, transaction_date")
         .eq("type", "expense")
         .gte("transaction_date", format(sixStart, "yyyy-MM-dd"))
         .lte("transaction_date", format(currentEnd, "yyyy-MM-dd"))
@@ -393,8 +393,9 @@ export function useFinancialIntelligence() {
       if (!monthlyData[monthKey]) monthlyData[monthKey] = { expense: 0, blocks: { stability: 0, lifestyle: 0, build: 0 } };
       const cat = tx.category_id ? catMap.get(tx.category_id) : null;
       const bucket = (cat as any)?.bucket || "lifestyle";
-      monthlyData[monthKey].expense += Number(tx.amount);
-      monthlyData[monthKey].blocks[bucket] = (monthlyData[monthKey].blocks[bucket] || 0) + Number(tx.amount);
+      const amt = Number((tx as any).amount_in_base ?? tx.amount);
+      monthlyData[monthKey].expense += amt;
+      monthlyData[monthKey].blocks[bucket] = (monthlyData[monthKey].blocks[bucket] || 0) + amt;
     });
 
     const monthNames = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];

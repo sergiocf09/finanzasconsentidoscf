@@ -319,12 +319,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const renderMethodStep = () => (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground mb-4">¿Cómo quieres construir tu presupuesto?</p>
+      <p className="text-sm text-muted-foreground mb-4">¿Desde dónde quieres construir tu presupuesto?</p>
       {[
-        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Asigna monto por categoría" },
-        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Usa tu gasto promedio como guía" },
-        { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige un modelo predefinido" },
-        { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Análisis y sugerencia optimizada" },
+        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría" },
+        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores" },
+        { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida" },
+        { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada" },
       ].map((m) => (
         <button
           key={m.id}

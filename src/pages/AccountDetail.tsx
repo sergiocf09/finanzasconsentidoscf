@@ -52,6 +52,7 @@ export default function AccountDetail() {
       amount: t.type === "expense" ? -t.amount : t.amount,
       currency: t.currency,
       source: "tx" as const,
+      categoryName: getCategoryName(t.category_id),
     })),
     ...transfers.map((t) => ({
       id: t.id,
@@ -63,6 +64,7 @@ export default function AccountDetail() {
       amount: t.from_account_id === id ? -t.amount_from : t.amount_to,
       currency: t.from_account_id === id ? t.currency_from : t.currency_to,
       source: "transfer" as const,
+      categoryName: "",
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

@@ -53,6 +53,8 @@ export default function AccountDetail() {
       currency: t.currency,
       source: "tx" as const,
       categoryName: getCategoryName(t.category_id),
+      amount_in_base: (t as any).amount_in_base ?? null,
+      exchange_rate: (t as any).exchange_rate ?? null,
     })),
     ...transfers.map((t) => ({
       id: t.id,

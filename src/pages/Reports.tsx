@@ -53,7 +53,7 @@ export default function Reports() {
   const { budgets } = useBudgets();
   const { categories } = useCategories();
   const { accounts } = useAccounts();
-  const { blockSummaries, stage, stageLabel } = useFinancialIntelligence();
+  const { blockSummaries, stage } = useFinancialIntelligence();
 
   const categoryMap = useMemo(() => {
     const m: Record<string, string> = {};

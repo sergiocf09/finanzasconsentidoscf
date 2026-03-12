@@ -66,7 +66,7 @@ export function BudgetCategoryDetail({
 
       const { data } = await supabase
         .from("transactions")
-        .select("id, description, amount, transaction_date, currency")
+        .select("id, description, amount, amount_in_base, exchange_rate, transaction_date, currency")
         .eq("category_id", budget.category_id!)
         .eq("type", "expense")
         .gte("transaction_date", startDate)

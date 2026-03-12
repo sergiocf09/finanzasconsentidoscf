@@ -345,7 +345,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const renderPeriodStep = () => (
     <div className="space-y-1.5">
-      <p className="text-sm text-muted-foreground mb-3">Selecciona el periodo para tu presupuesto.</p>
+      <p className="text-sm text-muted-foreground mb-3">¿Para qué mes quieres construir este presupuesto?</p>
 
       <FieldRow label="Mes">
         <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>

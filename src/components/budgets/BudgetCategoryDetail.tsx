@@ -19,6 +19,8 @@ interface Transaction {
   id: string;
   description: string | null;
   amount: number;
+  amount_in_base: number | null;
+  exchange_rate: number | null;
   transaction_date: string;
   currency: string;
 }

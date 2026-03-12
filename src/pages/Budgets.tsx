@@ -209,33 +209,41 @@ export default function Budgets() {
       {/* Comparativa vs mes anterior */}
       {!isLoading && blockComparison && budgets.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-3 animate-fade-in-up">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart2 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <h3 className="text-sm font-heading font-semibold text-foreground">
-                vs {monthNames[prevMonth]} {prevYear}
-              </h3>
-            </div>
-            <span className="text-[10px] text-muted-foreground">Gasto real por bloque</span>
+          <div className="flex items-center gap-2 mb-1">
+            <BarChart2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            <h3 className="text-sm font-heading font-semibold text-foreground">
+              vs {monthNames[prevMonth]} {prevYear}
+            </h3>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          {/* Table header */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center text-[10px] text-muted-foreground font-medium px-1">
+            <span>Bloque</span>
+            <span className="text-right min-w-[60px]">Actual</span>
+            <span className="text-right min-w-[50px]">Var.</span>
+            <span className="text-right min-w-[60px]">Anterior</span>
+          </div>
+
+          {/* Table rows */}
+          <div className="space-y-1">
             {blockComparison.map(({ block, label, emoji, currentSpent, prevSpent, spentDiff }) => (
-              <div key={block} className="rounded-lg bg-secondary/50 p-2.5 space-y-1 text-center">
-                <p className="text-[11px] text-muted-foreground font-medium">{emoji} {label}</p>
-                <p className="text-sm font-bold font-heading tabular-nums">{formatCurrency(currentSpent)}</p>
-                {spentDiff !== null && (
-                  <p className={cn(
-                    "text-[10px] font-semibold flex items-center justify-center gap-0.5",
-                    Math.abs(spentDiff) < 1 ? "text-muted-foreground" :
-                    spentDiff < 0 ? "text-income" : "text-expense"
-                  )}>
-                    {Math.abs(spentDiff) < 1 ? "= Sin cambio" : spentDiff < 0 ? `▼ ${Math.abs(spentDiff).toFixed(0)}%` : `▲ ${spentDiff.toFixed(0)}%`}
-                  </p>
-                )}
-                {prevSpent > 0 && (
-                  <p className="text-[9px] text-muted-foreground tabular-nums">ant. {formatCurrency(prevSpent)}</p>
-                )}
+              <div key={block} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center rounded-lg bg-secondary/40 px-2.5 py-2">
+                <span className="text-xs font-medium text-foreground">{emoji} {label}</span>
+                <span className="text-xs font-bold tabular-nums text-foreground text-right min-w-[60px]">
+                  {formatCurrency(currentSpent)}
+                </span>
+                <span className={cn(
+                  "text-[11px] font-semibold tabular-nums text-right min-w-[50px]",
+                  spentDiff === null || Math.abs(spentDiff) < 1 ? "text-muted-foreground" :
+                  spentDiff < 0 ? "text-income" : "text-expense"
+                )}>
+                  {spentDiff === null ? "—" :
+                   Math.abs(spentDiff) < 1 ? "=" :
+                   spentDiff < 0 ? `▼${Math.abs(spentDiff).toFixed(0)}%` : `▲${spentDiff.toFixed(0)}%`}
+                </span>
+                <span className="text-[11px] text-muted-foreground tabular-nums text-right min-w-[60px]">
+                  {prevSpent > 0 ? formatCurrency(prevSpent) : "—"}
+                </span>
               </div>
             ))}
           </div>
@@ -245,20 +253,23 @@ export default function Budgets() {
             const totalPrev = blockComparison.reduce((s, b) => s + b.prevSpent, 0);
             const totalDiff = totalPrev > 0 ? ((totalCurrent - totalPrev) / totalPrev) * 100 : null;
             return (
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <span className="text-[11px] text-muted-foreground">Total gasto presupuestado</span>
-                <div className="flex items-center gap-2">
-                  {totalDiff !== null && (
-                    <span className={cn(
-                      "text-[10px] font-semibold",
-                      Math.abs(totalDiff) < 1 ? "text-muted-foreground" :
-                      totalDiff < 0 ? "text-income" : "text-expense"
-                    )}>
-                      {totalDiff > 0 ? "+" : ""}{totalDiff.toFixed(0)}%
-                    </span>
-                  )}
-                  <span className="text-xs font-bold tabular-nums">{formatCurrency(totalCurrent)}</span>
-                </div>
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center pt-2 border-t border-border px-1">
+                <span className="text-[11px] font-semibold text-foreground">Gasto acumulado</span>
+                <span className="text-xs font-bold tabular-nums text-foreground text-right min-w-[60px]">
+                  {formatCurrency(totalCurrent)}
+                </span>
+                {totalDiff !== null ? (
+                  <span className={cn(
+                    "text-[11px] font-semibold tabular-nums text-right min-w-[50px]",
+                    Math.abs(totalDiff) < 1 ? "text-muted-foreground" :
+                    totalDiff < 0 ? "text-income" : "text-expense"
+                  )}>
+                    {totalDiff > 0 ? "+" : ""}{totalDiff.toFixed(0)}%
+                  </span>
+                ) : <span className="min-w-[50px]" />}
+                <span className="text-[11px] text-muted-foreground tabular-nums text-right min-w-[60px]">
+                  {totalPrev > 0 ? formatCurrency(totalPrev) : "—"}
+                </span>
               </div>
             );
           })()}

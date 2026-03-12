@@ -143,6 +143,7 @@ export default function Transactions() {
       amount: tx.amount,
       currency: tx.currency,
       amount_in_base: tx.amount_in_base ?? null,
+      exchange_rate: tx.exchange_rate ?? null,
       source: "tx" as const,
       accountName: getAccountName(tx.account_id),
       isRecurring: tx.is_recurring === true,

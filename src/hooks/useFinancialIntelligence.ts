@@ -211,33 +211,33 @@ export function useFinancialIntelligence() {
 
     // Positive signals
     if (currentBlocks.buildPct > 20) {
-      s.push({ id: "build-strong", type: "positive", title: "Construcción sólida", message: `Estás destinando ${currentBlocks.buildPct.toFixed(0)}% a Construcción. Excelente ritmo.`, block: "build" });
+      s.push({ id: "build-strong", type: "positive", title: "Construcción con ritmo", message: `Estás destinando el ${currentBlocks.buildPct.toFixed(0)}% a construir tu futuro. Eso no es un número — es una decisión.`, block: "build" });
     }
     if (income > 0 && expense < income * 0.85) {
-      s.push({ id: "savings-good", type: "positive", title: "Margen de ahorro", message: "Tus gastos están por debajo del 85% de tus ingresos. Buen equilibrio." });
+      s.push({ id: "savings-good", type: "positive", title: "Margen saludable", message: "Tus gastos están por debajo de tus ingresos. Ese espacio que guardas es más valioso de lo que parece." });
     }
     if (prevBlocks.total > 0 && currentBlocks.total < prevBlocks.total * 0.95) {
-      s.push({ id: "expense-down", type: "positive", title: "Gasto a la baja", message: "Tu gasto total es menor que el mes anterior. Buen progreso." });
+      s.push({ id: "expense-down", type: "positive", title: "Menos gasto, más claridad", message: "Gastaste menos que el mes pasado. No siempre es fácil. Vale la pena notarlo." });
     }
     if (fund && emergencyProgress >= 50) {
-      s.push({ id: "emergency-good", type: "positive", title: "Fondo de emergencia avanzando", message: `Tu fondo de emergencia va al ${emergencyProgress.toFixed(0)}% de la meta.` });
+      s.push({ id: "emergency-good", type: "positive", title: "Fondo creciendo", message: `Tu fondo de emergencia lleva el ${emergencyProgress.toFixed(0)}% del camino. Cada aportación es una decisión de protegerte.` });
     }
 
     // Attention signals
     if (currentBlocks.buildPct < 5 && income > 0) {
-      s.push({ id: "build-low", type: "attention", title: "Construcción baja", message: "Tu bloque de Construcción está por debajo del 5%. Considera destinar un poco más.", block: "build" });
+      s.push({ id: "build-low", type: "attention", title: "Construcción en pausa", message: "Tu bloque de Construcción está muy bajo este mes. No hay urgencia, pero cuando puedas, vale la pena retomarlo.", block: "build" });
     }
     if (currentBlocks.stabilityPct > 75) {
-      s.push({ id: "stability-high", type: "attention", title: "Estabilidad presionada", message: `El ${currentBlocks.stabilityPct.toFixed(0)}% de tu gasto va a obligaciones fijas. Es alto, pero puedes ajustar poco a poco.`, block: "stability" });
+      s.push({ id: "stability-high", type: "attention", title: "Estabilidad muy ajustada", message: `El ${currentBlocks.stabilityPct.toFixed(0)}% de tu gasto va a compromisos fijos. Es un número alto. Revisarlo con calma puede abrir espacio.`, block: "stability" });
     }
     if (prevBlocks.lifestylePct > 0 && currentBlocks.lifestylePct > prevBlocks.lifestylePct + 10) {
-      s.push({ id: "lifestyle-rising", type: "attention", title: "Calidad de Vida en aumento", message: "Tu bloque de Calidad de Vida creció más de 10 puntos respecto al mes pasado.", block: "lifestyle" });
+      s.push({ id: "lifestyle-rising", type: "attention", title: "Calidad de Vida subiendo", message: "Este bloque creció más de 10 puntos respecto al mes pasado. No es un juicio — solo información útil para decidir con más conciencia.", block: "lifestyle" });
     }
     if (totalBudgeted > 0 && totalSpent > totalBudgeted * 0.9) {
-      s.push({ id: "budget-near", type: "attention", title: "Presupuesto cerca del límite", message: `Ya usaste el ${((totalSpent / totalBudgeted) * 100).toFixed(0)}% de tu presupuesto mensual.` });
+      s.push({ id: "budget-near", type: "attention", title: "Presupuesto casi completo", message: `Llevas el ${((totalSpent / totalBudgeted) * 100).toFixed(0)}% de tu presupuesto usado. Queda poco margen para lo que resta del mes.` });
     }
     if (income > 0 && expense > income) {
-      s.push({ id: "deficit", type: "attention", title: "Gastos superan ingresos", message: "Este mes tus gastos han superado tus ingresos. Revisa si hay algo que puedas ajustar." });
+      s.push({ id: "deficit", type: "attention", title: "Gastos mayores que ingresos", message: "Este mes los gastos superaron los ingresos. Pasa. Lo importante es verlo y decidir qué hacer desde aquí." });
     }
 
     // Category-level signals
@@ -248,7 +248,7 @@ export function useFinancialIntelligence() {
           id: `cat-spike-${catId}`,
           type: "attention",
           title: `Aumento en ${curr.name}`,
-          message: `Tu gasto en ${curr.name} subió considerablemente respecto al mes anterior.`,
+          message: `Tu gasto en ${curr.name} creció significativamente respecto al mes pasado. Puede ser algo puntual — vale la pena revisarlo.`,
           category: curr.name,
           block: curr.block,
         });

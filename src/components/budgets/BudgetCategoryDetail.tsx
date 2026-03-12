@@ -19,6 +19,8 @@ interface Transaction {
   id: string;
   description: string | null;
   amount: number;
+  amount_in_base: number | null;
+  exchange_rate: number | null;
   transaction_date: string;
   currency: string;
 }
@@ -64,7 +66,7 @@ export function BudgetCategoryDetail({
 
       const { data } = await supabase
         .from("transactions")
-        .select("id, description, amount, transaction_date, currency")
+        .select("id, description, amount, amount_in_base, exchange_rate, transaction_date, currency")
         .eq("category_id", budget.category_id!)
         .eq("type", "expense")
         .gte("transaction_date", startDate)
@@ -199,24 +201,35 @@ export function BudgetCategoryDetail({
               </p>
             ) : (
               <div className="space-y-1">
-                {transactions.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/30 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground truncate">
-                        {tx.description || "Sin descripción"}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {format(new Date(tx.transaction_date), "d MMM", { locale: es })}
-                      </p>
+                {transactions.map((tx) => {
+                  const displayAmount = tx.amount_in_base ?? tx.amount;
+                  const isMultiCurrency = tx.currency !== "MXN" && tx.amount_in_base != null && tx.exchange_rate != null;
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/30 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-foreground truncate">
+                          {tx.description || "Sin descripción"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {format(new Date(tx.transaction_date), "d MMM", { locale: es })}
+                        </p>
+                      </div>
+                      <div className="shrink-0 ml-2 text-right">
+                        <span className="text-sm font-medium text-foreground">
+                          {fmt(displayAmount)}
+                        </span>
+                        {isMultiCurrency && (
+                          <p className="text-[10px] text-muted-foreground tabular-nums">
+                            {tx.currency} {formatCurrency(tx.amount, tx.currency)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-sm font-medium text-foreground shrink-0 ml-2">
-                      {fmt(tx.amount)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -24,8 +24,8 @@ export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = 
   const status = getStatus(percentage);
 
   const barBg = {
-    safe: "bg-[hsl(var(--block-build))]",
-    warning: "bg-[hsl(var(--block-lifestyle))]",
+    safe: "bg-white",
+    warning: "bg-white",
     caution: "bg-[hsl(var(--accent))]",
     over: "bg-[hsl(var(--status-danger))]",
   }[status];

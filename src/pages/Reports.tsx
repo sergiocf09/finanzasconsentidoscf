@@ -118,91 +118,107 @@ export default function Reports() {
       const MARGIN = 16;
       const COL_W = (PAGE_W - MARGIN * 2 - 6) / 2;
 
-      // === SECTION 1 — Branded header (rounded, centered, not full width) ===
-      const headerW = PAGE_W - MARGIN * 2;
-      const headerH = 24;
-      const headerY = 10;
-      doc.setFillColor(...SAGE_DARK);
-      doc.roundedRect(MARGIN, headerY, headerW, headerH, 4, 4, "F");
-      // Title
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("FINANZAS CON SENTIDO™", PAGE_W / 2, headerY + 9, { align: "center" });
-      // Period
-      doc.setTextColor(...GOLD);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
+      // === SECTION 1 — Clean header (no background, just text) ===
       const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
-      doc.text(mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), PAGE_W / 2, headerY + 15, { align: "center" });
-      // Generated date
-      doc.setTextColor(200, 210, 200);
-      doc.setFontSize(7);
-      doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, PAGE_W / 2, headerY + 21, { align: "center" });
+      const mesCapLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+      let y = 18;
+      doc.setTextColor(...SAGE_DARK);
+      doc.setFontSize(15);
+      doc.setFont("helvetica", "bold");
+      doc.text("Finanzas con Sentido™", PAGE_W / 2, y, { align: "center" });
+      y += 7;
+      doc.setTextColor(...DARK);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(mesCapLabel, PAGE_W / 2, y, { align: "center" });
+      y += 5;
+      doc.setTextColor(...MID);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, PAGE_W / 2, y, { align: "center" });
+      y += 9;
 
-      // === SECTION 2 — Summary cards (Ingresos, Gastos, Balance) ===
-      let y = headerY + headerH + 8;
+      // === SECTION 2 — Summary cards (Title Case, bigger labels) ===
       const cardW = 56;
-      const cardH = 20;
+      const cardH = 22;
       const gap = (PAGE_W - MARGIN * 2 - cardW * 3) / 2;
       const balance = totals.income - totals.expense;
 
       const cards = [
-        { label: "INGRESOS", value: formatCurrency(totals.income, "MXN", { decimals: 2 }), color: INCOME_GREEN },
-        { label: "GASTOS", value: formatCurrency(totals.expense, "MXN", { decimals: 2 }), color: EXPENSE_RED },
-        { label: "BALANCE", value: formatCurrency(balance, "MXN", { decimals: 2 }), color: balance >= 0 ? ACCENT : EXPENSE_RED },
+        { label: "Ingresos", value: formatCurrency(totals.income, "MXN", { decimals: 2 }), color: INCOME_GREEN },
+        { label: "Gastos", value: formatCurrency(totals.expense, "MXN", { decimals: 2 }), color: EXPENSE_RED },
+        { label: "Balance", value: formatCurrency(balance, "MXN", { decimals: 2 }), color: balance >= 0 ? ACCENT : EXPENSE_RED },
       ];
 
+      const cardsY = y;
       cards.forEach((card, i) => {
         const x = MARGIN + i * (cardW + gap);
         doc.setDrawColor(...card.color);
         doc.setLineWidth(0.6);
-        doc.roundedRect(x, y, cardW, cardH, 2, 2, "S");
+        doc.roundedRect(x, cardsY, cardW, cardH, 2, 2, "S");
         doc.setTextColor(...MID);
-        doc.setFontSize(7);
+        doc.setFontSize(9);
         doc.setFont("helvetica", "normal");
-        doc.text(card.label, x + cardW / 2, y + 7, { align: "center" });
+        doc.text(card.label, x + cardW / 2, cardsY + 8, { align: "center" });
         doc.setTextColor(...card.color);
-        doc.setFontSize(14);
+        doc.setFontSize(15);
         doc.setFont("helvetica", "bold");
-        doc.text(card.value, x + cardW / 2, y + 15, { align: "center" });
+        doc.text(card.value, x + cardW / 2, cardsY + 17, { align: "center" });
       });
 
-      // === SECTION 3 — Block distribution as cards with color ===
-      y += cardH + 6;
-      doc.setTextColor(...DARK);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.text("DISTRIBUCIÓN POR BLOQUES", MARGIN, y);
-      y += 3;
-
+      // === SECTION 3 — Arrow from Gastos → 3 block cards (no title) ===
+      y = cardsY + cardH;
       const blockColors: [number, number, number][] = [STABILITY_COLOR, LIFESTYLE_COLOR, BUILD_COLOR];
 
       if (blockSummariesList.length > 0) {
+        const gastosCenterX = MARGIN + 1 * (cardW + gap) + cardW / 2;
+        const arrowStartY = y + 1;
+        const arrowMidY = arrowStartY + 5;
+        const blockCardH = 24;
         const blockCardW = cardW;
-        const blockCardH = 20;
+        const blockCardsY = arrowMidY + 5;
+
+        // Vertical line down from Gastos card
+        doc.setDrawColor(...MID);
+        doc.setLineWidth(0.4);
+        doc.line(gastosCenterX, arrowStartY, gastosCenterX, arrowMidY);
+
+        // Horizontal line spanning all 3 block card centers
+        const block0CenterX = MARGIN + blockCardW / 2;
+        const block2CenterX = MARGIN + 2 * (blockCardW + gap) + blockCardW / 2;
+        doc.line(block0CenterX, arrowMidY, block2CenterX, arrowMidY);
+
+        // 3 vertical lines down + arrowheads
+        blockSummariesList.forEach((_, i) => {
+          const cx = MARGIN + i * (blockCardW + gap) + blockCardW / 2;
+          doc.line(cx, arrowMidY, cx, blockCardsY);
+          doc.setFillColor(...MID);
+          doc.triangle(cx - 1.2, blockCardsY - 1.5, cx + 1.2, blockCardsY - 1.5, cx, blockCardsY, "F");
+        });
+
+        // Block cards (bigger labels + percentage)
         blockSummariesList.forEach((b, i) => {
           const x = MARGIN + i * (blockCardW + gap);
           const bColor = blockColors[i] || MID;
           doc.setDrawColor(...bColor);
           doc.setLineWidth(0.6);
-          doc.roundedRect(x, y, blockCardW, blockCardH, 2, 2, "S");
+          doc.roundedRect(x, blockCardsY, blockCardW, blockCardH, 2, 2, "S");
           doc.setTextColor(...bColor);
-          doc.setFontSize(7);
-          doc.setFont("helvetica", "normal");
-          doc.text(b.label, x + blockCardW / 2, y + 6, { align: "center" });
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.text(b.label, x + blockCardW / 2, blockCardsY + 7, { align: "center" });
           doc.setTextColor(...DARK);
           doc.setFontSize(13);
           doc.setFont("helvetica", "bold");
-          doc.text(formatCurrency(b.amount, "MXN", { decimals: 2 }), x + blockCardW / 2, y + 13, { align: "center" });
+          doc.text(formatCurrency(b.amount, "MXN", { decimals: 2 }), x + blockCardW / 2, blockCardsY + 14, { align: "center" });
           doc.setTextColor(...bColor);
-          doc.setFontSize(8);
-          doc.setFont("helvetica", "normal");
-          doc.text(`${b.percent.toFixed(1)}%`, x + blockCardW / 2, y + 18, { align: "center" });
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text(`${b.percent.toFixed(1)}%`, x + blockCardW / 2, blockCardsY + 21, { align: "center" });
         });
-        y += blockCardH + 6;
+        y = blockCardsY + blockCardH + 6;
       } else {
-        y += 4;
+        y += 8;
       }
 
       // === SECTION 4 — Income table ===

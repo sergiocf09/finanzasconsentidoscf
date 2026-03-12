@@ -63,6 +63,7 @@ interface UnifiedItem {
   amount: number;
   currency: string;
   amount_in_base: number | null;
+  exchange_rate?: number | null;
   source: "tx" | "transfer";
   accountName: string;
   secondaryInfo?: string;
@@ -142,6 +143,7 @@ export default function Transactions() {
       amount: tx.amount,
       currency: tx.currency,
       amount_in_base: tx.amount_in_base ?? null,
+      exchange_rate: tx.exchange_rate ?? null,
       source: "tx" as const,
       accountName: getAccountName(tx.account_id),
       isRecurring: tx.is_recurring === true,
@@ -397,11 +399,25 @@ export default function Transactions() {
                     )}>
                       {item.type === "expense" && "-"}{item.type === "income" && "+"}{isAdjustment && (item.type === "adjustment_expense" ? "-" : "+")}{formatAmount(item.amount, item.currency)}
                     </p>
-                    {item.currency !== "MXN" && item.amount_in_base != null && (
-                      <p className="text-[10px] text-muted-foreground tabular-nums text-right">
-                        ≈ {formatAmount(item.amount_in_base, "MXN")}
-                      </p>
-                    )}
+                    {item.amount_in_base != null &&
+                      item.exchange_rate != null &&
+                      item.exchange_rate !== 1 && (() => {
+                        if (item.currency !== "MXN") {
+                          return (
+                            <p className="text-[10px] text-muted-foreground tabular-nums text-right">
+                              ≈ {formatAmount(item.amount_in_base, "MXN")}
+                            </p>
+                          );
+                        } else {
+                          const usdAmount = item.amount / item.exchange_rate;
+                          return (
+                            <p className="text-[10px] text-muted-foreground tabular-nums text-right">
+                              ≈ {formatAmount(usdAmount, "USD")}
+                            </p>
+                          );
+                        }
+                      })()
+                    }
                     <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

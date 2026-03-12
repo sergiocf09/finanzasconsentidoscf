@@ -136,13 +136,13 @@ export default function Reports() {
       y += 20;
 
       // Block distribution
-      if (blockSummaries && blockSummaries.length > 0) {
+      if (blockSummariesList.length > 0) {
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.text("Distribución por bloques", 15, y);
         y += 6;
 
-        const blockRows = blockSummaries.map((b) => [
+        const blockRows = blockSummariesList.map((b) => [
           b.label,
           formatCurrency(b.amount, "MXN", { decimals: 2 }),
           `${b.percent.toFixed(1)}%`,

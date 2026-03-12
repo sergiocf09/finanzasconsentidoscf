@@ -21,6 +21,7 @@ import ResetPassword from "./pages/ResetPassword";
 import FinancialDashboard from "./pages/FinancialDashboard";
 import ExchangeRate from "./pages/ExchangeRate";
 import RecurringPayments from "./pages/RecurringPayments";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 

@@ -115,7 +115,7 @@ export function useFinancialIntelligence() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("category_id, amount, type, transaction_date")
+        .select("category_id, amount, amount_in_base, type, transaction_date")
         .eq("type", "expense")
         .gte("transaction_date", format(sixStart, "yyyy-MM-dd"))
         .lte("transaction_date", format(currentEnd, "yyyy-MM-dd"))

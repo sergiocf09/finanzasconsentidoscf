@@ -336,7 +336,6 @@ export default function Reports() {
       const fmtNum = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
       const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
-      const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
 
       // === Sheet 1 — Movimientos ===
       const headerAoa: (string | number)[][] = [

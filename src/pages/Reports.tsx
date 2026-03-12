@@ -173,7 +173,7 @@ export default function Reports() {
           `${c.pct.toFixed(1)}%`,
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: y,
           head: [["Categoría", "Monto", "% del gasto"]],
           body: catRows,

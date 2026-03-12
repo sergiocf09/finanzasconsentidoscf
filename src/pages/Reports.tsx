@@ -340,10 +340,10 @@ export default function Reports() {
       const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
 
       // === Sheet 1 — Movimientos ===
-      // Header rows at the top
       const headerAoa: (string | number)[][] = [
-        ["FINANZAS CON SENTIDO™ — Movimientos " + mesCapitalized],
-        ["Periodo:", periodLabel, "", "Movimientos:", transactions.length, "Generado:", generatedDate],
+        ["FINANZAS CON SENTIDO™ — " + periodLabel],
+        ["Generado:", generatedDate],
+        ["", "Movimientos:", transactions.length],
         [], // blank row before data
         ["#", "Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"],
       ];
@@ -363,7 +363,7 @@ export default function Reports() {
       const allRows = [...headerAoa, ...txDataRows];
       const ws1 = XLSX.utils.aoa_to_sheet(allRows);
 
-      // Column widths (now with # column)
+      // Column widths (with # column)
       const colHeaders = ["#", "Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"];
       const colWidths = colHeaders.map((h, ci) => {
         const maxDataLen = txDataRows.reduce((max, row) => {
@@ -377,14 +377,15 @@ export default function Reports() {
       // Merge title row (A1:H1)
       ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
 
-      // === Sheet 2 — Resumen (redesigned: info at top, not bottom) ===
-      const summaryAoa: (string | number | string)[][] = [
-        ["FINANZAS CON SENTIDO™"],
-        ["Resumen financiero — " + mesCapitalized],
-        [],
-        ["Periodo:", periodLabel],
-        ["Movimientos totales:", transactions.length],
+      // === Sheet 2 — Resumen ===
+      // Compute top categories totals
+      const topCatTotalAmount = topCategories.reduce((s, c) => s + c.amount, 0);
+      const topCatTotalPct = topCategories.reduce((s, c) => s + c.pct, 0);
+
+      const summaryAoa: (string | number)[][] = [
+        ["FINANZAS CON SENTIDO™ — " + periodLabel],
         ["Generado:", generatedDate],
+        ["Movimientos totales:", transactions.length],
         [],
         ["RESUMEN DEL PERIODO", "", ""],
         ["Ingresos", fmtNum(totals.income), ""],
@@ -396,6 +397,7 @@ export default function Reports() {
         [],
         ["TOP CATEGORÍAS DE GASTO", "Monto", "% del gasto"],
         ...topCategories.map((c) => [c.name, fmtNum(c.amount), `${c.pct.toFixed(1)}%`]),
+        ["Total Top 5", fmtNum(topCatTotalAmount), `${topCatTotalPct.toFixed(1)}%`],
       ];
 
       const ws2 = XLSX.utils.aoa_to_sheet(summaryAoa);
@@ -403,7 +405,6 @@ export default function Reports() {
       // Merge title across columns
       ws2["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-        { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
       ];
 
       const wb = XLSX.utils.book_new();

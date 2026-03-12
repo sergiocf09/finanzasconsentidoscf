@@ -207,9 +207,9 @@ export default function Reports() {
 
       // === SECTION 4 — Income table ===
       doc.setTextColor(...DARK);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("INGRESOS DEL PERIODO", MARGIN, y);
+      doc.text("Ingresos del Periodo", MARGIN, y);
       y += 2;
       doc.setDrawColor(...LIGHT);
       doc.setLineWidth(0.3);
@@ -243,9 +243,9 @@ export default function Reports() {
 
       // === SECTION 5 — Top 20 expenses in two columns ===
       doc.setTextColor(...DARK);
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("TOP GASTOS DEL PERIODO", MARGIN, y);
+      doc.text("Top Gastos del Periodo", MARGIN, y);
       y += 2;
       doc.setDrawColor(...LIGHT);
       doc.line(MARGIN, y, PAGE_W - MARGIN, y);

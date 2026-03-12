@@ -149,7 +149,7 @@ export default function Reports() {
           `${b.percent.toFixed(1)}%`,
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: y,
           head: [["Bloque", "Monto", "% del gasto"]],
           body: blockRows,

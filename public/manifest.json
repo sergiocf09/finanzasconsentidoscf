@@ -1,0 +1,12 @@
+{
+  "name": "Finanzas con Sentido",
+  "short_name": "Finanzas",
+  "description": "Tu dinero con calma. Tu vida con sentido.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2d6a4f",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}

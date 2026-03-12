@@ -309,19 +309,41 @@ export default function Reports() {
 
       const ws1 = XLSX.utils.json_to_sheet(txRows);
 
-      // Sheet 2 — Summary
-      const summaryRows = [
-        { Concepto: "Ingresos", Monto: totals.income },
-        { Concepto: "Gastos", Monto: totals.expense },
-        { Concepto: "Balance", Monto: totals.income - totals.expense },
-        { Concepto: "", Monto: "" },
-        ...blockSummariesList.map((b) => ({
-          Concepto: `Bloque: ${b.label}`,
-          Monto: b.amount,
-          Porcentaje: `${b.percent.toFixed(1)}%`,
-        })),
+      // Auto-fit column widths
+      const headers = ["Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"];
+      const colWidths = headers.map((h) => {
+        const maxDataLen = txRows.reduce((max, row) => {
+          const val = String((row as any)[h] ?? "");
+          return Math.max(max, val.length);
+        }, h.length);
+        return { wch: Math.min(maxDataLen + 2, 50) };
+      });
+      ws1["!cols"] = colWidths;
+
+      // Sheet 2 — Summary (editorial layout with aoa_to_sheet)
+      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
+      const summaryAoa: (string | number)[][] = [
+        ["FINANZAS CON SENTIDO™ — Resumen " + mesLabel],
+        [""],
+        ["RESUMEN DEL PERIODO", ""],
+        ["Ingresos", totals.income],
+        ["Gastos", totals.expense],
+        ["Balance", totals.income - totals.expense],
+        [""],
+        ["DISTRIBUCIÓN POR BLOQUES", "", "% del gasto"],
+        ...blockSummariesList.map((b) => [b.label, b.amount, `${b.percent.toFixed(1)}%`]),
+        [""],
+        ["TOP CATEGORÍAS DE GASTO", "", "% del gasto"],
+        ...topCategories.map((c) => [c.name, c.amount, `${c.pct.toFixed(1)}%`]),
+        [""],
+        ["Periodo:", periodLabel],
+        ["Movimientos totales:", transactions.length],
+        ["Generado:", format(new Date(), "d MMM yyyy, HH:mm", { locale: es })],
       ];
-      const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+
+      const ws2 = XLSX.utils.aoa_to_sheet(summaryAoa);
+      ws2["!cols"] = [{ wch: 35 }, { wch: 20 }, { wch: 15 }];
+      ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws1, "Movimientos");

@@ -19,6 +19,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isDark, toggle } = useTheme();
 
   // Scroll to top on mount
   useEffect(() => {

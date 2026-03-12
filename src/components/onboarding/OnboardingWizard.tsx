@@ -95,10 +95,10 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
         <Sparkles className="h-7 w-7 text-primary" />
       </div>
       <h2 className="text-lg font-heading font-semibold text-foreground">
-        ¡Bienvenido a Finanzas con Sentido!
+        Bienvenido a Finanzas con Sentido
       </h2>
       <p className="text-sm text-muted-foreground max-w-xs">
-        Tu dinero con calma. Tu vida con sentido. Vamos a configurar lo básico en menos de 2 minutos.
+        Tu dinero con calma. Tu vida con sentido. En dos minutos dejamos todo listo para empezar.
       </p>
       <Button onClick={() => setStep(1)} className="w-full mt-2">
         Comenzar <ArrowRight className="ml-2 h-4 w-4" />

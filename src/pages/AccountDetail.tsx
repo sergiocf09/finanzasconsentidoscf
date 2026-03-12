@@ -96,7 +96,12 @@ export default function AccountDetail() {
       >
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground line-clamp-2">{item.description || item.type}</p>
-          <p className="text-xs text-muted-foreground">{format(new Date(item.date), "d MMM yyyy", { locale: es })}</p>
+          <p className="text-xs text-muted-foreground">
+            {item.categoryName
+              ? `${format(new Date(item.date), "d MMM yyyy", { locale: es })} · ${item.categoryName}`
+              : format(new Date(item.date), "d MMM yyyy", { locale: es })
+            }
+          </p>
         </div>
         <p className={cn("font-semibold tabular-nums text-sm shrink-0", amt < 0 ? "text-expense" : "text-income")}>
           {amt < 0 ? "-" : "+"}{fmt(Math.abs(amt), item.currency)}

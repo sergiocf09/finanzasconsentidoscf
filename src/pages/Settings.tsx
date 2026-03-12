@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { User, Bell, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X } from "lucide-react";
+import { User, Bell, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isDark, toggle } = useTheme();
 
   // Scroll to top on mount
   useEffect(() => {
@@ -127,6 +129,24 @@ export default function Settings() {
       {/* Header — sticky */}
       <div className="bg-background -mx-1 px-1 pb-1">
         <h1 className="text-lg font-heading font-semibold text-foreground py-1">Configuración</h1>
+      </div>
+
+      {/* Appearance */}
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
+          {isDark ? <Moon className="h-4 w-4 text-muted-foreground" /> : <Sun className="h-4 w-4 text-muted-foreground" />}
+          <h2 className="text-sm font-medium text-foreground">Apariencia</h2>
+        </div>
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-3 flex-1 min-w-0 mr-3">
+            {isDark ? <Moon className="h-4 w-4 text-muted-foreground" /> : <Sun className="h-4 w-4 text-muted-foreground" />}
+            <div>
+              <p className="text-sm text-foreground">{isDark ? "Modo oscuro" : "Modo claro"}</p>
+              <p className="text-xs text-muted-foreground">Elige cómo se ve la app</p>
+            </div>
+          </div>
+          <Switch checked={isDark} onCheckedChange={toggle} />
+        </div>
       </div>
 
       {/* Account */}

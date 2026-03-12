@@ -21,6 +21,7 @@ import ResetPassword from "./pages/ResetPassword";
 import FinancialDashboard from "./pages/FinancialDashboard";
 import ExchangeRate from "./pages/ExchangeRate";
 import RecurringPayments from "./pages/RecurringPayments";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/emergency-fund" element={<Construction />} />
               <Route path="/financial-dashboard" element={<FinancialDashboard />} />
               <Route path="/exchange-rate" element={<ExchangeRate />} />
+              <Route path="/reports" element={<Reports />} />
               <Route path="/library" element={<Library />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

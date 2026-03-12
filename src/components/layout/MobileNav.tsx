@@ -156,6 +156,16 @@ const HELP_CONTENT: Record<string, HelpEntry> = {
     tip: "Lo que no ves también cuenta — muchas personas se sorprenden al sumar todas sus suscripciones activas. Tenerlas aquí te da visibilidad total de tus compromisos fijos",
     needed: "Muy útil si tienes 3 o más pagos fijos al mes — te ahorra sorpresas y te da control sin esfuerzo"
   },
+  "/reports": {
+    title: "Exportar reporte",
+    description: "Descarga un resumen de tu mes en PDF o un listado completo de movimientos en Excel.",
+    actions: [
+      "El PDF incluye tus 3 bloques, presupuestos y top de categorías",
+      "El Excel contiene todos los movimientos del periodo seleccionado",
+    ],
+    tip: "Exportar tu reporte mensual es una buena forma de archivar tu progreso y compartirlo con quien necesites.",
+    needed: "Útil para revisar con tu pareja, contador o simplemente para archivar tu historial.",
+  },
   "/exchange-rate": {
     title: "Tipo de Cambio",
     description: "La referencia que permite que todo lo que entra y sale en otra moneda se entienda siempre en pesos",

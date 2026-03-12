@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FileDown, FileText, Table, Download, Loader2, CalendarDays } from "lucide-react";
+import { FileText, Table, Download, Loader2, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,19 +8,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useTransactions } from "@/hooks/useTransactions";
-import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { formatCurrency } from "@/lib/formatters";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
-type PeriodKey = "current" | "previous" | "last3" | "last6";
+type PeriodKey = "current" | "previous" | "last3" | "last6" | "custom";
 
-function getDateRange(period: PeriodKey) {
+function getDateRange(period: PeriodKey, customStart?: Date, customEnd?: Date) {
   const now = new Date();
   switch (period) {
     case "current":
@@ -33,6 +33,11 @@ function getDateRange(period: PeriodKey) {
       return { startDate: startOfMonth(subMonths(now, 2)), endDate: endOfMonth(now) };
     case "last6":
       return { startDate: startOfMonth(subMonths(now, 5)), endDate: endOfMonth(now) };
+    case "custom":
+      return {
+        startDate: customStart || startOfMonth(now),
+        endDate: customEnd || endOfMonth(now),
+      };
   }
 }
 
@@ -41,24 +46,44 @@ const periodLabels: Record<PeriodKey, string> = {
   previous: "Mes anterior",
   last3: "Últimos 3 meses",
   last6: "Últimos 6 meses",
+  custom: "Personalizado",
 };
+
+/** Build a human-readable period title for PDF/Excel headers */
+function buildPeriodTitle(startDate: Date, endDate: Date): string {
+  if (isSameMonth(startDate, endDate)) {
+    const m = format(startDate, "MMMM yyyy", { locale: es });
+    return m.charAt(0).toUpperCase() + m.slice(1);
+  }
+  const s = format(startDate, "MMM yyyy", { locale: es });
+  const e = format(endDate, "MMM yyyy", { locale: es });
+  return `${s.charAt(0).toUpperCase() + s.slice(1)} – ${e.charAt(0).toUpperCase() + e.slice(1)}`;
+}
 
 export default function Reports() {
   const [period, setPeriod] = useState<PeriodKey>("current");
+  const [customStart, setCustomStart] = useState<Date | undefined>();
+  const [customEnd, setCustomEnd] = useState<Date | undefined>();
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [generatingExcel, setGeneratingExcel] = useState(false);
 
-  const { startDate, endDate } = getDateRange(period);
+  const { startDate, endDate } = getDateRange(period, customStart, customEnd);
   const { transactions, totals, isLoading } = useTransactions({ startDate, endDate });
-  const { budgets } = useBudgets();
   const { categories } = useCategories();
   const { accounts } = useAccounts();
-  const { blockSummaries: blockSummariesRecord, stage } = useFinancialIntelligence();
-  const blockSummariesList = useMemo(() => Object.values(blockSummariesRecord), [blockSummariesRecord]);
 
   const categoryMap = useMemo(() => {
     const m: Record<string, string> = {};
     categories.forEach((c) => (m[c.id] = c.name));
+    return m;
+  }, [categories]);
+
+  // Category → bucket map (from DB)
+  const categoryBucketMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    categories.forEach((c: any) => {
+      if (c.bucket) m[c.id] = c.bucket;
+    });
     return m;
   }, [categories]);
 
@@ -67,6 +92,34 @@ export default function Reports() {
     accounts.forEach((a) => (m[a.id] = a.name));
     return m;
   }, [accounts]);
+
+  // Compute block summaries from the actual period transactions
+  const blockSummariesList = useMemo(() => {
+    const bucketTotals: Record<string, number> = { stability: 0, lifestyle: 0, build: 0 };
+    transactions
+      .filter((t) => t.type === "expense")
+      .forEach((t) => {
+        const bucket = t.category_id ? categoryBucketMap[t.category_id] : null;
+        const amt = t.amount_in_base ?? t.amount;
+        if (bucket && bucketTotals[bucket] !== undefined) {
+          bucketTotals[bucket] += amt;
+        } else {
+          // Unassigned goes to lifestyle by default
+          bucketTotals["lifestyle"] += amt;
+        }
+      });
+    const total = bucketTotals.stability + bucketTotals.lifestyle + bucketTotals.build;
+    const labels: Record<string, string> = {
+      stability: "Estabilidad",
+      lifestyle: "Calidad de Vida",
+      build: "Construcción",
+    };
+    return ["stability", "lifestyle", "build"].map((key) => ({
+      label: labels[key],
+      amount: bucketTotals[key],
+      percent: total > 0 ? (bucketTotals[key] / total) * 100 : 0,
+    }));
+  }, [transactions, categoryBucketMap]);
 
   // Top 5 expense categories
   const topCategories = useMemo(() => {
@@ -87,8 +140,10 @@ export default function Reports() {
     }));
   }, [transactions, categoryMap]);
 
+  const periodTitle = buildPeriodTitle(startDate, endDate);
   const periodLabel = `${format(startDate, "d MMM yyyy", { locale: es })} – ${format(endDate, "d MMM yyyy", { locale: es })}`;
 
+  // ─── PDF Export ───
   const handleExportPDF = async () => {
     setGeneratingPdf(true);
     try {
@@ -96,20 +151,17 @@ export default function Reports() {
       const autoTable = (await import("jspdf-autotable")).default;
       const jsPDF = jsPDFModule.default;
 
-      // Letter size instead of A4
       const doc = new jsPDF({ unit: "mm", format: "letter" });
 
       const DARK: [number, number, number] = [30, 30, 30];
       const MID: [number, number, number] = [70, 70, 70];
       const LIGHT: [number, number, number] = [200, 200, 200];
-      // Brand colors — sage green + gold
       const SAGE_DARK: [number, number, number] = [58, 90, 64];
       const SAGE_MID: [number, number, number] = [85, 120, 90];
       const GOLD: [number, number, number] = [180, 155, 90];
       const INCOME_GREEN: [number, number, number] = [34, 139, 84];
       const EXPENSE_RED: [number, number, number] = [165, 42, 42];
       const ACCENT: [number, number, number] = [99, 102, 241];
-      // Block colors
       const STABILITY_COLOR: [number, number, number] = [58, 90, 64];
       const LIFESTYLE_COLOR: [number, number, number] = [99, 102, 241];
       const BUILD_COLOR: [number, number, number] = [180, 155, 90];
@@ -118,9 +170,7 @@ export default function Reports() {
       const MARGIN = 16;
       const COL_W = (PAGE_W - MARGIN * 2 - 6) / 2;
 
-      // === SECTION 1 — Clean header (no background, just text) ===
-      const mesLabel = format(startDate, "MMMM yyyy", { locale: es });
-      const mesCapLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+      // === SECTION 1 — Clean header ===
       let y = 18;
       doc.setTextColor(...SAGE_DARK);
       doc.setFontSize(15);
@@ -130,7 +180,7 @@ export default function Reports() {
       doc.setTextColor(...DARK);
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.text(mesCapLabel, PAGE_W / 2, y, { align: "center" });
+      doc.text(periodTitle, PAGE_W / 2, y, { align: "center" });
       y += 5;
       doc.setTextColor(...MID);
       doc.setFontSize(8);
@@ -138,16 +188,17 @@ export default function Reports() {
       doc.text(`Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`, PAGE_W / 2, y, { align: "center" });
       y += 9;
 
-      // === SECTION 2 — Summary cards (Title Case, bigger labels) ===
-      const cardW = 56;
-      const cardH = 22;
+      // === SECTION 2 — Summary cards (compact, colored labels) ===
+      const cardW = 50;
+      const cardH = 18;
       const gap = (PAGE_W - MARGIN * 2 - cardW * 3) / 2;
       const balance = totals.income - totals.expense;
+      const balanceColor = balance >= 0 ? ACCENT : EXPENSE_RED;
 
       const cards = [
-        { label: "Ingresos", value: formatCurrency(totals.income, "MXN", { decimals: 2 }), color: INCOME_GREEN },
-        { label: "Gastos", value: formatCurrency(totals.expense, "MXN", { decimals: 2 }), color: EXPENSE_RED },
-        { label: "Balance", value: formatCurrency(balance, "MXN", { decimals: 2 }), color: balance >= 0 ? ACCENT : EXPENSE_RED },
+        { label: "Ingresos", value: formatCurrency(totals.income, "MXN"), color: INCOME_GREEN },
+        { label: "Gastos", value: formatCurrency(totals.expense, "MXN"), color: EXPENSE_RED },
+        { label: "Balance", value: formatCurrency(balance, "MXN"), color: balanceColor },
       ];
 
       const cardsY = y;
@@ -156,17 +207,15 @@ export default function Reports() {
         doc.setDrawColor(...card.color);
         doc.setLineWidth(0.6);
         doc.roundedRect(x, cardsY, cardW, cardH, 2, 2, "S");
-        doc.setTextColor(...MID);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-        doc.text(card.label, x + cardW / 2, cardsY + 8, { align: "center" });
         doc.setTextColor(...card.color);
-        doc.setFontSize(15);
+        doc.setFontSize(8);
         doc.setFont("helvetica", "bold");
-        doc.text(card.value, x + cardW / 2, cardsY + 17, { align: "center" });
+        doc.text(card.label, x + cardW / 2, cardsY + 6, { align: "center" });
+        doc.setFontSize(14);
+        doc.text(card.value, x + cardW / 2, cardsY + 14, { align: "center" });
       });
 
-      // === SECTION 3 — Arrow from Gastos → 3 block cards (no title) ===
+      // === SECTION 3 — Arrow from Gastos → 3 oval block cards ===
       y = cardsY + cardH;
       const blockColors: [number, number, number][] = [STABILITY_COLOR, LIFESTYLE_COLOR, BUILD_COLOR];
 
@@ -174,7 +223,7 @@ export default function Reports() {
         const gastosCenterX = MARGIN + 1 * (cardW + gap) + cardW / 2;
         const arrowStartY = y + 1;
         const arrowMidY = arrowStartY + 5;
-        const blockCardH = 24;
+        const blockCardH = 20;
         const blockCardW = cardW;
         const blockCardsY = arrowMidY + 5;
 
@@ -196,25 +245,30 @@ export default function Reports() {
           doc.triangle(cx - 1.2, blockCardsY - 1.5, cx + 1.2, blockCardsY - 1.5, cx, blockCardsY, "F");
         });
 
-        // Block cards (bigger labels + percentage)
+        // Oval block cards (roundedRect with high radius)
         blockSummariesList.forEach((b, i) => {
           const x = MARGIN + i * (blockCardW + gap);
           const bColor = blockColors[i] || MID;
+          // Light fill for distinction
+          doc.setFillColor(...bColor);
+          doc.setGlobalAlpha?.(0.06);
+          doc.roundedRect(x, blockCardsY, blockCardW, blockCardH, 10, 10, "F");
+          doc.setGlobalAlpha?.(1);
           doc.setDrawColor(...bColor);
-          doc.setLineWidth(0.6);
-          doc.roundedRect(x, blockCardsY, blockCardW, blockCardH, 2, 2, "S");
+          doc.setLineWidth(0.5);
+          doc.roundedRect(x, blockCardsY, blockCardW, blockCardH, 10, 10, "S");
           doc.setTextColor(...bColor);
-          doc.setFontSize(9);
+          doc.setFontSize(8);
           doc.setFont("helvetica", "bold");
-          doc.text(b.label, x + blockCardW / 2, blockCardsY + 7, { align: "center" });
+          doc.text(b.label, x + blockCardW / 2, blockCardsY + 6, { align: "center" });
           doc.setTextColor(...DARK);
-          doc.setFontSize(13);
+          doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
-          doc.text(formatCurrency(b.amount, "MXN", { decimals: 2 }), x + blockCardW / 2, blockCardsY + 14, { align: "center" });
+          doc.text(formatCurrency(b.amount, "MXN"), x + blockCardW / 2, blockCardsY + 12, { align: "center" });
           doc.setTextColor(...bColor);
-          doc.setFontSize(11);
+          doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
-          doc.text(`${b.percent.toFixed(1)}%`, x + blockCardW / 2, blockCardsY + 21, { align: "center" });
+          doc.text(`${b.percent.toFixed(1)}%`, x + blockCardW / 2, blockCardsY + 18, { align: "center" });
         });
         y = blockCardsY + blockCardH + 6;
       } else {
@@ -241,7 +295,7 @@ export default function Reports() {
             tx.transaction_date,
             tx.description || categoryMap[tx.category_id ?? ""] || "—",
             accountMap[tx.account_id] || "",
-            formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
+            formatCurrency(tx.amount_in_base ?? tx.amount, "MXN"),
           ])
         : [["", "Sin ingresos en este periodo", "", ""]];
 
@@ -281,7 +335,7 @@ export default function Reports() {
         body: rows.map((tx, i) => [
           String(i + 1),
           tx.description || categoryMap[tx.category_id ?? ""] || "—",
-          formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
+          formatCurrency(tx.amount_in_base ?? tx.amount, "MXN"),
         ]),
         margin: { left: marginLeft, right: marginRight },
         styles: { fontSize: 8, textColor: DARK },
@@ -300,7 +354,7 @@ export default function Reports() {
           body: rightExpenses.map((tx, i) => [
             String(i + 11),
             tx.description || categoryMap[tx.category_id ?? ""] || "—",
-            formatCurrency(tx.amount_in_base ?? tx.amount, "MXN", { decimals: 2 }),
+            formatCurrency(tx.amount_in_base ?? tx.amount, "MXN"),
           ]),
         });
       }
@@ -329,24 +383,21 @@ export default function Reports() {
     }
   };
 
+  // ─── Excel Export ───
   const handleExportExcel = async () => {
     setGeneratingExcel(true);
     try {
       const XLSX = await import("xlsx");
-      const fmtNum = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-      const generatedDate = format(new Date(), "d MMM yyyy, HH:mm", { locale: es });
+      const fmtInt = (n: number) => Math.round(n).toLocaleString("es-MX");
 
       // === Sheet 1 — Movimientos ===
       const headerAoa: (string | number)[][] = [
-        ["FINANZAS CON SENTIDO™ — " + periodLabel],
-        ["Generado:", generatedDate],
-        ["", "Movimientos:", transactions.length],
-        [], // blank row before data
+        ["FINANZAS CON SENTIDO™ — " + periodTitle],
+        ["Movimientos:", transactions.length],
+        [],
         ["#", "Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"],
       ];
 
-      // Transaction data rows with row numbers and formatted amounts
       const txDataRows: (string | number)[][] = transactions.map((tx, i) => [
         i + 1,
         tx.transaction_date,
@@ -354,14 +405,13 @@ export default function Reports() {
         tx.description || "",
         tx.category_id ? categoryMap[tx.category_id] || "" : "",
         accountMap[tx.account_id] || "",
-        fmtNum(tx.amount_in_base ?? tx.amount),
+        fmtInt(tx.amount_in_base ?? tx.amount),
         tx.currency,
       ]);
 
       const allRows = [...headerAoa, ...txDataRows];
       const ws1 = XLSX.utils.aoa_to_sheet(allRows);
 
-      // Column widths (with # column)
       const colHeaders = ["#", "Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Monto", "Moneda"];
       const colWidths = colHeaders.map((h, ci) => {
         const maxDataLen = txDataRows.reduce((max, row) => {
@@ -371,39 +421,32 @@ export default function Reports() {
         return { wch: Math.min(maxDataLen + 2, 50) };
       });
       ws1["!cols"] = colWidths;
-
-      // Merge title row (A1:H1)
       ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
 
       // === Sheet 2 — Resumen ===
-      // Compute top categories totals
       const topCatTotalAmount = topCategories.reduce((s, c) => s + c.amount, 0);
       const topCatTotalPct = topCategories.reduce((s, c) => s + c.pct, 0);
 
       const summaryAoa: (string | number)[][] = [
-        ["FINANZAS CON SENTIDO™ — " + periodLabel],
-        ["Generado:", generatedDate],
+        ["FINANZAS CON SENTIDO™ — " + periodTitle],
         ["Movimientos totales:", transactions.length],
         [],
         ["RESUMEN DEL PERIODO", "", ""],
-        ["Ingresos", fmtNum(totals.income), ""],
-        ["Gastos", fmtNum(totals.expense), ""],
-        ["Balance", fmtNum(totals.income - totals.expense), ""],
+        ["Ingresos", fmtInt(totals.income), ""],
+        ["Gastos", fmtInt(totals.expense), ""],
+        ["Balance", fmtInt(totals.income - totals.expense), ""],
         [],
         ["DISTRIBUCIÓN POR BLOQUES", "Monto", "% del gasto"],
-        ...blockSummariesList.map((b) => [b.label, fmtNum(b.amount), `${b.percent.toFixed(1)}%`]),
+        ...blockSummariesList.map((b) => [b.label, fmtInt(b.amount), `${b.percent.toFixed(1)}%`]),
         [],
         ["TOP CATEGORÍAS DE GASTO", "Monto", "% del gasto"],
-        ...topCategories.map((c) => [c.name, fmtNum(c.amount), `${c.pct.toFixed(1)}%`]),
-        ["Total Top 5", fmtNum(topCatTotalAmount), `${topCatTotalPct.toFixed(1)}%`],
+        ...topCategories.map((c) => [c.name, fmtInt(c.amount), `${c.pct.toFixed(1)}%`]),
+        ["Total Top 5", fmtInt(topCatTotalAmount), `${topCatTotalPct.toFixed(1)}%`],
       ];
 
       const ws2 = XLSX.utils.aoa_to_sheet(summaryAoa);
       ws2["!cols"] = [{ wch: 35 }, { wch: 22 }, { wch: 15 }];
-      // Merge title across columns
-      ws2["!merges"] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-      ];
+      ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws1, "Movimientos");
@@ -444,6 +487,43 @@ export default function Reports() {
             </Select>
           </div>
         </div>
+
+        {/* Custom date pickers */}
+        {period === "custom" && (
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs h-8">
+                  {customStart ? format(customStart, "dd MMM yyyy", { locale: es }) : "Desde"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customStart}
+                  onSelect={(d) => d && setCustomStart(d)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">–</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs h-8">
+                  {customEnd ? format(customEnd, "dd MMM yyyy", { locale: es }) : "Hasta"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customEnd}
+                  onSelect={(d) => d && setCustomEnd(d)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       {/* Export cards */}
@@ -460,18 +540,10 @@ export default function Reports() {
             </div>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Incluye ingresos, gastos, balance, distribución de los 3 bloques y top 5 categorías del periodo.
+            Incluye ingresos, gastos, balance, distribución de los 3 bloques y top gastos del periodo.
           </p>
-          <Button
-            onClick={handleExportPDF}
-            disabled={busy || isLoading}
-            className="w-full gap-2"
-          >
-            {generatingPdf ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
+          <Button onClick={handleExportPDF} disabled={busy || isLoading} className="w-full gap-2">
+            {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Descargar PDF
           </Button>
         </div>
@@ -488,19 +560,10 @@ export default function Reports() {
             </div>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Exporta todos los movimientos del periodo con fecha, descripción, categoría, cuenta y monto. Listo para contabilidad.
+            Exporta todos los movimientos del periodo con fecha, descripción, categoría, cuenta y monto.
           </p>
-          <Button
-            onClick={handleExportExcel}
-            disabled={busy || isLoading}
-            variant="outline"
-            className="w-full gap-2"
-          >
-            {generatingExcel ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
+          <Button onClick={handleExportExcel} disabled={busy || isLoading} variant="outline" className="w-full gap-2">
+            {generatingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Descargar Excel
           </Button>
         </div>

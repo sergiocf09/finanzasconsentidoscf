@@ -61,15 +61,15 @@ function determineStage(_stability: number, _lifestyle: number, build: number): 
 const stageLabels: Record<FinancialStage, { name: string; message: string }> = {
   stabilize: {
     name: "Estabilizar",
-    message: "Estás priorizando sostener tus obligaciones. Vamos paso a paso hacia un balance más equilibrado.",
+    message: "Estás sosteniendo lo esencial. Eso ya es mucho. Desde aquí, todo lo que construyas tiene base real.",
   },
   balance: {
     name: "Equilibrar",
-    message: "Ya sostienes lo básico y empiezas a construir con calma. Buen camino.",
+    message: "Lo básico ya está sostenido y empiezas a crear espacio para algo más. Ese equilibrio no es pequeño — es el puente hacia lo que sigue.",
   },
   build: {
     name: "Construir",
-    message: "Tu dinero ya tiene espacio para crecer contigo. Sigue así.",
+    message: "Tu dinero tiene espacio para crecer contigo. Lo que estás haciendo hoy tiene nombre: patrimonio.",
   },
 };
 

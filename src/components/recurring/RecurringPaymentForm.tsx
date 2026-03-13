@@ -145,7 +145,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
     setOpenAccountCombo(false);
     setOpenCategoryCombo(false);
-  }, [open, editPayment, prefill]);
+  }, [open, editPayment]);
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
 

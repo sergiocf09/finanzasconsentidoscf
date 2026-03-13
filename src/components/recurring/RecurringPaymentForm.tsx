@@ -200,6 +200,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       remaining_balance: originalTotal ? parseFloat(originalTotal) : null,
       notes: notes || null,
       payments_made: generateRetro ? retroDates.length : 0,
+      requires_manual_action: requiresManualAction,
     };
 
     if (isEdit) {

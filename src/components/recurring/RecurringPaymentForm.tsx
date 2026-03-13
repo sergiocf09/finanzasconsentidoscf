@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, addMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Loader2, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Loader2, AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,9 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -100,6 +103,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [requiresManualAction, setRequiresManualAction] = useState(false);
   const [retroConfirmOpen, setRetroConfirmOpen] = useState(false);
   const [isSavingRetro, setIsSavingRetro] = useState(false);
+  const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
+  const [openAccountCombo, setOpenAccountCombo] = useState(false);
 
   const isEdit = !!editPayment;
 
@@ -344,31 +349,86 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Cuenta">
-              <select
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-background px-3 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <option value="">Selecciona cuenta</option>
-                {accounts.map(a => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} — {formatCurrency(a.current_balance ?? 0, a.currency)}
-                  </option>
-                ))}
-              </select>
+              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm"
+                  >
+                    <span className={cn(!accountId && "text-muted-foreground")}>
+                      {accountId
+                        ? (() => { const a = accounts.find(a => a.id === accountId); return a ? `${a.name} · ${formatCurrency(a.current_balance ?? 0, a.currency)}` : "Selecciona"; })()
+                        : "Selecciona cuenta"}
+                    </span>
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar cuenta..." className="h-8 text-xs" />
+                    <CommandList className="max-h-[35vh]">
+                      <CommandEmpty>Sin resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {accounts.map((acc) => (
+                          <CommandItem
+                            key={acc.id}
+                            value={acc.name}
+                            onSelect={() => {
+                              setAccountId(acc.id);
+                              setOpenAccountCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", accountId === acc.id ? "opacity-100" : "opacity-0")} />
+                            <span className="flex-1 truncate">{acc.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-background px-3 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <option value="">Selecciona categoría</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm"
+                  >
+                    <span className={cn(!categoryId && "text-muted-foreground")}>
+                      {categoryId
+                        ? categories.find(c => c.id === categoryId)?.name || "Selecciona"
+                        : "Selecciona categoría"}
+                    </span>
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar categoría..." className="h-8 text-xs" />
+                    <CommandList className="max-h-[35vh]">
+                      <CommandEmpty>Sin resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {categories.map((cat) => (
+                          <CommandItem
+                            key={cat.id}
+                            value={cat.name}
+                            onSelect={() => {
+                              setCategoryId(cat.id);
+                              setOpenCategoryCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
+                            {cat.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </FieldRow>
 
             <FieldRow label="Frecuencia">

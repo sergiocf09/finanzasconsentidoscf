@@ -28,7 +28,11 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!isSupported) { setPermission("unsupported"); return; }
-    const sync = () => setPermission(Notification.permission as PushPermission);
+    const sync = () => {
+      const perm = Notification.permission as PushPermission;
+      console.log('[PUSH] Notification.permission:', perm);
+      setPermission(perm);
+    };
     sync();
     window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", sync);
@@ -40,7 +44,16 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!isSupported) return;
-    navigator.serviceWorker.register("/sw.js").catch(console.error);
+    console.log('[PUSH] isSupported:', isSupported);
+    console.log('[PUSH] VAPID_PUBLIC_KEY exists:', !!VAPID_PUBLIC_KEY);
+    console.log('[PUSH] VAPID_PUBLIC_KEY value:', VAPID_PUBLIC_KEY?.substring(0, 20) + '...');
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg => {
+        console.log('[SW] registered, scope:', reg.scope);
+        console.log('[SW] active:', !!reg.active);
+        console.log('[SW] installing:', !!reg.installing);
+      })
+      .catch(err => console.error('[SW] registration error:', err));
   }, [isSupported]);
 
   useEffect(() => {
@@ -54,23 +67,30 @@ export function usePushNotifications() {
 
   const subscribe = useCallback(async () => {
     if (!isSupported || !user || !VAPID_PUBLIC_KEY) return;
+    console.log('[PUSH] subscribe called');
+    console.log('[PUSH] user:', user?.id);
     setIsLoading(true);
     try {
       const reg = await navigator.serviceWorker.ready;
+      console.log('[PUSH] SW ready, subscribing...');
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
       const subJson = sub.toJSON();
+      console.log('[PUSH] subscription obtained:', JSON.stringify(subJson).substring(0, 100));
       await supabase
         .from("profiles")
         .update({ push_subscription: subJson as any, push_enabled: true } as any)
         .eq("id", user.id);
       setIsSubscribed(true);
       setPermission("granted");
+      console.log('[PUSH] subscribe SUCCESS');
     } catch (err: any) {
       if (err.name === "NotAllowedError") setPermission("denied");
-      console.error("Push subscribe error:", err);
+      console.error('[PUSH] subscribe ERROR name:', err.name);
+      console.error('[PUSH] subscribe ERROR message:', err.message);
+      console.error('[PUSH] subscribe ERROR full:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
     } finally {
       setIsLoading(false);
     }

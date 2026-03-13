@@ -387,6 +387,9 @@ export default function Settings() {
               </div>
               {pushNotifications.isSubscribed && (
                 <div className="px-4 py-2.5 space-y-2">
+                  <p className="text-[10px] text-muted-foreground break-all font-mono">
+                    VAPID: {"BLbnR-vBUrE6ZNzmAf65X-ZchHZ_cqWsVhtlYD_AlV8GZllwQV8wkxgfZcdO8v2FXUBgGB7J7Pa5wuFRUll0ywQ".substring(0, 30)}...
+                  </p>
                   <div className="space-y-1">
                     <p className="text-[11px] text-muted-foreground">· Alerta cuando un presupuesto llega al 80%</p>
                     <p className="text-[11px] text-muted-foreground">· Recordatorio si llevas 3+ días sin registrar</p>

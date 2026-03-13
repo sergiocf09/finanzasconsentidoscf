@@ -283,6 +283,7 @@ export function VoiceButton() {
     setEditDate(format(new Date(), "yyyy-MM-dd"));
     setMakeRecurring(false);
     setRecurringFrequency("monthly");
+    setRequiresManualAction(false);
     setEditCurrency("MXN");
   };
 

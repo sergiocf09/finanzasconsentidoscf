@@ -83,6 +83,7 @@ export function usePushNotifications() {
         .from("profiles")
         .update({ push_subscription: subJson as any, push_enabled: true } as any)
         .eq("id", user.id);
+      console.log('[PUSH] subscription saved, endpoint:', subJson.endpoint?.substring(0, 60));
       setIsSubscribed(true);
       setPermission("granted");
       console.log('[PUSH] subscribe SUCCESS');

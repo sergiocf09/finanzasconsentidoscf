@@ -77,7 +77,21 @@ Deno.serve(async (req) => {
       url: "/settings",
     };
 
-    await webpush.sendNotification(profile.push_subscription, JSON.stringify(payload));
+    try {
+      const result = await webpush.sendNotification(
+        profile.push_subscription,
+        JSON.stringify(payload)
+      );
+      console.log('[PUSH] sendNotification result:', JSON.stringify(result));
+      console.log('[PUSH] subscription endpoint:', profile.push_subscription?.endpoint?.substring(0, 60));
+    } catch (pushErr: any) {
+      console.error('[PUSH] sendNotification FAILED:', pushErr.message);
+      console.error('[PUSH] statusCode:', pushErr.statusCode);
+      console.error('[PUSH] body:', pushErr.body);
+      console.error('[PUSH] endpoint:', profile.push_subscription?.endpoint?.substring(0, 60));
+      throw pushErr;
+    }
+
     console.log("Push sent successfully");
     
     return new Response(JSON.stringify({ success: true }), {

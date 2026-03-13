@@ -387,16 +387,13 @@ export default function Settings() {
               </div>
               {pushNotifications.isSubscribed && (
                 <div className="px-4 py-2.5 space-y-2">
-                  <p className="text-[10px] text-muted-foreground break-all font-mono">
-                    VAPID: {"BLU8ftZuCxnK7PMhg9aUb6nFBycf9U16LwgplR8rMYXEB4z-hcMFkGk06hbCMQiZGDKCrJzew6hNRJ_v6rVeQtE".substring(0, 30)}...
-                  </p>
                   <div className="space-y-1">
                     <p className="text-[11px] text-muted-foreground">· Alerta cuando un presupuesto llega al 80%</p>
                     <p className="text-[11px] text-muted-foreground">· Recordatorio si llevas 3+ días sin registrar</p>
                     <p className="text-[11px] text-muted-foreground">· Resumen de cierre el primer día de cada mes</p>
                   </div>
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     className="w-full gap-2 h-8 text-xs"
                     onClick={async () => {

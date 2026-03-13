@@ -332,22 +332,45 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
             {/* 4. Cuenta */}
             <FieldRow label="Cuenta">
-              <Select value={watchedAccountId} onValueChange={(v) => form.setValue("account_id", v)}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
-                  {accounts.map((account) => {
-                    const bal = formatCurrency(account.current_balance ?? 0, account.currency);
-                    return (
-                      <SelectItem key={account.id} value={account.id}>
-                        <span className="flex items-center gap-3 w-full">
-                          <span className="truncate">{account.name}</span>
-                          <span className="text-muted-foreground text-xs font-bold ml-auto">{bal}</span>
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  >
+                    <span className={cn(!watchedAccountId && "text-muted-foreground")}>
+                      {selectedAccount
+                        ? `${selectedAccount.name} · ${formatCurrency(selectedAccount.current_balance ?? 0, selectedAccount.currency)}`
+                        : "Selecciona"}
+                    </span>
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar cuenta..." className="h-8 text-sm" />
+                    <CommandList className="max-h-[35vh]">
+                      <CommandEmpty>Sin resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {accounts.map((acc) => (
+                          <CommandItem
+                            key={acc.id}
+                            value={acc.name}
+                            onSelect={() => {
+                              form.setValue("account_id", acc.id);
+                              setOpenAccountCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", watchedAccountId === acc.id ? "opacity-100" : "opacity-0")} />
+                            <span className="flex-1 truncate">{acc.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </FieldRow>
             {form.formState.errors.account_id && (
               <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>

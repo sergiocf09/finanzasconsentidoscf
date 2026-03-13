@@ -98,10 +98,56 @@ export function UpcomingDueDates({
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const in7days = useMemo(() => format(addDays(today, 7), "yyyy-MM-dd"), [today]);
+  const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
   const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
   const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
+
+  // Query upcoming recurring payments (next 7 days)
+  const { data: upcomingRecurring } = useQuery({
+    queryKey: ["upcoming_recurring", user?.id, todayStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recurring_payments" as any)
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at")
+        .eq("status", "active")
+        .gte("next_execution_date", todayStr)
+        .lte("next_execution_date", in7days)
+        .order("next_execution_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: !!user,
+  });
+
+  const recurringItems = useMemo<RecurringDueItem[]>(() => {
+    if (!upcomingRecurring) return [];
+    return upcomingRecurring.map((r: any) => {
+      const execDate = new Date(r.next_execution_date + "T00:00:00");
+      const diff = Math.ceil((execDate.getTime() - today.getTime()) / 86400000);
+      return { ...r, daysLeft: diff };
+    });
+  }, [upcomingRecurring, today]);
+
+  const handleConfirmRecurring = useCallback(async (id: string) => {
+    setConfirmingRecurring(id);
+    try {
+      await supabase
+        .from("recurring_payments" as any)
+        .update({ confirmed_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      toast.success("Pago confirmado");
+    } catch {
+      toast.error("Error al confirmar");
+    } finally {
+      setConfirmingRecurring(null);
+    }
+  }, [queryClient]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({

@@ -28,7 +28,14 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!isSupported) { setPermission("unsupported"); return; }
-    setPermission(Notification.permission as PushPermission);
+    const sync = () => setPermission(Notification.permission as PushPermission);
+    sync();
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
   }, [isSupported]);
 
   useEffect(() => {

@@ -373,7 +373,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             <FieldRow label="Frecuencia">
               <Select value={frequency} onValueChange={setFrequency}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[200]">
                   {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}

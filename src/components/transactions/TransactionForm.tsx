@@ -332,7 +332,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
             {/* 4. Cuenta */}
             <FieldRow label="Cuenta">
-              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo}>
+              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"

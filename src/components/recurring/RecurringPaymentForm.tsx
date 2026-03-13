@@ -445,8 +445,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
               {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : (isEdit ? "Actualizar" : "Programar")}
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Retroactive confirmation dialog */}
       <AlertDialog open={retroConfirmOpen} onOpenChange={setRetroConfirmOpen}>

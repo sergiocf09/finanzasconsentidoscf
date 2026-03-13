@@ -406,6 +406,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
+                    <CommandInput className="hidden" />
                     <CommandList className="max-h-[35vh]">
                       <CommandGroup>
                         {categories.map((cat) => (

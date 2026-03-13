@@ -405,26 +405,25 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
-                  <Command filter={() => 1}>
-                    <div className="hidden"><CommandInput /></div>
-                    <CommandList className="max-h-[35vh]">
-                      <CommandGroup>
-                        {categories.map((cat) => (
-                          <CommandItem
-                            key={cat.id}
-                            value={cat.name}
-                            onSelect={() => {
-                              setCategoryId(cat.id);
-                              setOpenCategoryCombo(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-3.5 w-3.5", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
-                            {cat.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
+                  <div className="max-h-[35vh] overflow-y-auto overscroll-contain p-1">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                          categoryId === cat.id && "bg-accent"
+                        )}
+                        onClick={() => {
+                          setCategoryId(cat.id);
+                          setOpenCategoryCombo(false);
+                        }}
+                      >
+                        <Check className={cn("h-3.5 w-3.5 shrink-0", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
+                        <span className="truncate">{cat.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </PopoverContent>
               </Popover>
             </FieldRow>

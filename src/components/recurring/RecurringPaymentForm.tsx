@@ -344,7 +344,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Cuenta">
-              <Select value={accountId} onValueChange={setAccountId}>
+              <Select value={accountId || undefined} onValueChange={setAccountId}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona cuenta" /></SelectTrigger>
                 <SelectContent className="max-h-[35vh] overflow-y-auto">
                   {accounts.map(a => (

@@ -299,21 +299,16 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="bottom"
-          className="max-h-[90vh] overflow-y-auto rounded-t-2xl"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
-          <SheetHeader className="pb-3">
-            <SheetTitle className="text-base font-heading">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="text-base font-heading">
               {isEdit ? "Editar pago recurrente" : "Nuevo pago recurrente"}
-            </SheetTitle>
-            <SheetDescription className="text-xs">
+            </DialogTitle>
+            <DialogDescription className="text-xs">
               {isEdit ? "Modifica los datos del pago programado." : "Programa un cargo o pago automático."}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-1.5 py-2">
             <FieldRow label="Nombre">

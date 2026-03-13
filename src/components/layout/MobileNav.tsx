@@ -328,7 +328,7 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
                 <span>Más</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
+            <SheetContent side="left" className="w-72 p-0 [&>button]:top-3 [&>button]:right-3 [&>button]:z-50 [&>button]:opacity-100 [&>button]:h-8 [&>button]:w-8 [&>button]:flex [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:bg-muted [&>button]:text-foreground [&>button]:hover:bg-muted-foreground/20 [&>button>svg]:h-5 [&>button>svg]:w-5">
               <SheetHeader className="sr-only">
                 <SheetTitle>Menú de navegación</SheetTitle>
               </SheetHeader>

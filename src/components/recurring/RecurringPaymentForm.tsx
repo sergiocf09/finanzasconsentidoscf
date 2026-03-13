@@ -299,8 +299,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl z-50">
+      <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
+        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl" hideOverlay>
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-heading">
               {isEdit ? "Editar pago recurrente" : "Nuevo pago recurrente"}

@@ -347,7 +347,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
-                    <CommandInput className="hidden" />
+                    <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">
                       <CommandGroup>
                         {accounts.map((acc) => (

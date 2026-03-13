@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Bell, BellOff, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun } from "lucide-react";
+import { User, Bell, BellOff, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun, Send } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useTheme } from "@/hooks/useTheme";
 import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";

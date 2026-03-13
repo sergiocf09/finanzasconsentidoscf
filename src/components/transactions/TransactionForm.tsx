@@ -263,7 +263,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
             {/* 3. Categoría */}
             <FieldRow label="Categoría" hint="Opcional">
-              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo}>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"

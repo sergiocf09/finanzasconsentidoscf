@@ -336,10 +336,24 @@ export default function Settings() {
               </p>
             </div>
           ) : pushNotifications.permission === "denied" ? (
-            <div className="px-4 py-3">
-              <p className="text-xs text-muted-foreground">
-                Las notificaciones están bloqueadas en tu navegador. Actívalas desde la configuración del sitio.
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-xs text-muted-foreground font-medium">
+                Las notificaciones están bloqueadas. Sigue estos pasos para activarlas:
               </p>
+              <ol className="text-[11px] text-muted-foreground space-y-1.5 list-decimal list-inside">
+                <li>Toca el ícono de <strong className="text-foreground">candado 🔒</strong> o <strong className="text-foreground">ajustes ⚙️</strong> en la barra de dirección del navegador</li>
+                <li>Busca <strong className="text-foreground">"Notificaciones"</strong> en los permisos del sitio</li>
+                <li>Cambia de <strong className="text-foreground">"Bloquear"</strong> a <strong className="text-foreground">"Permitir"</strong></li>
+                <li>Regresa aquí y <strong className="text-foreground">recarga la página</strong></li>
+              </ol>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 h-8 text-xs mt-1"
+                onClick={() => window.location.reload()}
+              >
+                Ya lo hice, recargar página
+              </Button>
             </div>
           ) : (
             <>

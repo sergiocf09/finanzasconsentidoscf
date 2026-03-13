@@ -393,11 +393,11 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={false}>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm"
+                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                   >
                     <span className={cn(!categoryId && "text-muted-foreground")}>
                       {categoryId

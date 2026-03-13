@@ -263,7 +263,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
             {/* 3. Categoría */}
             <FieldRow label="Categoría" hint="Opcional">
-              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo}>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -277,7 +277,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                     <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar categoría..." className="h-8 text-sm" />
                     <CommandList className="max-h-[35vh]">
@@ -332,7 +332,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
             {/* 4. Cuenta */}
             <FieldRow label="Cuenta">
-              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo}>
+              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -346,7 +346,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                     <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar cuenta..." className="h-8 text-sm" />
                     <CommandList className="max-h-[35vh]">

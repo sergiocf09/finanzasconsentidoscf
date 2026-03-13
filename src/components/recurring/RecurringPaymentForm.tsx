@@ -365,7 +365,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command>
-                    <CommandInput placeholder="Buscar cuenta..." className="h-8 text-xs" />
+                    <CommandInput placeholder="Buscar cuenta..." className="h-8 text-xs" autoFocus={false} />
                     <CommandList className="max-h-[35vh]">
                       <CommandEmpty>Sin resultados.</CommandEmpty>
                       <CommandGroup>
@@ -407,7 +407,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command>
-                    <CommandInput placeholder="Buscar categoría..." className="h-8 text-xs" />
+                    <CommandInput placeholder="Buscar categoría..." className="h-8 text-xs" autoFocus={false} />
                     <CommandList className="max-h-[35vh]">
                       <CommandEmpty>Sin resultados.</CommandEmpty>
                       <CommandGroup>

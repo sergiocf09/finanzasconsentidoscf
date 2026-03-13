@@ -344,30 +344,31 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Cuenta">
-              <Select value={accountId || undefined} onValueChange={setAccountId}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona cuenta" /></SelectTrigger>
-                <SelectContent position="popper" className="max-h-[35vh] overflow-y-auto z-[100]">
-                  {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      <span className="flex items-center gap-2">
-                        <span className="truncate">{a.name}</span>
-                        <span className="text-muted-foreground text-xs ml-auto">{formatCurrency(a.current_balance ?? 0, a.currency)}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                className="h-8 w-full rounded-md border border-input bg-background px-3 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Selecciona cuenta</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} — {formatCurrency(a.current_balance ?? 0, a.currency)}
+                  </option>
+                ))}
+              </select>
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <Select value={categoryId || undefined} onValueChange={setCategoryId}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent position="popper" className="max-h-[35vh] overflow-y-auto z-[100]">
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="h-8 w-full rounded-md border border-input bg-background px-3 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="">Selecciona categoría</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
             </FieldRow>
 
             <FieldRow label="Frecuencia">

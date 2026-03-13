@@ -390,16 +390,16 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Selecciona categoría" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[35vh]">
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={categoryId}
+                onChange={e => setCategoryId(e.target.value)}
+                className="flex h-8 w-full items-center rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Selecciona categoría</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
             </FieldRow>
 
             <FieldRow label="Frecuencia">

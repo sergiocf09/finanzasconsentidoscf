@@ -18,7 +18,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Command, CommandGroup, CommandItem, CommandList,
+  Command, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -365,6 +365,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">
                       <CommandGroup>
                         {accounts.map((acc) => (
@@ -405,6 +406,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">
                       <CommandGroup>
                         {categories.map((cat) => (

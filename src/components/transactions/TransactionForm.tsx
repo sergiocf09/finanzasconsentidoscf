@@ -22,7 +22,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Command, CommandGroup, CommandItem, CommandList,
+  Command, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -279,6 +279,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">
                       <CommandGroup>
                         {categories.map((cat) => (
@@ -346,6 +347,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">
                       <CommandGroup>
                         {accounts.map((acc) => (

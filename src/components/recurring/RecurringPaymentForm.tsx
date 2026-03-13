@@ -363,7 +363,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                     <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto z-[100]" align="start">
                   <Command filter={() => 1}>
                     <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">

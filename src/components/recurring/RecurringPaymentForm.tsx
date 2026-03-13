@@ -103,6 +103,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [requiresManualAction, setRequiresManualAction] = useState(false);
   const [retroConfirmOpen, setRetroConfirmOpen] = useState(false);
   const [isSavingRetro, setIsSavingRetro] = useState(false);
+  const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
   const [openAccountCombo, setOpenAccountCombo] = useState(false);
 
   const isEdit = !!editPayment;
@@ -362,7 +363,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                     <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto z-[100]" align="start">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
                   <Command filter={() => 1}>
                     <div className="hidden"><CommandInput /></div>
                     <CommandList className="max-h-[35vh]">
@@ -389,16 +390,43 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <select
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="flex h-8 w-full items-center rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Selecciona categoría</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={false}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm"
+                  >
+                    <span className={cn(!categoryId && "text-muted-foreground")}>
+                      {categoryId
+                        ? categories.find(c => c.id === categoryId)?.name || "Selecciona"
+                        : "Selecciona categoría"}
+                    </span>
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
+                  <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
+                    <CommandList className="max-h-[35vh]">
+                      <CommandGroup>
+                        {categories.map((cat) => (
+                          <CommandItem
+                            key={cat.id}
+                            value={cat.name}
+                            onSelect={() => {
+                              setCategoryId(cat.id);
+                              setOpenCategoryCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
+                            {cat.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </FieldRow>
 
             <FieldRow label="Frecuencia">

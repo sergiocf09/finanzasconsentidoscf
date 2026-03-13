@@ -1,11 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X,
+  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X, Repeat, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrencyAbs } from "@/lib/formatters";
 import { useDebts } from "@/hooks/useDebts";
 import { useSavingsGoals } from "@/hooks/useSavingsGoals";

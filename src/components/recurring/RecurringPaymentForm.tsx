@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, addDays, addMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Loader2, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Loader2, AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

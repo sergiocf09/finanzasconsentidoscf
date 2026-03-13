@@ -388,7 +388,7 @@ export default function Settings() {
               {pushNotifications.isSubscribed && (
                 <div className="px-4 py-2.5 space-y-2">
                   <p className="text-[10px] text-muted-foreground break-all font-mono">
-                    VAPID: {VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY.substring(0, 30) + '...' : 'NO DEFINIDA'}
+                    VAPID: {"BLbnR-vBUrE6ZNzmAf65X-ZchHZ_cqWsVhtlYD_AlV8GZllwQV8wkxgfZcdO8v2FXUBgGB7J7Pa5wuFRUll0ywQ".substring(0, 30)}...
                   </p>
                   <div className="space-y-1">
                     <p className="text-[11px] text-muted-foreground">· Alerta cuando un presupuesto llega al 80%</p>

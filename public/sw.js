@@ -1,20 +1,39 @@
 self.addEventListener('push', function(event) {
-  if (!event.data) return;
-  const data = event.data.json();
+  console.log('[SW] Push event received');
+  
+  let data = {};
+  try {
+    if (event.data) {
+      data = event.data.json();
+    }
+  } catch (e) {
+    console.error('[SW] Error parsing push data:', e);
+    data = { title: 'Finanzas con Sentido', body: 'Tienes una nueva notificación' };
+  }
+
+  const title = data.title || 'Finanzas con Sentido';
   const options = {
-    body: data.body,
+    body: data.body || 'Tienes una nueva notificación',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     tag: data.tag || 'fcs-notification',
     renotify: true,
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
     data: { url: data.url || '/' },
+    actions: [
+      { action: 'open', title: 'Abrir' },
+    ],
   };
+
+  console.log('[SW] Showing notification:', title, options.body);
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(title, options)
   );
 });
 
 self.addEventListener('notificationclick', function(event) {
+  console.log('[SW] Notification clicked');
   event.notification.close();
   const url = event.notification.data?.url || '/';
   event.waitUntil(
@@ -31,5 +50,12 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('install', function(e) {
+  console.log('[SW] Installing...');
+  e.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', function(e) {
+  console.log('[SW] Activating...');
+  e.waitUntil(self.clients.claim());
+});

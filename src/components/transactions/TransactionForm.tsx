@@ -263,23 +263,46 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
             {/* 3. Categoría */}
             <FieldRow label="Categoría" hint="Opcional">
-              <Select
-                value={form.watch("category_id") || ""}
-                onValueChange={(v) => {
-                  form.setValue("category_id", v);
-                  setUserSelectedCategory(true);
-                  setSuggestedCategory(null);
-                }}
-              >
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  >
+                    <span className={cn(!form.watch("category_id") && "text-muted-foreground")}>
+                      {form.watch("category_id")
+                        ? categories.find(c => c.id === form.watch("category_id"))?.name || "Selecciona"
+                        : "Selecciona"}
+                    </span>
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar categoría..." className="h-8 text-sm" />
+                    <CommandList className="max-h-[35vh]">
+                      <CommandEmpty>Sin resultados.</CommandEmpty>
+                      <CommandGroup>
+                        {categories.map((cat) => (
+                          <CommandItem
+                            key={cat.id}
+                            value={cat.name}
+                            onSelect={() => {
+                              form.setValue("category_id", cat.id);
+                              setUserSelectedCategory(true);
+                              setSuggestedCategory(null);
+                              setOpenCategoryCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", form.watch("category_id") === cat.id ? "opacity-100" : "opacity-0")} />
+                            {cat.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </FieldRow>
 
             {/* Category suggestion badge */}

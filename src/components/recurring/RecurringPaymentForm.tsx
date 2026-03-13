@@ -119,6 +119,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setTotalPayments(editPayment.total_payments ? String(editPayment.total_payments) : "");
       setOriginalTotal(editPayment.original_total_amount ? String(editPayment.original_total_amount) : "");
       setNotes(editPayment.notes || "");
+      setRequiresManualAction(editPayment.requires_manual_action ?? false);
     } else {
       setName(prefill?.description || "");
       setDescription(prefill?.description || "");

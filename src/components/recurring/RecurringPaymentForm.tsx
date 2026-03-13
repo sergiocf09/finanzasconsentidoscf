@@ -103,6 +103,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [requiresManualAction, setRequiresManualAction] = useState(false);
   const [retroConfirmOpen, setRetroConfirmOpen] = useState(false);
   const [isSavingRetro, setIsSavingRetro] = useState(false);
+  const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
+  const [openAccountCombo, setOpenAccountCombo] = useState(false);
 
   const isEdit = !!editPayment;
 

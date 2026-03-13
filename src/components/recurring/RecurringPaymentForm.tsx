@@ -134,6 +134,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setTotalPayments("");
       setOriginalTotal("");
       setNotes("");
+      setRequiresManualAction(false);
     }
   }, [open, editPayment]);
 

@@ -23,6 +23,8 @@ export interface RecurringPayment {
   remaining_balance: number | null;
   status: string;
   notes: string | null;
+  requires_manual_action: boolean;
+  confirmed_at: string | null;
   created_at: string;
   updated_at: string;
 }

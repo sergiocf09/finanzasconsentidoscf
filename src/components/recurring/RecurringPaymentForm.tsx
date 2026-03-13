@@ -299,7 +299,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
+      <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl z-50">
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-heading">

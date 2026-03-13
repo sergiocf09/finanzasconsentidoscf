@@ -249,6 +249,7 @@ export function VoiceButton() {
           start_date: editDate,
           next_execution_date: format(nextDate, "yyyy-MM-dd"),
           payments_made: 1,
+          requires_manual_action: requiresManualAction,
         });
         queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
       }

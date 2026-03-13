@@ -65,6 +65,17 @@ interface UpcomingDueDatesProps {
   summaryAccounts?: AccountSummaryItem[];
 }
 
+interface RecurringDueItem {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  next_execution_date: string;
+  requires_manual_action: boolean;
+  confirmed_at: string | null;
+  daysLeft: number;
+}
+
 export function UpcomingDueDates({
   summaryDebts,
   summaryGoals,

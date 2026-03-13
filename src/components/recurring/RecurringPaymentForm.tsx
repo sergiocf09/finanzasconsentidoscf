@@ -142,7 +142,10 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setNotes("");
       setRequiresManualAction(false);
     }
-  }, [open, editPayment]);
+
+    setOpenAccountCombo(false);
+    setOpenCategoryCombo(false);
+  }, [open, editPayment, prefill]);
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
 

@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem("fcs_last_route");
     await supabase.auth.signOut();
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon, Loader2, Info, Repeat } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { matchCategory } from "@/lib/voiceParser";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategories, Category } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
@@ -69,10 +70,13 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [activeTab, setActiveTab] = useState<"income" | "expense">(defaultType);
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
+  const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
+  const [userSelectedCategory, setUserSelectedCategory] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
-  const { expenseCategories, incomeCategories } = useCategories();
+  const { expenseCategories, incomeCategories, categories: allCategories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
   const { rate: fxRate } = useExchangeRate();
   const { createPayment: createRecurring } = useRecurringPayments();
@@ -95,10 +99,36 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       setActiveTab(defaultType);
       form.setValue("type", defaultType);
       setMakeRecurring(false);
+      setSuggestedCategory(null);
+      setUserSelectedCategory(false);
     }
   }, [open, defaultType]);
 
   const categories = activeTab === "income" ? incomeCategories : expenseCategories;
+
+  // Debounced category suggestion
+  const watchedDescription = form.watch("description");
+  
+  const runSuggestion = useCallback((desc: string) => {
+    if (!desc || desc.trim().length < 2 || userSelectedCategory) {
+      setSuggestedCategory(null);
+      return;
+    }
+    const voiceCategories = allCategories.map(c => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      keywords: c.keywords,
+    }));
+    const result = matchCategory(desc, voiceCategories, activeTab);
+    setSuggestedCategory(result.category ? allCategories.find(c => c.id === result.category!.id) ?? null : null);
+  }, [allCategories, activeTab, userSelectedCategory]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => runSuggestion(watchedDescription || ""), 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [watchedDescription, runSuggestion]);
 
   const watchedAccountId = form.watch("account_id");
   const watchedCurrency = form.watch("currency");
@@ -127,11 +157,11 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     if (crossCurrency && fxRate > 0) {
       if (data.currency === "USD" && account.currency === "MXN") {
         finalAmount = data.amount * fxRate;
-        amountInBase = finalAmount; // equivalente en MXN
+        amountInBase = finalAmount;
         exchangeRate = fxRate;
       } else if (data.currency === "MXN" && account.currency === "USD") {
         finalAmount = data.amount / fxRate;
-        amountInBase = data.amount; // ya está en MXN
+        amountInBase = data.amount;
         exchangeRate = 1 / fxRate;
       }
       finalCurrency = account.currency;
@@ -175,6 +205,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
     form.reset();
     setMakeRecurring(false);
+    setSuggestedCategory(null);
+    setUserSelectedCategory(false);
     onOpenChange(false);
   };
 
@@ -187,7 +219,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         </DialogHeader>
 
         <div>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as typeof activeTab); setSuggestedCategory(null); setUserSelectedCategory(false); }}>
             <TabsList className="grid w-full grid-cols-2 h-9">
               <TabsTrigger value="income" className="text-xs text-income">Ingreso</TabsTrigger>
               <TabsTrigger value="expense" className="text-xs text-expense">Gasto</TabsTrigger>
@@ -195,6 +227,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
           </Tabs>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-3">
+            {/* 1. Monto */}
             <FieldRow label="Monto">
               <div className="flex gap-2">
                 <Input
@@ -206,7 +239,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                 />
                 <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
                   <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
-                <SelectContent side="bottom">
+                  <SelectContent side="bottom">
                     <SelectItem value="MXN">MXN</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>
@@ -218,6 +251,58 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
               <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
             )}
 
+            {/* 2. Descripción (moved up) */}
+            <FieldRow label="Descripción" hint="Opcional">
+              <Input className="h-8 text-sm" placeholder="Ej: Uber oficina" {...form.register("description")} />
+            </FieldRow>
+
+            {/* 3. Categoría */}
+            <FieldRow label="Categoría" hint="Opcional">
+              <Select
+                value={form.watch("category_id") || ""}
+                onValueChange={(v) => {
+                  form.setValue("category_id", v);
+                  setUserSelectedCategory(true);
+                  setSuggestedCategory(null);
+                }}
+              >
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            {/* Category suggestion badge */}
+            {suggestedCategory && !userSelectedCategory && (
+              <div className="flex items-center gap-2 pl-[40%]">
+                <span className="text-xs text-muted-foreground">¿Sugerida?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    form.setValue("category_id", suggestedCategory.id);
+                    setUserSelectedCategory(true);
+                    setSuggestedCategory(null);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                >
+                  {suggestedCategory.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSuggestedCategory(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* 4. Cuenta */}
             <FieldRow label="Cuenta">
               <Select value={watchedAccountId} onValueChange={(v) => form.setValue("account_id", v)}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
@@ -256,19 +341,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
               </div>
             )}
 
-            <FieldRow label="Categoría" hint="Opcional">
-              <Select value={form.watch("category_id") || ""} onValueChange={(v) => form.setValue("category_id", v)}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                <SelectContent side="bottom" className="max-h-[35vh] overflow-y-auto">
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldRow>
-
+            {/* 5. Fecha */}
             <FieldRow label="Fecha">
               <Popover>
                 <PopoverTrigger asChild>
@@ -296,10 +369,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   />
                 </PopoverContent>
               </Popover>
-            </FieldRow>
-
-            <FieldRow label="Descripción" hint="Opcional">
-              <Input className="h-8 text-sm" placeholder="Ej: Uber oficina" {...form.register("description")} />
             </FieldRow>
 
             {/* Recurring switch */}

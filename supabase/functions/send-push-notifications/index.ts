@@ -170,6 +170,59 @@ Deno.serve(async (req) => {
         results.skipped++;
       }
     }
+
+    // REGLA 4: Pago recurrente manual en 2 días
+    const in2days = new Date(now);
+    in2days.setDate(in2days.getDate() + 2);
+    const in2daysStr = in2days.toISOString().split("T")[0];
+
+    const { data: upcomingManual } = await supabase
+      .from("recurring_payments")
+      .select("id, name, amount, currency, next_execution_date, requires_manual_action")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .eq("requires_manual_action", true)
+      .eq("next_execution_date", in2daysStr)
+      .is("confirmed_at", null);
+
+    for (const r of upcomingManual ?? []) {
+      const todayCheck = now.toISOString().split("T")[0];
+      const { data: alreadySent } = await supabase
+        .from("push_logs")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("type", "recurring_reminder")
+        .gte("sent_at", todayCheck)
+        .limit(1);
+
+      if (alreadySent?.length) { results.skipped++; continue; }
+
+      const fmtAmount = (n: number) =>
+        new Intl.NumberFormat("es-MX", {
+          style: "currency",
+          currency: r.currency || "MXN",
+          maximumFractionDigits: 0,
+        }).format(n);
+
+      const payload = {
+        title: `📅 ${r.name} vence en 2 días`,
+        body: `Tienes pendiente realizar el pago de ${fmtAmount(r.amount)}. Recuerda hacerlo antes del ${r.next_execution_date}.`,
+        tag: `recurring-${r.id}`,
+        url: "/",
+      };
+
+      try {
+        await webpush.sendNotification(sub, JSON.stringify(payload));
+        await supabase.from("push_logs").insert({
+          user_id: userId,
+          type: "recurring_reminder",
+          payload,
+        });
+        results.sent++;
+      } catch {
+        results.errors++;
+      }
+    }
   }
 
   return new Response(JSON.stringify(results), {

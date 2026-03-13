@@ -1,0 +1,3 @@
+ALTER TABLE public.recurring_payments
+  ADD COLUMN IF NOT EXISTS requires_manual_action BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ DEFAULT NULL;

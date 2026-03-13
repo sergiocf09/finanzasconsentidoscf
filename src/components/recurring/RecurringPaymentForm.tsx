@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
@@ -96,6 +97,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [totalPayments, setTotalPayments] = useState("");
   const [originalTotal, setOriginalTotal] = useState("");
   const [notes, setNotes] = useState("");
+  const [requiresManualAction, setRequiresManualAction] = useState(false);
   const [retroConfirmOpen, setRetroConfirmOpen] = useState(false);
   const [isSavingRetro, setIsSavingRetro] = useState(false);
 
@@ -118,6 +120,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setTotalPayments(editPayment.total_payments ? String(editPayment.total_payments) : "");
       setOriginalTotal(editPayment.original_total_amount ? String(editPayment.original_total_amount) : "");
       setNotes(editPayment.notes || "");
+      setRequiresManualAction(editPayment.requires_manual_action ?? false);
     } else {
       setName(prefill?.description || "");
       setDescription(prefill?.description || "");
@@ -132,6 +135,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setTotalPayments("");
       setOriginalTotal("");
       setNotes("");
+      setRequiresManualAction(false);
     }
   }, [open, editPayment]);
 
@@ -197,6 +201,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       remaining_balance: originalTotal ? parseFloat(originalTotal) : null,
       notes: notes || null,
       payments_made: generateRetro ? retroDates.length : 0,
+      requires_manual_action: requiresManualAction,
     };
 
     if (isEdit) {
@@ -427,6 +432,10 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
             <FieldRow label="Notas">
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionales" className="text-xs min-h-[3rem]" />
+            </FieldRow>
+
+            <FieldRow label="¿Acción manual?" hint="Actívalo si realizas tú el pago (transferencia, depósito)">
+              <Switch checked={requiresManualAction} onCheckedChange={setRequiresManualAction} />
             </FieldRow>
           </div>
 

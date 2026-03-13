@@ -1,11 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X,
+  CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X, Repeat, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrencyAbs } from "@/lib/formatters";
 import { useDebts } from "@/hooks/useDebts";
 import { useSavingsGoals } from "@/hooks/useSavingsGoals";
@@ -64,6 +65,17 @@ interface UpcomingDueDatesProps {
   summaryAccounts?: AccountSummaryItem[];
 }
 
+interface RecurringDueItem {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  next_execution_date: string;
+  requires_manual_action: boolean;
+  confirmed_at: string | null;
+  daysLeft: number;
+}
+
 export function UpcomingDueDates({
   summaryDebts,
   summaryGoals,
@@ -86,10 +98,56 @@ export function UpcomingDueDates({
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const in7days = useMemo(() => format(addDays(today, 7), "yyyy-MM-dd"), [today]);
+  const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
   const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
   const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
+
+  // Query upcoming recurring payments (next 7 days)
+  const { data: upcomingRecurring } = useQuery({
+    queryKey: ["upcoming_recurring", user?.id, todayStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recurring_payments" as any)
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at")
+        .eq("status", "active")
+        .gte("next_execution_date", todayStr)
+        .lte("next_execution_date", in7days)
+        .order("next_execution_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: !!user,
+  });
+
+  const recurringItems = useMemo<RecurringDueItem[]>(() => {
+    if (!upcomingRecurring) return [];
+    return upcomingRecurring.map((r: any) => {
+      const execDate = new Date(r.next_execution_date + "T00:00:00");
+      const diff = Math.ceil((execDate.getTime() - today.getTime()) / 86400000);
+      return { ...r, daysLeft: diff };
+    });
+  }, [upcomingRecurring, today]);
+
+  const handleConfirmRecurring = useCallback(async (id: string) => {
+    setConfirmingRecurring(id);
+    try {
+      await supabase
+        .from("recurring_payments" as any)
+        .update({ confirmed_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      toast.success("Pago confirmado");
+    } catch {
+      toast.error("Error al confirmar");
+    } finally {
+      setConfirmingRecurring(null);
+    }
+  }, [queryClient]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({
@@ -245,13 +303,14 @@ export function UpcomingDueDates({
   );
 
   const hasAnyDueItems = useMemo(() => {
+    if (recurringItems.length > 0) return true;
     if (summaryDebts || summaryGoals) {
       return (summaryDebts?.length ?? 0) > 0 || (summaryGoals?.length ?? 0) > 0;
     }
     const hasDebts = (hookDebts ?? []).some(d => d.is_active && d.due_day);
     const hasGoals = (hookGoals ?? []).some(g => g.is_active && (g as any).contribution_day);
     return hasDebts || hasGoals;
-  }, [summaryDebts, summaryGoals, hookDebts, hookGoals]);
+  }, [summaryDebts, summaryGoals, hookDebts, hookGoals, recurringItems]);
 
   const handleAmountChange = useCallback((itemId: string, value: string) => {
     setEditedAmounts(prev => ({ ...prev, [itemId]: value }));
@@ -483,6 +542,73 @@ export function UpcomingDueDates({
                     </div>
                   </div>
                 )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Upcoming recurring payments */}
+      {recurringItems.length > 0 && (
+        <div className="space-y-1.5 mt-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Repeat className="h-3.5 w-3.5 text-primary" />
+            <h3 className="text-xs font-heading font-semibold text-foreground">Pagos recurrentes próximos</h3>
+          </div>
+          {recurringItems.map(r => {
+            const isManual = r.requires_manual_action;
+            const isConfirmed = !!r.confirmed_at;
+            const isUrgent = r.daysLeft <= 2;
+            return (
+              <div
+                key={r.id}
+                className={cn(
+                  "rounded-xl border p-3 transition-colors",
+                  isManual && !isConfirmed && isUrgent
+                    ? "border-amber-500/30 bg-amber-500/5"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
+                    isManual && !isConfirmed ? "bg-amber-500/10" : "bg-primary/10"
+                  )}>
+                    <Repeat className={cn("h-5 w-5", isManual && !isConfirmed ? "text-amber-600" : "text-primary")} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {r.daysLeft === 0 ? "Hoy" : r.daysLeft === 1 ? "Mañana" : `En ${r.daysLeft} días`}
+                      </p>
+                      {isManual && !isConfirmed ? (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-700 border-amber-500/30">
+                          Pendiente confirmar
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
+                          {isConfirmed ? "Confirmado" : "Automático"}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-bold text-foreground tabular-nums">
+                      {formatCurrencyAbs(r.amount, r.currency)}
+                    </span>
+                    {isManual && !isConfirmed && (
+                      <button
+                        onClick={() => handleConfirmRecurring(r.id)}
+                        disabled={confirmingRecurring === r.id}
+                        className="flex h-7 items-center gap-1 px-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Ya lo realicé
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}

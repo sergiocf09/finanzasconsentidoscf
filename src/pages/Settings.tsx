@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Bell, BellOff, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useTheme } from "@/hooks/useTheme";
 import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";
@@ -7,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +17,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { validatePassword } from "@/lib/passwordValidation";
 import { PasswordRequirements } from "@/components/auth/PasswordRequirements";
 
+const AVAILABLE_CURRENCIES = [
+  { code: "MXN", name: "Peso mexicano", flag: "🇲🇽" },
+  { code: "USD", name: "Dólar estadounidense", flag: "🇺🇸" },
+  { code: "EUR", name: "Euro", flag: "🇪🇺" },
+  { code: "GBP", name: "Libra esterlina", flag: "🇬🇧" },
+];
+
 export default function Settings() {
   const { profile, isLoading } = useProfile();
   const { user, signOut } = useAuth();
@@ -22,8 +31,8 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const { isDark, toggle } = useTheme();
   const pushNotifications = usePushNotifications();
+  const navigate = useNavigate();
 
-  // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -41,9 +50,13 @@ export default function Settings() {
 
   // Password
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  // Currency
+  const [isSavingCurrency, setIsSavingCurrency] = useState(false);
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
@@ -68,7 +81,6 @@ export default function Settings() {
 
     setIsSavingEmail(true);
     try {
-      // Verify current password first
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: user!.email!,
         password: emailPassword,
@@ -80,7 +92,6 @@ export default function Settings() {
         return;
       }
 
-      // Update email (Supabase sends confirmation to both old and new email)
       const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
 
       if (error) {
@@ -100,6 +111,22 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
+    if (!currentPassword) {
+      toast({ title: "Ingresa tu contraseña actual", variant: "destructive" });
+      return;
+    }
+
+    // Verify current password
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: user!.email!,
+      password: currentPassword,
+    });
+
+    if (authError) {
+      toast({ title: "Contraseña actual incorrecta", description: "Verifica tu contraseña actual.", variant: "destructive" });
+      return;
+    }
+
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
       toast({ title: "Contraseña no válida", description: validation.errors.join(". "), variant: "destructive" });
@@ -116,10 +143,27 @@ export default function Settings() {
     } else {
       toast({ title: "Contraseña actualizada correctamente" });
       setShowPasswordForm(false);
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     }
     setIsSavingPassword(false);
+  };
+
+  const handleChangeCurrency = async (currency: string) => {
+    setIsSavingCurrency(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ base_currency: currency } as any)
+      .eq("id", user!.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast({ title: "Moneda actualizada", description: `Moneda principal: ${currency}` });
+    }
+    setIsSavingCurrency(false);
   };
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "Usuario";
@@ -128,17 +172,22 @@ export default function Settings() {
 
   return (
     <div className="space-y-2">
-      {/* Header — sticky */}
+      {/* Header with close button */}
       <div className="bg-background -mx-1 px-1 pb-1">
-        <h1 className="text-lg font-heading font-semibold text-foreground py-1">Configuración</h1>
+        <div className="flex items-center justify-between py-1">
+          <h1 className="text-lg font-heading font-semibold text-foreground">Configuración</h1>
+          <button
+            onClick={() => navigate(-1)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors"
+            aria-label="Cerrar configuración"
+          >
+            <X className="h-5 w-5 text-foreground" />
+          </button>
+        </div>
       </div>
 
-      {/* Appearance */}
+      {/* Dark/Light mode — no "Apariencia" header */}
       <div className="rounded-xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
-          {isDark ? <Moon className="h-4 w-4 text-muted-foreground" /> : <Sun className="h-4 w-4 text-muted-foreground" />}
-          <h2 className="text-sm font-medium text-foreground">Apariencia</h2>
-        </div>
         <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-3 flex-1 min-w-0 mr-3">
             {isDark ? <Moon className="h-4 w-4 text-muted-foreground" /> : <Sun className="h-4 w-4 text-muted-foreground" />}
@@ -262,6 +311,18 @@ export default function Settings() {
           {showPasswordForm ? (
             <div className="px-4 py-2.5 space-y-3">
               <div className="space-y-1">
+                <Label htmlFor="current-password" className="text-xs">Contraseña actual</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  placeholder="Tu contraseña actual"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="h-9"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
                 <Label htmlFor="new-password" className="text-xs">Nueva contraseña</Label>
                 <Input
                   id="new-password"
@@ -285,7 +346,7 @@ export default function Settings() {
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setShowPasswordForm(false)}>
+                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setShowPasswordForm(false); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}>
                   Cancelar
                 </Button>
                 <Button size="sm" className="h-8 text-xs" onClick={handleChangePassword} disabled={isSavingPassword}>
@@ -317,7 +378,18 @@ export default function Settings() {
         <div className="divide-y divide-border">
           <div className="flex items-center justify-between px-4 py-2.5">
             <span className="text-sm text-foreground">Moneda principal</span>
-            <span className="text-sm text-muted-foreground">{displayCurrency}</span>
+            <Select value={displayCurrency} onValueChange={handleChangeCurrency} disabled={isSavingCurrency}>
+              <SelectTrigger className="w-auto h-8 text-sm gap-1 border-none bg-transparent px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.flag} {c.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

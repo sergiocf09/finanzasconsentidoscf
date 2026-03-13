@@ -390,7 +390,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={false}>
+              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"

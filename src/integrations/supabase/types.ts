@@ -697,6 +697,7 @@ export type Database = {
           account_id: string
           amount: number
           category_id: string | null
+          confirmed_at: string | null
           created_at: string | null
           currency: string
           description: string | null
@@ -709,6 +710,7 @@ export type Database = {
           original_total_amount: number | null
           payments_made: number
           remaining_balance: number | null
+          requires_manual_action: boolean | null
           start_date: string
           status: string
           total_payments: number | null
@@ -720,6 +722,7 @@ export type Database = {
           account_id: string
           amount: number
           category_id?: string | null
+          confirmed_at?: string | null
           created_at?: string | null
           currency?: string
           description?: string | null
@@ -732,6 +735,7 @@ export type Database = {
           original_total_amount?: number | null
           payments_made?: number
           remaining_balance?: number | null
+          requires_manual_action?: boolean | null
           start_date: string
           status?: string
           total_payments?: number | null
@@ -743,6 +747,7 @@ export type Database = {
           account_id?: string
           amount?: number
           category_id?: string | null
+          confirmed_at?: string | null
           created_at?: string | null
           currency?: string
           description?: string | null
@@ -755,6 +760,7 @@ export type Database = {
           original_total_amount?: number | null
           payments_made?: number
           remaining_balance?: number | null
+          requires_manual_action?: boolean | null
           start_date?: string
           status?: string
           total_payments?: number | null

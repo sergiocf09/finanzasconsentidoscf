@@ -303,13 +303,14 @@ export function UpcomingDueDates({
   );
 
   const hasAnyDueItems = useMemo(() => {
+    if (recurringItems.length > 0) return true;
     if (summaryDebts || summaryGoals) {
       return (summaryDebts?.length ?? 0) > 0 || (summaryGoals?.length ?? 0) > 0;
     }
     const hasDebts = (hookDebts ?? []).some(d => d.is_active && d.due_day);
     const hasGoals = (hookGoals ?? []).some(g => g.is_active && (g as any).contribution_day);
     return hasDebts || hasGoals;
-  }, [summaryDebts, summaryGoals, hookDebts, hookGoals]);
+  }, [summaryDebts, summaryGoals, hookDebts, hookGoals, recurringItems]);
 
   const handleAmountChange = useCallback((itemId: string, value: string) => {
     setEditedAmounts(prev => ({ ...prev, [itemId]: value }));

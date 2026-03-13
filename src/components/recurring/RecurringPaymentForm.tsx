@@ -390,43 +390,16 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm"
-                  >
-                    <span className={cn(!categoryId && "text-muted-foreground")}>
-                      {categoryId
-                        ? categories.find(c => c.id === categoryId)?.name || "Selecciona"
-                        : "Selecciona categoría"}
-                    </span>
-                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto z-[100]" align="start">
-                  <Command filter={() => 1}>
-                    <div className="hidden"><CommandInput /></div>
-                    <CommandList className="max-h-[35vh]">
-                      <CommandGroup>
-                        {categories.map((cat) => (
-                          <CommandItem
-                            key={cat.id}
-                            value={cat.name}
-                            onSelect={() => {
-                              setCategoryId(cat.id);
-                              setOpenCategoryCombo(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-3.5 w-3.5", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
-                            {cat.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecciona categoría" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[35vh]">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FieldRow>
 
             <FieldRow label="Frecuencia">

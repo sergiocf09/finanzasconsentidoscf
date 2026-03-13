@@ -360,7 +360,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Categoría">
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={categoryId || undefined} onValueChange={setCategoryId}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona" /></SelectTrigger>
                 <SelectContent className="max-h-[35vh] overflow-y-auto">
                   {categories.map((c) => (

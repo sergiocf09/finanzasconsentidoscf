@@ -432,6 +432,10 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             <FieldRow label="Notas">
               <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionales" className="text-xs min-h-[3rem]" />
             </FieldRow>
+
+            <FieldRow label="¿Acción manual?" hint="Actívalo si realizas tú el pago (transferencia, depósito)">
+              <Switch checked={requiresManualAction} onCheckedChange={setRequiresManualAction} />
+            </FieldRow>
           </div>
 
           <div className="flex gap-3 pt-3">

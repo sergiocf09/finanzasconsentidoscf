@@ -45,6 +45,7 @@ export interface CreateRecurringPaymentData {
   total_payments?: number;
   payments_made?: number;
   remaining_balance?: number;
+  requires_manual_action?: boolean;
   notes?: string;
 }
 

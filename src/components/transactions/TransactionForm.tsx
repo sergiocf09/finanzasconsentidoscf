@@ -75,6 +75,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
   const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
   const [userSelectedCategory, setUserSelectedCategory] = useState(false);
+  const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
+  const [openAccountCombo, setOpenAccountCombo] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { createTransaction } = useTransactions();

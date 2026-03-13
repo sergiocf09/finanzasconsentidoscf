@@ -28,7 +28,11 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!isSupported) { setPermission("unsupported"); return; }
-    const sync = () => setPermission(Notification.permission as PushPermission);
+    const sync = () => {
+      const perm = Notification.permission as PushPermission;
+      console.log('[PUSH] Notification.permission:', perm);
+      setPermission(perm);
+    };
     sync();
     window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", sync);
@@ -40,7 +44,16 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!isSupported) return;
-    navigator.serviceWorker.register("/sw.js").catch(console.error);
+    console.log('[PUSH] isSupported:', isSupported);
+    console.log('[PUSH] VAPID_PUBLIC_KEY exists:', !!VAPID_PUBLIC_KEY);
+    console.log('[PUSH] VAPID_PUBLIC_KEY value:', VAPID_PUBLIC_KEY?.substring(0, 20) + '...');
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg => {
+        console.log('[SW] registered, scope:', reg.scope);
+        console.log('[SW] active:', !!reg.active);
+        console.log('[SW] installing:', !!reg.installing);
+      })
+      .catch(err => console.error('[SW] registration error:', err));
   }, [isSupported]);
 
   useEffect(() => {

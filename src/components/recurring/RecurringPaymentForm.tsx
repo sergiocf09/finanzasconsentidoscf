@@ -334,7 +334,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                 <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="h-8 text-xs flex-1" />
                 <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger className="h-8 text-xs w-20"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[200]">
+                  <SelectContent>
                     <SelectItem value="MXN">MXN</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>

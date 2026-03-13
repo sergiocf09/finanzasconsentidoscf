@@ -500,16 +500,22 @@ export function VoiceButton() {
                         <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
                       </div>
                       {makeRecurring && (
-                        <div className="flex items-center gap-2">
-                          <Label className="text-[10px] text-muted-foreground shrink-0">Frecuencia:</Label>
-                          <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
-                            <SelectTrigger className="h-7 text-[11px] flex-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
-                                <SelectItem key={k} value={k}>{v}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-[10px] text-muted-foreground shrink-0">Frecuencia:</Label>
+                            <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                              <SelectTrigger className="h-7 text-[11px] flex-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] text-muted-foreground">¿Acción manual?</Label>
+                            <Switch checked={requiresManualAction} onCheckedChange={setRequiresManualAction} />
+                          </div>
                         </div>
                       )}
                     </div>

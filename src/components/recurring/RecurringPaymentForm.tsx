@@ -96,6 +96,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [totalPayments, setTotalPayments] = useState("");
   const [originalTotal, setOriginalTotal] = useState("");
   const [notes, setNotes] = useState("");
+  const [requiresManualAction, setRequiresManualAction] = useState(false);
   const [retroConfirmOpen, setRetroConfirmOpen] = useState(false);
   const [isSavingRetro, setIsSavingRetro] = useState(false);
 

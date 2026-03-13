@@ -349,7 +349,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             </FieldRow>
 
             <FieldRow label="Cuenta">
-              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo} modal={false}>
+              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo} modal={true}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -364,26 +364,27 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
-                  <div className="max-h-[35vh] overflow-y-auto overscroll-contain p-1">
-                    {accounts.map((acc) => (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer hover:bg-accent hover:text-accent-foreground",
-                          accountId === acc.id && "bg-accent"
-                        )}
-                        onClick={() => {
-                          setAccountId(acc.id);
-                          setOpenAccountCombo(false);
-                        }}
-                      >
-                        <Check className={cn("h-3.5 w-3.5 shrink-0", accountId === acc.id ? "opacity-100" : "opacity-0")} />
-                        <span className="flex-1 truncate">{acc.name}</span>
-                        <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
+                    <CommandList className="max-h-[35vh]">
+                      <CommandGroup>
+                        {accounts.map((acc) => (
+                          <CommandItem
+                            key={acc.id}
+                            value={acc.name}
+                            onSelect={() => {
+                              setAccountId(acc.id);
+                              setOpenAccountCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", accountId === acc.id ? "opacity-100" : "opacity-0")} />
+                            <span className="flex-1 truncate">{acc.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
                 </PopoverContent>
               </Popover>
             </FieldRow>
@@ -404,25 +405,26 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
-                  <div className="max-h-[35vh] overflow-y-auto overscroll-contain p-1">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer hover:bg-accent hover:text-accent-foreground",
-                          categoryId === cat.id && "bg-accent"
-                        )}
-                        onClick={() => {
-                          setCategoryId(cat.id);
-                          setOpenCategoryCombo(false);
-                        }}
-                      >
-                        <Check className={cn("h-3.5 w-3.5 shrink-0", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
-                        <span className="truncate">{cat.name}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <Command filter={() => 1}>
+                    <div className="hidden"><CommandInput /></div>
+                    <CommandList className="max-h-[35vh]">
+                      <CommandGroup>
+                        {categories.map((cat) => (
+                          <CommandItem
+                            key={cat.id}
+                            value={cat.name}
+                            onSelect={() => {
+                              setCategoryId(cat.id);
+                              setOpenCategoryCombo(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
+                            {cat.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
                 </PopoverContent>
               </Popover>
             </FieldRow>

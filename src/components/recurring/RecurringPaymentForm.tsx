@@ -322,7 +322,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             <FieldRow label="Tipo">
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[200]">
                   <SelectItem value="expense">Gasto</SelectItem>
                   <SelectItem value="income">Ingreso</SelectItem>
                 </SelectContent>

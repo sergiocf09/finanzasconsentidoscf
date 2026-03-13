@@ -4,11 +4,13 @@ import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { VoiceButton } from "../voice/VoiceButton";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
+import { useSaveLastRoute } from "@/hooks/useLastRoute";
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   useSwipeNavigation();
+  useSaveLastRoute();
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">

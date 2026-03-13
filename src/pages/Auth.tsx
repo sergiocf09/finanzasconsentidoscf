@@ -55,7 +55,8 @@ export default function Auth() {
     if (error) {
       toast({ title: "Error al iniciar sesión", description: getErrorMessage(error.message), variant: "destructive" });
     } else {
-      navigate("/");
+      const { getLastRoute } = await import("@/hooks/useLastRoute");
+      navigate(getLastRoute());
     }
     setIsSubmitting(false);
   };

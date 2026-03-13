@@ -9,8 +9,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -299,16 +299,16 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl">
-          <SheetHeader className="pb-3">
-            <SheetTitle className="text-base font-heading">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="text-base font-heading">
               {isEdit ? "Editar pago recurrente" : "Nuevo pago recurrente"}
-            </SheetTitle>
-            <SheetDescription className="text-xs">
+            </DialogTitle>
+            <DialogDescription className="text-xs">
               {isEdit ? "Modifica los datos del pago programado." : "Programa un cargo o pago automático."}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-1.5 py-2">
             <FieldRow label="Nombre">
@@ -445,8 +445,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
               {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : (isEdit ? "Actualizar" : "Programar")}
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Retroactive confirmation dialog */}
       <AlertDialog open={retroConfirmOpen} onOpenChange={setRetroConfirmOpen}>

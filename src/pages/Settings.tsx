@@ -177,7 +177,7 @@ export default function Settings() {
         <div className="flex items-center justify-between py-1">
           <h1 className="text-lg font-heading font-semibold text-foreground">Configuración</h1>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/"); }}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors"
             aria-label="Cerrar configuración"
           >

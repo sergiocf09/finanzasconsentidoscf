@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Bell, BellOff, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun } from "lucide-react";
+import { User, Bell, BellOff, DollarSign, Shield, HelpCircle, Loader2, LogOut, Mail, Check, X, Moon, Sun, Send } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useTheme } from "@/hooks/useTheme";
 import { ArchivedItemsSection } from "@/components/settings/ArchivedItemsSection";
@@ -372,10 +372,30 @@ export default function Settings() {
                 />
               </div>
               {pushNotifications.isSubscribed && (
-                <div className="px-4 py-2.5 space-y-1">
-                  <p className="text-[11px] text-muted-foreground">· Alerta cuando un presupuesto llega al 80%</p>
-                  <p className="text-[11px] text-muted-foreground">· Recordatorio si llevas 3+ días sin registrar</p>
-                  <p className="text-[11px] text-muted-foreground">· Resumen de cierre el primer día de cada mes</p>
+                <div className="px-4 py-2.5 space-y-2">
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground">· Alerta cuando un presupuesto llega al 80%</p>
+                    <p className="text-[11px] text-muted-foreground">· Recordatorio si llevas 3+ días sin registrar</p>
+                    <p className="text-[11px] text-muted-foreground">· Resumen de cierre el primer día de cada mes</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2 h-8 text-xs"
+                    onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.functions.invoke("send-test-push");
+                        if (error) throw error;
+                        if (data?.error) throw new Error(data.error);
+                        toast({ title: "Notificación enviada", description: "Debería llegar en unos segundos." });
+                      } catch (err: any) {
+                        toast({ title: "Error al enviar", description: err.message, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Send className="h-3 w-3" />
+                    Enviar notificación de prueba
+                  </Button>
                 </div>
               )}
             </>

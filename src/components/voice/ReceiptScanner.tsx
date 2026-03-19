@@ -381,11 +381,29 @@ export function ReceiptScanner() {
     }
 
     queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    queryClient.invalidateQueries({ queryKey: ["transactions_paginated"] });
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+
+    // Determine the date range of saved transactions for user feedback
+    const dates = selected.map(t => t.date).filter(Boolean).sort();
+    const minDate = dates[0];
+    const maxDate = dates[dates.length - 1];
+    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    let periodHint = "";
+    if (minDate) {
+      const m = parseInt(minDate.split("-")[1], 10) - 1;
+      const currentMonth = new Date().getMonth();
+      if (m !== currentMonth) {
+        periodHint = ` en ${monthNames[m]}`;
+      }
+    }
 
     if (failed === 0) {
       toast.success(
-        `${saved} movimiento${saved !== 1 ? "s" : ""} registrado${saved !== 1 ? "s" : ""}`
+        `${saved} movimiento${saved !== 1 ? "s" : ""} registrado${saved !== 1 ? "s" : ""}${periodHint}`,
+        { description: periodHint ? "Cambia el período en Movimientos para verlos." : undefined, duration: 5000 }
       );
     } else if (saved > 0) {
       toast.warning(

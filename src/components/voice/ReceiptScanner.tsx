@@ -429,6 +429,7 @@ export function ReceiptScanner() {
           <DialogHeader>
             <DialogTitle className="text-base">
               {mode === "scanning" && "Leyendo imagen..."}
+              {mode === "error" && "Error al leer imagen"}
               {mode === "single" && "Confirma el movimiento"}
               {mode === "statement" &&
                 `Confirma los movimientos (${selectedCount})`}

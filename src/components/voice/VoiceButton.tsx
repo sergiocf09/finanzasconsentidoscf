@@ -148,6 +148,8 @@ export function VoiceButton() {
     return null;
   };
 
+  const activeAccounts = accounts.filter(a => a.is_active);
+
   // Reactive transfer conversion preview
   const transferConversion = useMemo(() => {
     if (editType !== "transfer") return null;

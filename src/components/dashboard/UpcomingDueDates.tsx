@@ -351,7 +351,32 @@ export function UpcomingDueDates({
     if (!item.accountId) return;
 
     const source = accounts.find(a => a.id === sourceAccountId);
-    if (!source) return;
+    const dest = accounts.find(a => a.id === item.accountId);
+    if (!source || !dest) return;
+
+    // Bidirectional FX calculation
+    const userCurrency = transferCurrency || item.currency;
+    let amountFrom = amount;
+    let amountTo = amount;
+    let fxRateUsed: number | null = null;
+
+    if (source.currency !== dest.currency) {
+      const usdRate = fxRates["USD"] || 1;
+
+      if (userCurrency === source.currency) {
+        // User expressed in source currency → convert to dest
+        amountFrom = amount;
+        if (source.currency === "USD" && dest.currency === "MXN") amountTo = amount * usdRate;
+        else if (source.currency === "MXN" && dest.currency === "USD") amountTo = amount / usdRate;
+        fxRateUsed = usdRate;
+      } else if (userCurrency === dest.currency) {
+        // User expressed in dest currency → calculate what leaves source
+        amountTo = amount;
+        if (source.currency === "USD" && dest.currency === "MXN") amountFrom = amount / usdRate;
+        else if (source.currency === "MXN" && dest.currency === "USD") amountFrom = amount * usdRate;
+        fxRateUsed = usdRate;
+      }
+    }
 
     setIsSaving(true);
     try {
@@ -360,10 +385,11 @@ export function UpcomingDueDates({
         user_id: user.id,
         from_account_id: sourceAccountId,
         to_account_id: item.accountId,
-        amount_from: amount,
-        amount_to: source.currency === item.currency ? amount : amount,
+        amount_from: Math.round(amountFrom * 100) / 100,
+        amount_to: Math.round(amountTo * 100) / 100,
         currency_from: source.currency,
-        currency_to: item.currency,
+        currency_to: dest.currency,
+        fx_rate: fxRateUsed,
         transfer_date: format(new Date(), "yyyy-MM-dd"),
         description: `${descLabel}: ${item.name}`,
         created_from: "due_dates",
@@ -374,15 +400,15 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
-      toast.success("Transferencia registrada");
       queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
+      toast.success("Transferencia registrada");
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");
     } finally {
       setIsSaving(false);
     }
-  }, [user, getDisplayAmount, sourceAccountId, accounts, queryClient, handleCancelTransfer]);
+  }, [user, getDisplayAmount, sourceAccountId, transferCurrency, accounts, fxRates, queryClient, handleCancelTransfer]);
 
   if (!hasAnyDueItems) return null;
 

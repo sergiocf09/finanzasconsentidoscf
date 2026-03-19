@@ -128,6 +128,8 @@ export function useTransfers(accountId?: string, options?: { startDate?: Date; e
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });
+      queryClient.invalidateQueries({ queryKey: ['due_date_transfers'] });
       toast({ title: "Transferencia eliminada" });
     },
     onError: (error) => {

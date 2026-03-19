@@ -13,6 +13,7 @@ import { useSavingsGoals } from "@/hooks/useSavingsGoals";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useAuth } from "@/contexts/AuthContext";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

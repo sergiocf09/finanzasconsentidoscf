@@ -83,32 +83,21 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
 
   if (!debt) return null;
 
-  const newBalanceNum = parseFloat(currentBalance) || 0;
-  const oldBalanceAbs = Math.abs(debt.current_balance);
-  const hasDiff = Math.abs(newBalanceNum - oldBalanceAbs) >= 0.01;
-
   const fmt = (v: number) => formatCurrency(v, debt.currency);
 
   const handleSave = () => {
-    if (hasDiff) {
-      setShowBalanceConfirm(true);
-    } else {
-      executeSave();
-    }
+    executeSave();
   };
 
   const executeSave = async () => {
     setSaving(true);
     try {
-      const signedBalance = newBalanceNum > 0 ? -newBalanceNum : newBalanceNum;
-
       await updateDebt.mutateAsync({
         id: debt.id,
         name,
         type: type as Debt["type"],
         creditor: creditor || null,
         original_amount: parseFloat(originalAmount) || 0,
-        current_balance: signedBalance,
         interest_rate: parseFloat(interestRate) || 0,
         minimum_payment: parseFloat(minimumPayment) || 0,
         planned_payment: parseFloat(plannedPayment) || 0,
@@ -116,25 +105,11 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
         cut_day: cutDay ? parseInt(cutDay) : null,
       });
 
-      if (hasDiff && debt.account_id) {
-        const oldSigned = debt.current_balance;
-        await supabase.from("account_reconciliations").insert({
-          account_id: debt.account_id,
-          user_id: debt.user_id,
-          previous_balance: oldSigned,
-          new_balance: signedBalance,
-          delta: signedBalance - oldSigned,
-          note: reconciliationNote || "Ajuste desde módulo de deudas",
-        });
-        queryClient.invalidateQueries({ queryKey: ["reconciliations"] });
-      }
-
       onOpenChange(false);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setSaving(false);
-      setShowBalanceConfirm(false);
     }
   };
 

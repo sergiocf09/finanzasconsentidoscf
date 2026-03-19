@@ -203,8 +203,9 @@ export function ReceiptScanner() {
         setMode("statement");
       }
     } catch (err: any) {
-      toast.error(err.message || "No se pudo leer la imagen");
-      setResultOpen(false);
+      console.error("Receipt scan failed:", err);
+      setMode("error");
+      setErrorMessage(err.message || "No se pudo leer la imagen. Intenta con mejor iluminación.");
     } finally {
       setIsLoading(false);
     }

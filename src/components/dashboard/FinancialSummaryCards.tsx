@@ -64,13 +64,15 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   const { assetsByCurrency, liabilitiesByCurrency } = useMemo(() => {
     const assets: Record<string, number> = {};
     const liabilities: Record<string, number> = {};
-    activeOnly.forEach(acc => {
-      if (isAssetType(acc.type)) {
-        assets[acc.currency] = (assets[acc.currency] ?? 0) + (acc.current_balance ?? 0);
-      } else if (isLiability(acc.type)) {
-        liabilities[acc.currency] = (liabilities[acc.currency] ?? 0) + Math.abs(acc.current_balance ?? 0);
-      }
-    });
+    activeOnly
+      .filter(acc => acc.include_in_summary !== false)
+      .forEach(acc => {
+        if (isAssetType(acc.type)) {
+          assets[acc.currency] = (assets[acc.currency] ?? 0) + (acc.current_balance ?? 0);
+        } else if (isLiability(acc.type)) {
+          liabilities[acc.currency] = (liabilities[acc.currency] ?? 0) + Math.abs(acc.current_balance ?? 0);
+        }
+      });
     return { assetsByCurrency: assets, liabilitiesByCurrency: liabilities };
   }, [activeOnly]);
 

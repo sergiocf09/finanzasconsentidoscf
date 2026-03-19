@@ -13,14 +13,13 @@ import {
 } from "@/components/ui/select";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransfers } from "@/hooks/useTransfers";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
 
 const schema = z.object({
   from_account_id: z.string().min(1, "Selecciona cuenta origen"),
   to_account_id: z.string().min(1, "Selecciona cuenta destino"),
   amount: z.coerce.number().positive("Monto debe ser mayor a 0"),
-  amount_to: z.coerce.number().optional(),
-  fx_rate: z.coerce.number().optional(),
   transfer_date: z.string(),
   description: z.string().optional(),
 }).refine((d) => d.from_account_id !== d.to_account_id, {
@@ -48,6 +47,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const { accounts } = useAccounts();
   const { createTransfer } = useTransfers();
+  const { rate: fxRate } = useExchangeRate();
   const activeAccounts = accounts.filter((a) => a.is_active);
 
   const fmtBalance = (acc: typeof accounts[0]) =>
@@ -59,8 +59,6 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
       from_account_id: "",
       to_account_id: "",
       amount: 0,
-      amount_to: undefined,
-      fx_rate: undefined,
       transfer_date: format(new Date(), "yyyy-MM-dd"),
       description: "",
     },
@@ -71,26 +69,34 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const toId = form.watch("to_account_id");
   const toAccount = activeAccounts.find((a) => a.id === toId);
   const needsFx = fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
-
-  const watchedFxRate = form.watch("fx_rate");
   const watchedAmount = form.watch("amount");
 
   const onSubmit = async (data: FormValues) => {
     const from = activeAccounts.find((a) => a.id === data.from_account_id)!;
     const to = activeAccounts.find((a) => a.id === data.to_account_id)!;
-    const isCrossCurrency = from.currency !== to.currency;
+    const isCross = from.currency !== to.currency;
 
-    const amountTo = isCrossCurrency && data.amount_to ? data.amount_to : data.amount;
-    const fxRate = isCrossCurrency && data.fx_rate ? data.fx_rate : undefined;
+    let amountTo = data.amount;
+    let fxRateUsed: number | undefined;
+
+    if (isCross && fxRate > 0) {
+      if (from.currency === "USD" && to.currency === "MXN") {
+        amountTo = data.amount * fxRate;
+        fxRateUsed = fxRate;
+      } else if (from.currency === "MXN" && to.currency === "USD") {
+        amountTo = data.amount / fxRate;
+        fxRateUsed = fxRate;
+      }
+    }
 
     await createTransfer.mutateAsync({
       from_account_id: data.from_account_id,
       to_account_id: data.to_account_id,
       amount_from: data.amount,
       currency_from: from.currency,
-      amount_to: amountTo,
+      amount_to: Math.round(amountTo * 100) / 100,
       currency_to: to.currency,
-      fx_rate: fxRate,
+      fx_rate: fxRateUsed,
       transfer_date: data.transfer_date,
       description: data.description || undefined,
     });
@@ -149,43 +155,30 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
           )}
 
-          {needsFx && (
-            <div className="space-y-1.5 rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground font-medium">
-                Monedas diferentes: {fromAccount?.currency} → {toAccount?.currency}
-              </p>
-              <FieldRow label="Tipo de cambio">
-                <Input
-                  className="h-8 text-sm text-right"
-                  type="number"
-                  step="0.0001"
-                  placeholder="Ej: 17.50"
-                  {...form.register("fx_rate", { valueAsNumber: true })}
-                  onChange={(e) => {
-                    form.setValue("fx_rate", parseFloat(e.target.value));
-                    const rate = parseFloat(e.target.value);
-                    if (rate > 0 && watchedAmount > 0) {
-                      form.setValue("amount_to", Math.round(watchedAmount * rate * 100) / 100);
-                    }
-                  }}
-                />
-              </FieldRow>
-              <FieldRow label={`Monto destino (${toAccount?.currency})`}>
-                <Input
-                  className="h-8 text-sm text-right"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...form.register("amount_to", { valueAsNumber: true })}
-                  onChange={(e) => {
-                    form.setValue("amount_to", parseFloat(e.target.value));
-                    const amtTo = parseFloat(e.target.value);
-                    if (amtTo > 0 && watchedAmount > 0) {
-                      form.setValue("fx_rate", Math.round((amtTo / watchedAmount) * 10000) / 10000);
-                    }
-                  }}
-                />
-              </FieldRow>
+          {needsFx && fxRate > 0 && (
+            <div className="rounded-lg bg-muted px-3 py-2 space-y-1 text-xs">
+              {(() => {
+                const amt = watchedAmount || 0;
+                let amountTo = amt;
+                if (fromAccount!.currency === "USD" && toAccount!.currency === "MXN") amountTo = amt * fxRate;
+                else if (fromAccount!.currency === "MXN" && toAccount!.currency === "USD") amountTo = amt / fxRate;
+                return (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Sale de {fromAccount!.name}</span>
+                      <span className="font-medium">{new Intl.NumberFormat("es-MX", { style: "currency", currency: fromAccount!.currency }).format(amt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Llega a {toAccount!.name}</span>
+                      <span className="font-medium text-foreground">{new Intl.NumberFormat("es-MX", { style: "currency", currency: toAccount!.currency }).format(amountTo)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tipo de cambio automático</span>
+                      <span>TC: ${fxRate.toFixed(2)}</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 

@@ -156,14 +156,25 @@ export function VoiceButton() {
     const from = activeAccounts.find(a => a.id === editAccountId);
     const to = activeAccounts.find(a => a.id === editToAccountId);
     if (!from || !to || from.currency === to.currency) return null;
-    const amount = parseFloat(editAmount) || 0;
-    if (!amount) return null;
+    const amt = parseFloat(editAmount) || 0;
+    if (!amt) return null;
     const usdRate = fxRates["USD"] || 1;
-    let amountTo = amount;
-    if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / usdRate;
-    else if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * usdRate;
+
+    let amountFrom = amt;
+    let amountTo = amt;
+
+    if (editCurrency === from.currency) {
+      amountFrom = amt;
+      if (from.currency === "USD" && to.currency === "MXN") amountTo = amt * usdRate;
+      else if (from.currency === "MXN" && to.currency === "USD") amountTo = amt / usdRate;
+    } else if (editCurrency === to.currency) {
+      amountTo = amt;
+      if (from.currency === "USD" && to.currency === "MXN") amountFrom = amt / usdRate;
+      else if (from.currency === "MXN" && to.currency === "USD") amountFrom = amt * usdRate;
+    }
+
     return {
-      amountFrom: amount,
+      amountFrom: Math.round(amountFrom * 100) / 100,
       currencyFrom: from.currency,
       amountTo: Math.round(amountTo * 100) / 100,
       currencyTo: to.currency,
@@ -171,7 +182,7 @@ export function VoiceButton() {
       fromName: from.name,
       toName: to.name,
     };
-  }, [editType, editAmount, editAccountId, editToAccountId, activeAccounts, fxRates]);
+  }, [editType, editAmount, editCurrency, editAccountId, editToAccountId, activeAccounts, fxRates]);
 
   const handleConfirm = async () => {
     if (!user || !canConfirm()) return;
@@ -182,30 +193,34 @@ export function VoiceButton() {
       if (editType === "transfer") {
         const from = accounts.find(a => a.id === editAccountId)!;
         const to = accounts.find(a => a.id === editToAccountId)!;
-        const fromCurrency = from.currency;
-        const toCurrency = to.currency;
-        // Use the precomputed transferConversion if available (what the user saw)
-        let amountTo = transferConversion ? transferConversion.amountTo : amount;
-        let fxRate: number | null = transferConversion ? transferConversion.rate : null;
-        if (!transferConversion && fromCurrency !== toCurrency) {
-          const usdRate = fxRates["USD"] || 1;
-          if (fromCurrency === "MXN" && toCurrency === "USD") {
-            amountTo = amount / usdRate;
-            fxRate = usdRate;
-          } else if (fromCurrency === "USD" && toCurrency === "MXN") {
-            amountTo = amount * usdRate;
-            fxRate = usdRate;
-          }
+        const usdRate = fxRates["USD"] || 1;
+        const userCurrency = editCurrency;
+
+        let amountFrom = amount;
+        let amountTo = amount;
+        let fxRateUsed: number | null = null;
+
+        if (userCurrency === from.currency && from.currency !== to.currency) {
+          fxRateUsed = usdRate;
+          if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * usdRate;
+          else if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / usdRate;
+          amountFrom = amount;
+        } else if (userCurrency !== from.currency && userCurrency === to.currency) {
+          fxRateUsed = usdRate;
+          amountTo = amount;
+          if (from.currency === "USD" && to.currency === "MXN") amountFrom = amount / usdRate;
+          else if (from.currency === "MXN" && to.currency === "USD") amountFrom = amount * usdRate;
         }
+
         await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: editAccountId,
           to_account_id: editToAccountId,
-          amount_from: amount,
-          currency_from: fromCurrency,
+          amount_from: Math.round(amountFrom * 100) / 100,
+          currency_from: from.currency,
           amount_to: Math.round(amountTo * 100) / 100,
-          currency_to: toCurrency,
-          fx_rate: fxRate,
+          currency_to: to.currency,
+          fx_rate: fxRateUsed,
           transfer_date: editDate,
           description: editDescription || cleanTranscript || committedText,
           created_from: "voice",

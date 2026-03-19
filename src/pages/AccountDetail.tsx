@@ -213,7 +213,8 @@ export default function AccountDetail() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content — mt to clear sticky header */}
+      <div className="pt-1" />
       {filter === "reconciliations" ? (
         <div className="rounded-2xl bg-card border border-border p-4 space-y-0">
           {reconciliations.length === 0 ? (

@@ -889,6 +889,10 @@ export type Database = {
           goal_type: string
           id: string
           is_active: boolean | null
+          milestone_100_notified: boolean | null
+          milestone_25_notified: boolean | null
+          milestone_50_notified: boolean | null
+          milestone_75_notified: boolean | null
           monthly_contribution: number | null
           name: string
           priority: number | null
@@ -906,6 +910,10 @@ export type Database = {
           goal_type?: string
           id?: string
           is_active?: boolean | null
+          milestone_100_notified?: boolean | null
+          milestone_25_notified?: boolean | null
+          milestone_50_notified?: boolean | null
+          milestone_75_notified?: boolean | null
           monthly_contribution?: number | null
           name: string
           priority?: number | null
@@ -923,6 +931,10 @@ export type Database = {
           goal_type?: string
           id?: string
           is_active?: boolean | null
+          milestone_100_notified?: boolean | null
+          milestone_25_notified?: boolean | null
+          milestone_50_notified?: boolean | null
+          milestone_75_notified?: boolean | null
           monthly_contribution?: number | null
           name?: string
           priority?: number | null

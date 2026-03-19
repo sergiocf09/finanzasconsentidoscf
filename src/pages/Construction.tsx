@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Plus, Target, TrendingUp, PiggyBank, Sparkles, Pencil, Trash2,
-  CalendarDays, Building2,
+  Plus, TrendingUp, Pencil, Trash2, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,22 +12,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAbs } from "@/lib/formatters";
-import { useSavingsGoals, SavingsGoal } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
 import { SavingsGoalForm } from "@/components/construction/SavingsGoalForm";
 import { GoalEditSheet } from "@/components/construction/GoalEditSheet";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-const goalTypeIcons: Record<string, typeof Target> = {
-  emergency: Target,
-  retirement: Building2,
-  custom: PiggyBank,
-};
-
-const goalTypeLabels: Record<string, string> = {
-  emergency: "Fondo de emergencia",
-  retirement: "Retiro",
-  custom: "Meta personalizada",
+const goalConfig: Record<string, { emoji: string; phrase: string }> = {
+  emergency: { emoji: "🛡️", phrase: "Tu red de seguridad" },
+  home: { emoji: "🏠", phrase: "Tu propio espacio" },
+  car: { emoji: "🚗", phrase: "Tu movilidad propia" },
+  travel: { emoji: "✈️", phrase: "Ese viaje que mereces" },
+  education: { emoji: "🎓", phrase: "Invertir en tu futuro" },
+  business: { emoji: "🌱", phrase: "Tu negocio propio" },
+  retirement: { emoji: "🌅", phrase: "Tu libertad financiera" },
+  custom: { emoji: "⭐", phrase: "Tu meta personal" },
 };
 
 export default function Construction() {
@@ -47,35 +45,38 @@ export default function Construction() {
   const overallPct = totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0;
 
   const renderGoalCard = (goal: SavingsGoal) => {
-    const Icon = goalTypeIcons[goal.goal_type] || PiggyBank;
+    const config = goalConfig[goal.goal_type] || goalConfig.custom;
     const pct = goal.target_amount > 0
       ? Math.min((goal.current_amount / goal.target_amount) * 100, 100)
+      : 0;
+    const projection = getGoalProjection(goal);
+
+    const milestones = [
+      { pct: 25, notified: goal.milestone_25_notified },
+      { pct: 50, notified: goal.milestone_50_notified },
+      { pct: 75, notified: goal.milestone_75_notified },
+      { pct: 100, notified: goal.milestone_100_notified },
+    ];
+
+    const nextMilestone = milestones.find(m => pct < m.pct);
+    const amountToNextMilestone = nextMilestone
+      ? (goal.target_amount * nextMilestone.pct / 100) - goal.current_amount
       : 0;
 
     return (
       <div
         key={goal.id}
-        className="rounded-xl bg-card border border-border p-3 space-y-2 card-interactive cursor-pointer"
+        className="rounded-xl bg-card border border-border p-3 space-y-2.5 card-interactive cursor-pointer"
         onClick={() => goal.account_id && navigate(`/accounts/${goal.account_id}`)}
       >
+        {/* Header */}
         <div className="flex items-start gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--block-build))]/10 shrink-0">
-            <Icon className="h-4 w-4 text-[hsl(var(--block-build))]" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--block-build))]/10 shrink-0 text-lg">
+            {config.emoji}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{goal.name}</p>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span>{goalTypeLabels[goal.goal_type]}</span>
-              {goal.target_date && (
-                <span className="flex items-center gap-0.5">
-                  <CalendarDays className="h-2.5 w-2.5" />
-                  {format(new Date(goal.target_date), "MMM yyyy", { locale: es })}
-                </span>
-              )}
-            </div>
-            {goal.description && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{goal.description}</p>
-            )}
+            <p className="text-[10px] text-muted-foreground">{config.phrase}</p>
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             <Button
@@ -96,24 +97,92 @@ export default function Construction() {
         {/* Progress */}
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[hsl(var(--block-build))] font-semibold tabular-nums">
-              {formatCurrencyAbs(goal.current_amount)}
-            </span>
-            <span className="text-muted-foreground tabular-nums">
-              de {formatCurrencyAbs(goal.target_amount)}
+            <div>
+              <span className="text-[hsl(var(--block-build))] font-semibold tabular-nums">
+                {formatCurrencyAbs(goal.current_amount)}
+              </span>
+              <span className="text-muted-foreground ml-1 tabular-nums">
+                de {formatCurrencyAbs(goal.target_amount)}
+              </span>
+            </div>
+            <span className="text-[hsl(var(--block-build))] font-bold tabular-nums">
+              {pct.toFixed(0)}%
             </span>
           </div>
           <Progress
             value={pct}
             className="h-2"
-            style={
-              { "--progress-foreground": "hsl(var(--block-build))" } as React.CSSProperties
-            }
+            style={{ "--progress-foreground": "hsl(var(--block-build))" } as React.CSSProperties}
           />
-          <p className="text-[10px] text-muted-foreground text-right tabular-nums">
-            {pct.toFixed(0)}% completado
-          </p>
         </div>
+
+        {/* Projection */}
+        {projection.projectedLabel && (
+          <div className="rounded-lg bg-muted/50 px-2.5 py-1.5">
+            {projection.monthsRemaining === 0 ? (
+              <p className="text-xs font-medium text-[hsl(var(--block-build))]">
+                🎉 ¡Meta alcanzada!
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Aportando{" "}
+                <span className="font-semibold text-foreground">
+                  {formatCurrencyAbs(goal.monthly_contribution)}/mes
+                </span>{" "}
+                llegas en{" "}
+                <span className="font-semibold text-foreground">
+                  {projection.projectedLabel}
+                </span>
+                {" "}({projection.monthsRemaining} meses)
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Milestones */}
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Hitos</p>
+          <div className="flex gap-1">
+            {milestones.map((m) => {
+              const reached = pct >= m.pct;
+              return (
+                <div key={m.pct} className="flex-1 text-center">
+                  <div className={cn(
+                    "text-[10px] font-bold rounded-md py-0.5 transition-colors",
+                    reached
+                      ? "bg-[hsl(var(--block-build))]/15 text-[hsl(var(--block-build))]"
+                      : "bg-muted/50 text-muted-foreground/50"
+                  )}>
+                    {reached ? "✓" : ""}{m.pct}%
+                  </div>
+                  <p className={cn(
+                    "text-[9px] tabular-nums mt-0.5",
+                    reached ? "text-foreground" : "text-muted-foreground/40"
+                  )}>
+                    {formatCurrencyAbs(goal.target_amount * m.pct / 100)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          {nextMilestone && amountToNextMilestone > 0 && (
+            <p className="text-[10px] text-muted-foreground">
+              Faltan{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrencyAbs(amountToNextMilestone)}
+              </span>{" "}
+              para el siguiente hito ({nextMilestone.pct}%)
+            </p>
+          )}
+        </div>
+
+        {/* Target date */}
+        {goal.target_date && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <CalendarDays className="h-3 w-3" />
+            Objetivo: {format(new Date(goal.target_date), "MMMM yyyy", { locale: es })}
+          </div>
+        )}
       </div>
     );
   };
@@ -139,10 +208,13 @@ export default function Construction() {
         </div>
       ) : goals.length === 0 ? (
         <div className="text-center py-12">
-          <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">Aún no tienes metas de construcción</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Construir patrimonio empieza con una decisión pequeña: ponerle nombre y número a lo que quieres proteger o alcanzar.
+          <div className="text-4xl mb-3">🌱</div>
+          <p className="text-sm font-medium text-foreground">
+            Construir empieza con una imagen clara de lo que quieres.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+            No importa si es grande o pequeño. Lo que importa es ponerle nombre,
+            un número y una fecha. Tu primer paso es ahora.
           </p>
           <Button variant="outline" className="mt-4" onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> Crear mi primera meta
@@ -172,22 +244,6 @@ export default function Construction() {
           {/* Goal cards */}
           <div className="space-y-2">
             {goals.map(renderGoalCard)}
-          </div>
-
-          {/* Educational tip */}
-          <div className="rounded-xl bg-gradient-to-r from-[hsl(var(--block-build))]/5 to-accent/5 border border-[hsl(var(--block-build))]/10 p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--block-build))]/10 flex-shrink-0">
-                <Sparkles className="h-4 w-4 text-[hsl(var(--block-build))]" />
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-foreground">Tip: Separa tus cuentas</p>
-                <p className="text-xs text-muted-foreground">
-                  Usa cuentas bancarias de ahorro o inversión diferentes a las de tu operación diaria.
-                  Esto te dará total transparencia y evitará que mezcles tus metas con tu gasto cotidiano.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       )}

@@ -118,7 +118,7 @@ Formato exacto:
   ]
 }
 ${images.length > 1 ? "Las imágenes son páginas consecutivas del MISMO documento — combina todos los movimientos en un solo array." : ""}
-Incluye solo transacciones con monto claro. Ignora saldos, totales y encabezados. Máximo 30 transacciones.`;
+Incluye solo transacciones con monto claro. Ignora saldos, totales y encabezados. Máximo 50 transacciones.`;
 
     // Choose prompt based on mode and image count
     let prompt: string;

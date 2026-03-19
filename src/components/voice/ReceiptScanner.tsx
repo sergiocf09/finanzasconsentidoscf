@@ -332,32 +332,71 @@ export function ReceiptScanner() {
       toast.error("Selecciona al menos un movimiento");
       return;
     }
-    try {
-      const inserts = selected.map((t) => ({
-        user_id: user!.id,
-        account_id: t.resolvedAccountId,
-        category_id: t.resolvedCategoryId || null,
-        type: t.type,
-        amount: t.amount,
-        amount_in_base: t.amount,
-        currency: t.currency,
-        exchange_rate: 1,
-        description: t.description || t.merchant,
-        transaction_date: t.date,
-        notes: "Registrado mediante escaneo de imagen",
-      }));
-      const { error } = await supabase.from("transactions").insert(inserts);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      toast.success(
-        `${selected.length} movimiento${selected.length > 1 ? "s" : ""} registrado${selected.length > 1 ? "s" : ""}`
-      );
-      setResultOpen(false);
-      reset();
-    } catch {
-      toast.error("Error al guardar los movimientos");
+
+    const inserts = selected.map((t) => ({
+      user_id: user!.id,
+      account_id: t.resolvedAccountId,
+      category_id: t.resolvedCategoryId || null,
+      type: t.type,
+      amount: t.amount,
+      amount_in_base: t.amount,
+      currency: t.currency || "MXN",
+      exchange_rate: 1,
+      description: (t.description || t.merchant || "Sin descripción").substring(0, 255),
+      transaction_date: t.date || format(new Date(), "yyyy-MM-dd"),
+      notes: "Registrado mediante escaneo de imagen",
+    }));
+
+    const BATCH_SIZE = 10;
+    let saved = 0;
+    let failed = 0;
+
+    for (let i = 0; i < inserts.length; i += BATCH_SIZE) {
+      const batch = inserts.slice(i, i + BATCH_SIZE);
+      try {
+        const { error } = await supabase.from("transactions").insert(batch);
+        if (error) {
+          console.error(`Batch ${i}-${i + BATCH_SIZE} failed:`, error.message);
+          for (const item of batch) {
+            try {
+              const { error: singleError } = await supabase
+                .from("transactions")
+                .insert([item]);
+              if (singleError) {
+                console.error("Single insert failed:", singleError.message, item);
+                failed++;
+              } else {
+                saved++;
+              }
+            } catch {
+              failed++;
+            }
+          }
+        } else {
+          saved += batch.length;
+        }
+      } catch {
+        failed += batch.length;
+      }
     }
+
+    queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+
+    if (failed === 0) {
+      toast.success(
+        `${saved} movimiento${saved !== 1 ? "s" : ""} registrado${saved !== 1 ? "s" : ""}`
+      );
+    } else if (saved > 0) {
+      toast.warning(
+        `${saved} registrados, ${failed} no se pudieron guardar`
+      );
+    } else {
+      toast.error("No se pudo guardar ningún movimiento");
+    }
+
+    setResultOpen(false);
+    reset();
   };
 
   const reset = () => {

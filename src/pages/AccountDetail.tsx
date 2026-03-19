@@ -175,7 +175,8 @@ export default function AccountDetail() {
 
   return (
     <div className="space-y-3">
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1 space-y-3">
+      {/* Header — sticky */}
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
         <div className="flex items-center gap-3">
           <Link to="/accounts">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
@@ -185,19 +186,19 @@ export default function AccountDetail() {
             <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
           </div>
         </div>
-
-        {/* Period selector inside sticky area */}
-        <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-          <SelectTrigger className="h-8 text-xs w-1/2">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(periodLabels).map(([k, label]) => (
-              <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
+
+      {/* Period selector */}
+      <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+        <SelectTrigger className="h-8 text-xs w-1/2">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(periodLabels).map(([k, label]) => (
+            <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {period === "custom" && (
         <div className="flex gap-2">
@@ -236,13 +237,14 @@ export default function AccountDetail() {
         </div>
       )}
 
+      {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-3">
-        <TabsList className="w-full">
-          <TabsTrigger value="all" className="text-[11px] flex-1">Todo ({allItems.length})</TabsTrigger>
-          <TabsTrigger value="movements" className="text-[11px] flex-1">Mov. ({accountTxs.length})</TabsTrigger>
-          <TabsTrigger value="transfers" className="text-[11px] flex-1">Transf. ({transfers.length})</TabsTrigger>
+        <TabsList className="w-full h-9">
+          <TabsTrigger value="all" className="text-[11px] flex-1 px-2">Todo ({allItems.length})</TabsTrigger>
+          <TabsTrigger value="movements" className="text-[11px] flex-1 px-2">Mov. ({accountTxs.length})</TabsTrigger>
+          <TabsTrigger value="transfers" className="text-[11px] flex-1 px-2">Transf. ({transfers.length})</TabsTrigger>
           {reconciliations.length > 0 && (
-            <TabsTrigger value="reconciliations" className="text-[11px] flex-1">Conc. ({reconciliations.length})</TabsTrigger>
+            <TabsTrigger value="reconciliations" className="text-[11px] flex-1 px-1">Conc. ({reconciliations.length})</TabsTrigger>
           )}
         </TabsList>
 

@@ -46,7 +46,7 @@ interface DebtEditSheetProps {
   onOpenReconciliation?: (debt: Debt) => void;
 }
 
-export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) {
+export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }: DebtEditSheetProps) {
   const { updateDebt } = useDebts();
   const queryClient = useQueryClient();
   const { toast } = useToast();

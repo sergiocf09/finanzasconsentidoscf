@@ -47,6 +47,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const { accounts } = useAccounts();
   const { createTransfer } = useTransfers();
+  const { rate: fxRate } = useExchangeRate();
   const activeAccounts = accounts.filter((a) => a.is_active);
 
   const fmtBalance = (acc: typeof accounts[0]) =>
@@ -58,8 +59,6 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
       from_account_id: "",
       to_account_id: "",
       amount: 0,
-      amount_to: undefined,
-      fx_rate: undefined,
       transfer_date: format(new Date(), "yyyy-MM-dd"),
       description: "",
     },
@@ -70,8 +69,6 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const toId = form.watch("to_account_id");
   const toAccount = activeAccounts.find((a) => a.id === toId);
   const needsFx = fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
-
-  const watchedFxRate = form.watch("fx_rate");
   const watchedAmount = form.watch("amount");
 
   const onSubmit = async (data: FormValues) => {

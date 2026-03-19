@@ -55,7 +55,6 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [dueDay, setDueDay] = useState("");
   const [cutDay, setCutDay] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (debt && open) {
@@ -63,13 +62,11 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
       setType(debt.type);
       setCreditor(debt.creditor || "");
       setOriginalAmount(String(debt.original_amount));
-      setCurrentBalance(String(Math.abs(debt.current_balance)));
       setInterestRate(String(debt.interest_rate ?? 0));
       setMinimumPayment(String(debt.minimum_payment ?? 0));
       setPlannedPayment(String((debt as any).planned_payment ?? 0));
       setDueDay(debt.due_day ? String(debt.due_day) : "");
       setCutDay(debt.cut_day ? String(debt.cut_day) : "");
-      setReconciliationNote("");
     }
   }, [debt, open]);
 

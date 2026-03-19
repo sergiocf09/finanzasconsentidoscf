@@ -514,6 +514,24 @@ export function VoiceButton() {
                     );
                   })()}
 
+                  {/* ─── TRANSFER CONVERSION PREVIEW ──── */}
+                  {transferConversion && (
+                    <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Sale de {transferConversion.fromName}</span>
+                        <span className="font-medium">{formatCurrency(transferConversion.amountFrom, transferConversion.currencyFrom)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Llega a {transferConversion.toName}</span>
+                        <span className="font-medium text-foreground">{formatCurrency(transferConversion.amountTo, transferConversion.currencyTo)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tipo de cambio</span>
+                        <span>TC: ${transferConversion.rate.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ─── RECURRING PAYMENT SWITCH ──── */}
                   {editType !== "transfer" && (
                     <div className="w-full rounded-lg border border-border p-2 space-y-1.5">

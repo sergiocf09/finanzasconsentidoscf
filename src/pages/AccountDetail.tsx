@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useAccounts, isLiability } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers, Transfer } from "@/hooks/useTransfers";
@@ -11,19 +14,56 @@ import { useReconciliations } from "@/hooks/useReconciliations";
 import { formatCurrency } from "@/lib/formatters";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+type PeriodKey = "current" | "previous" | "last3" | "last6" | "custom";
+
+const periodLabels: Record<PeriodKey, string> = {
+  current: "Mes en curso",
+  previous: "Mes anterior",
+  last3: "Últimos 3 meses",
+  last6: "Últimos 6 meses",
+  custom: "Rango personalizado",
+};
+
+function getDateRange(period: PeriodKey, customStart?: Date, customEnd?: Date) {
+  const now = new Date();
+  switch (period) {
+    case "previous":
+      return { startDate: startOfMonth(subMonths(now, 1)), endDate: endOfMonth(subMonths(now, 1)) };
+    case "last3":
+      return { startDate: startOfMonth(subMonths(now, 2)), endDate: endOfMonth(now) };
+    case "last6":
+      return { startDate: startOfMonth(subMonths(now, 5)), endDate: endOfMonth(now) };
+    case "custom":
+      return {
+        startDate: customStart || startOfMonth(now),
+        endDate: customEnd || endOfMonth(now),
+      };
+    default:
+      return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+  }
+}
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const { accounts } = useAccounts();
-  const { transactions } = useTransactions();
-  const { transfers } = useTransfers(id);
   const { categories } = useCategories();
   const { reconciliations, deleteReconciliation } = useReconciliations(id);
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+
+  // Period state — independent from Transactions page
+  const [period, setPeriod] = useState<PeriodKey>("last3");
+  const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
+
+  const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
+
+  const { transactions } = useTransactions({ startDate, endDate });
+  const { transfers } = useTransfers(id, { startDate, endDate });
 
   const account = accounts.find((a) => a.id === id);
 
@@ -70,7 +110,6 @@ export default function AccountDetail() {
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // For liabilities, flip the display sign: expenses should show negative
   const displayAmount = (item: typeof allItems[0]) => {
     if (isLiab && item.source === "tx") {
       return item.type === "expense" ? -Math.abs(item.amount) : item.amount;
@@ -105,35 +144,37 @@ export default function AccountDetail() {
             }
           </p>
         </div>
-        <p className={cn("font-semibold tabular-nums text-sm shrink-0", amt < 0 ? "text-expense" : "text-income")}>
-          {amt < 0 ? "-" : "+"}{fmt(Math.abs(amt), item.currency)}
-        </p>
-        {item.source === "tx" &&
-          item.amount_in_base != null &&
-          item.exchange_rate != null &&
-          item.exchange_rate !== 1 && (() => {
-            if (item.currency !== "MXN") {
-              return (
-                <p className="text-[10px] text-muted-foreground tabular-nums text-right">
-                  ≈ {formatCurrency(item.amount_in_base as number, "MXN")}
-                </p>
-              );
-            } else {
-              const usdAmount = Math.abs(item.amount) / (item.exchange_rate as number);
-              return (
-                <p className="text-[10px] text-muted-foreground tabular-nums text-right">
-                  ≈ {formatCurrency(usdAmount, "USD")}
-                </p>
-              );
-            }
-          })()
-        }
+        <div className="text-right shrink-0">
+          <p className={cn("font-semibold tabular-nums text-sm", amt < 0 ? "text-expense" : "text-income")}>
+            {amt < 0 ? "-" : "+"}{fmt(Math.abs(amt), item.currency)}
+          </p>
+          {item.source === "tx" &&
+            item.amount_in_base != null &&
+            item.exchange_rate != null &&
+            item.exchange_rate !== 1 && (() => {
+              if (item.currency !== "MXN") {
+                return (
+                  <p className="text-[10px] text-muted-foreground tabular-nums">
+                    ≈ {formatCurrency(item.amount_in_base as number, "MXN")}
+                  </p>
+                );
+              } else {
+                const usdAmount = Math.abs(item.amount) / (item.exchange_rate as number);
+                return (
+                  <p className="text-[10px] text-muted-foreground tabular-nums">
+                    ≈ {formatCurrency(usdAmount, "USD")}
+                  </p>
+                );
+              }
+            })()
+          }
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
         <div className="flex items-center gap-3">
           <Link to="/accounts">
@@ -144,6 +185,59 @@ export default function AccountDetail() {
             <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
           </div>
         </div>
+      </div>
+
+      {/* Period selector */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+            <SelectTrigger className="h-8 text-xs w-1/2">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(periodLabels).map(([k, label]) => (
+                <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {period === "custom" && (
+          <div className="flex gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {format(customStartDate, "dd MMM yyyy", { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={customStartDate}
+                  onSelect={(d) => d && setCustomStartDate(d)}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {format(customEndDate, "dd MMM yyyy", { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={customEndDate}
+                  onSelect={(d) => d && setCustomEndDate(d)}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="all" className="space-y-4">
@@ -159,7 +253,7 @@ export default function AccountDetail() {
         <TabsContent value="all">
           <div className="rounded-2xl bg-card border border-border p-4">
             {allItems.length === 0 ? (
-              <p className="text-center py-8 text-sm text-muted-foreground">Sin movimientos</p>
+              <p className="text-center py-8 text-sm text-muted-foreground">Sin movimientos en este período</p>
             ) : allItems.map(renderItem)}
           </div>
         </TabsContent>
@@ -167,7 +261,7 @@ export default function AccountDetail() {
         <TabsContent value="movements">
           <div className="rounded-2xl bg-card border border-border p-4">
             {accountTxs.length === 0 ? (
-              <p className="text-center py-8 text-sm text-muted-foreground">Sin movimientos</p>
+              <p className="text-center py-8 text-sm text-muted-foreground">Sin movimientos en este período</p>
             ) : accountTxs.map((t) => renderItem({
               id: t.id,
               date: t.transaction_date,
@@ -186,7 +280,7 @@ export default function AccountDetail() {
         <TabsContent value="transfers">
           <div className="rounded-2xl bg-card border border-border p-4">
             {transfers.length === 0 ? (
-              <p className="text-center py-8 text-sm text-muted-foreground">Sin transferencias</p>
+              <p className="text-center py-8 text-sm text-muted-foreground">Sin transferencias en este período</p>
             ) : transfers.map((t) => renderItem({
               id: t.id,
               date: t.transfer_date,

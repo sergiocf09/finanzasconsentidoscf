@@ -85,6 +85,7 @@ export function UpcomingDueDates({
 }: UpcomingDueDatesProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { rates: fxRates } = useExchangeRate();
 
   // Only fetch from DB when no summary data provided
   const hasSummary = !!summaryDebts;
@@ -97,6 +98,7 @@ export function UpcomingDueDates({
   const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
+  const [transferCurrency, setTransferCurrency] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);

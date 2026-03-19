@@ -142,12 +142,12 @@ export function useAccounts(options?: { enabled?: boolean }) {
     }
   });
 
-  const totalBalance = activeOnly.reduce((sum, acc) => {
-    if (isLiability(acc.type)) {
-      return sum - Math.abs(acc.current_balance);
-    }
-    return sum + acc.current_balance;
-  }, 0);
+  const totalBalance = activeOnly
+    .filter(acc => acc.include_in_summary !== false)
+    .reduce((sum, acc) => {
+      if (isLiability(acc.type)) return sum - Math.abs(acc.current_balance);
+      return sum + acc.current_balance;
+    }, 0);
 
   return {
     accounts: allAccounts,

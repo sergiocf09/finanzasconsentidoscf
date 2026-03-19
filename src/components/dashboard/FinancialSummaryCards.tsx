@@ -29,10 +29,10 @@ interface FinancialSummaryCardsProps {
 
 export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCardsProps) {
   const navigate = useNavigate();
-  // Only fetch accounts from DB if no summary data provided
   const { accounts: hookAccounts } = useAccounts({ enabled: !accountsSummary });
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const { convertToMXN } = useExchangeRate();
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<"assets" | "liabilities" | null>(null);
 
   // Normalize accounts from either source

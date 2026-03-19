@@ -156,14 +156,25 @@ export function VoiceButton() {
     const from = activeAccounts.find(a => a.id === editAccountId);
     const to = activeAccounts.find(a => a.id === editToAccountId);
     if (!from || !to || from.currency === to.currency) return null;
-    const amount = parseFloat(editAmount) || 0;
-    if (!amount) return null;
+    const amt = parseFloat(editAmount) || 0;
+    if (!amt) return null;
     const usdRate = fxRates["USD"] || 1;
-    let amountTo = amount;
-    if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / usdRate;
-    else if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * usdRate;
+
+    let amountFrom = amt;
+    let amountTo = amt;
+
+    if (editCurrency === from.currency) {
+      amountFrom = amt;
+      if (from.currency === "USD" && to.currency === "MXN") amountTo = amt * usdRate;
+      else if (from.currency === "MXN" && to.currency === "USD") amountTo = amt / usdRate;
+    } else if (editCurrency === to.currency) {
+      amountTo = amt;
+      if (from.currency === "USD" && to.currency === "MXN") amountFrom = amt / usdRate;
+      else if (from.currency === "MXN" && to.currency === "USD") amountFrom = amt * usdRate;
+    }
+
     return {
-      amountFrom: amount,
+      amountFrom: Math.round(amountFrom * 100) / 100,
       currencyFrom: from.currency,
       amountTo: Math.round(amountTo * 100) / 100,
       currencyTo: to.currency,
@@ -171,7 +182,7 @@ export function VoiceButton() {
       fromName: from.name,
       toName: to.name,
     };
-  }, [editType, editAmount, editAccountId, editToAccountId, activeAccounts, fxRates]);
+  }, [editType, editAmount, editCurrency, editAccountId, editToAccountId, activeAccounts, fxRates]);
 
   const handleConfirm = async () => {
     if (!user || !canConfirm()) return;

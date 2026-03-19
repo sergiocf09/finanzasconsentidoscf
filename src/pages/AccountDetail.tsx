@@ -176,30 +176,28 @@ export default function AccountDetail() {
   return (
     <div className="space-y-3">
       {/* Header — sticky */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1">
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1 space-y-2">
         <div className="flex items-center gap-3">
           <Link to="/accounts">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">{account.name}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-heading font-bold text-foreground truncate">{account.name}</h1>
             <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
           </div>
         </div>
-      </div>
-
-      {/* Period selector */}
-      <div>
-        <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-          <SelectTrigger className="h-8 text-xs w-1/2">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(periodLabels).map(([k, label]) => (
-              <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+            <SelectTrigger className="h-8 text-xs w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(periodLabels).map(([k, label]) => (
+                <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {period === "custom" && (

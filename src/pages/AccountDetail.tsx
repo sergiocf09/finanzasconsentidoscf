@@ -239,13 +239,10 @@ export default function AccountDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-3">
-        <TabsList className="grid w-full" style={{ gridTemplateColumns: reconciliations.length > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)' }}>
-          <TabsTrigger value="all" className="text-[11px] px-1">Todo ({allItems.length})</TabsTrigger>
-          <TabsTrigger value="movements" className="text-[11px] px-1">Mov. ({accountTxs.length})</TabsTrigger>
-          <TabsTrigger value="transfers" className="text-[11px] px-1">Transf. ({transfers.length})</TabsTrigger>
-          {reconciliations.length > 0 && (
-            <TabsTrigger value="reconciliations" className="text-[11px] px-1">Conc. ({reconciliations.length})</TabsTrigger>
-          )}
+        <TabsList className="grid w-full grid-cols-3 h-9">
+          <TabsTrigger value="all" className="text-[11px]">Todo ({allItems.length})</TabsTrigger>
+          <TabsTrigger value="movements" className="text-[11px]">Mov. ({accountTxs.length})</TabsTrigger>
+          <TabsTrigger value="transfers" className="text-[11px]">Transf. ({transfers.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all">

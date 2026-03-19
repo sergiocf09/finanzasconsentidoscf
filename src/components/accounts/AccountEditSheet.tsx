@@ -51,7 +51,9 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
   </div>
 );
 
-export function AccountEditSheet({ account, open, onOpenChange }: AccountEditSheetProps) {
+const LIABILITY_TYPES = ["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"];
+
+export function AccountEditSheet({ account, open, onOpenChange, onOpenReconciliation }: AccountEditSheetProps) {
   const { user } = useAuth();
   const { updateAccount } = useAccounts();
   const { toast } = useToast();

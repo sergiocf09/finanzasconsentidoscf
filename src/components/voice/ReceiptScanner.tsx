@@ -419,15 +419,16 @@ export function ReceiptScanner() {
               </button>
             </div>
 
-            <Button className="w-full" onClick={handleTakePhoto}>
-              <Camera className="mr-2 h-4 w-4" />
-              {scanMode === "single"
-                ? "Tomar foto del recibo"
-                : "Tomar foto del estado de cuenta"}
-            </Button>
-            <p className="text-[10px] text-center text-muted-foreground">
-              También puedes seleccionar una imagen de tu galería
-            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="w-full" onClick={handleTakePhoto}>
+                <Camera className="mr-2 h-4 w-4" />
+                Tomar foto
+              </Button>
+              <Button variant="outline" className="w-full" onClick={handleGalleryClick}>
+                <FileText className="mr-2 h-4 w-4" />
+                Elegir imagen
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

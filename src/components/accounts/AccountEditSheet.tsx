@@ -38,6 +38,7 @@ interface AccountEditSheetProps {
   account: Account | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenReconciliation?: (account: Account) => void;
 }
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (

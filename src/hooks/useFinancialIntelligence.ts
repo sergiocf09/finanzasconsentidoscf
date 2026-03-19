@@ -473,5 +473,8 @@ export function useFinancialIntelligence() {
     totalSpent,
     // Accounts
     totalBalance,
+    // Reconciliation
+    totalFinancialCost,
+    totalUnregistered,
   };
 }

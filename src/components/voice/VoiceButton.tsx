@@ -148,6 +148,29 @@ export function VoiceButton() {
     return null;
   };
 
+  // Reactive transfer conversion preview
+  const transferConversion = useMemo(() => {
+    if (editType !== "transfer") return null;
+    const from = activeAccounts.find(a => a.id === editAccountId);
+    const to = activeAccounts.find(a => a.id === editToAccountId);
+    if (!from || !to || from.currency === to.currency) return null;
+    const amount = parseFloat(editAmount) || 0;
+    if (!amount) return null;
+    const usdRate = fxRates["USD"] || 1;
+    let amountTo = amount;
+    if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / usdRate;
+    else if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * usdRate;
+    return {
+      amountFrom: amount,
+      currencyFrom: from.currency,
+      amountTo: Math.round(amountTo * 100) / 100,
+      currencyTo: to.currency,
+      rate: usdRate,
+      fromName: from.name,
+      toName: to.name,
+    };
+  }, [editType, editAmount, editAccountId, editToAccountId, activeAccounts, fxRates]);
+
   const handleConfirm = async () => {
     if (!user || !canConfirm()) return;
     setIsSaving(true);

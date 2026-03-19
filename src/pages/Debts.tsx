@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ChevronDown, ChevronUp, ArrowUpDown, Pencil } from "lucide-react";
+import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ArrowUpDown, Pencil, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -13,6 +13,7 @@ import { useDebtIntelligence } from "@/hooks/useDebtIntelligence";
 import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
 import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
+import { BalanceAdjustmentSheet } from "@/components/debts/BalanceAdjustmentSheet";
 import { useNavigate } from "react-router-dom";
 
 const typeIcons: Record<string, typeof CreditCard> = {
@@ -35,6 +36,7 @@ export default function Debts() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Debt | null>(null);
   const [editTarget, setEditTarget] = useState<Debt | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<Debt | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const navigate = useNavigate();
 
@@ -54,6 +56,7 @@ export default function Debts() {
 
   const renderDebtRow = (debt: Debt) => {
     const Icon = typeIcons[debt.type] || CreditCard;
+    const isFixed = debt.debt_category === "fixed" || debt.type !== "credit_card";
     return (
       <div
         key={debt.id}
@@ -68,6 +71,7 @@ export default function Debts() {
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span>{typeLabels[debt.type] ?? debt.type}</span>
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
+            {isFixed && <span className="text-primary font-medium">A plazo</span>}
           </div>
         </div>
         <div className="text-right shrink-0">
@@ -86,20 +90,32 @@ export default function Debts() {
             </p>
           )}
         </div>
-        <Button
-          variant="ghost" size="icon" className="h-7 w-7 shrink-0 ml-1"
-          onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
-          title="Editar deuda"
-        >
-          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-        <Button
-          variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-          onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
-          title="Eliminar deuda"
-        >
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-        </Button>
+        <div className="flex items-center gap-0.5 shrink-0 ml-1">
+          {/* Balance adjustment button for fixed debts */}
+          {isFixed && (
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={(e) => { e.stopPropagation(); setAdjustTarget(debt); }}
+              title="Actualizar saldo real"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-primary" />
+            </Button>
+          )}
+          <Button
+            variant="ghost" size="icon" className="h-7 w-7"
+            onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
+            title="Editar deuda"
+          >
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+          <Button
+            variant="ghost" size="icon" className="h-7 w-7"
+            onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
+            title="Eliminar deuda"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -205,6 +221,7 @@ export default function Debts() {
 
       <DebtForm open={formOpen} onOpenChange={setFormOpen} />
       <DebtEditSheet debt={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
+      <BalanceAdjustmentSheet debt={adjustTarget} open={!!adjustTarget} onOpenChange={(o) => !o && setAdjustTarget(null)} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

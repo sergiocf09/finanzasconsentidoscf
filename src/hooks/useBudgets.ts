@@ -18,6 +18,7 @@ export interface Budget {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  budget_type: 'expense' | 'income';
 }
 
 export interface CreateBudgetData {
@@ -28,6 +29,7 @@ export interface CreateBudgetData {
   month?: number;
   year: number;
   alert_threshold?: number;
+  budget_type?: string;
 }
 
 export function useBudgets(year?: number, month?: number) {
@@ -70,6 +72,7 @@ export function useBudgets(year?: number, month?: number) {
           ...data,
           user_id: user!.id,
           spent: 0,
+          budget_type: data.budget_type || 'expense',
         });
       
       if (error) throw error;
@@ -119,18 +122,31 @@ export function useBudgets(year?: number, month?: number) {
     },
   });
 
-  // Calculate totals and alerts
-  const totalBudgeted = budgetsQuery.data?.reduce((sum, b) => sum + b.amount, 0) ?? 0;
-  const totalSpent = budgetsQuery.data?.reduce((sum, b) => sum + b.spent, 0) ?? 0;
-  const budgetsNearLimit = budgetsQuery.data?.filter(b => b.spent / b.amount >= b.alert_threshold) ?? [];
+  // Separate expense and income budgets
+  const allBudgets = budgetsQuery.data ?? [];
+  const expenseBudgets = allBudgets.filter(b => (b.budget_type || 'expense') === 'expense');
+  const incomeBudgets = allBudgets.filter(b => b.budget_type === 'income');
+
+  // Calculate totals and alerts (expense only for backward compat)
+  const totalBudgeted = expenseBudgets.reduce((sum, b) => sum + b.amount, 0);
+  const totalSpent = expenseBudgets.reduce((sum, b) => sum + b.spent, 0);
+  const budgetsNearLimit = expenseBudgets.filter(b => b.spent / b.amount >= b.alert_threshold);
+
+  // Income totals
+  const totalIncomeExpected = incomeBudgets.reduce((sum, b) => sum + b.amount, 0);
+  const totalIncomeReceived = incomeBudgets.reduce((sum, b) => sum + b.spent, 0);
 
   return {
-    budgets: budgetsQuery.data ?? [],
+    budgets: expenseBudgets,
+    incomeBudgets,
+    allBudgets,
     isLoading: budgetsQuery.isLoading,
     error: budgetsQuery.error,
     totalBudgeted,
     totalSpent,
     budgetsNearLimit,
+    totalIncomeExpected,
+    totalIncomeReceived,
     createBudget,
     updateBudget,
     deleteBudget,

@@ -33,6 +33,7 @@ import { useCategories, Category } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
+import { useDebts } from "@/hooks/useDebts";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -79,12 +80,17 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [openAccountCombo, setOpenAccountCombo] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Debt payment state for transfers to debt accounts
+  const [selectedDebtId, setSelectedDebtId] = useState("");
+  const [debtPaymentAmount, setDebtPaymentAmount] = useState("");
+
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories, categories: allCategories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
   const { rate: fxRate } = useExchangeRate();
   const { createPayment: createRecurring } = useRecurringPayments();
+  const { debts, addPayment: addDebtPayment } = useDebts({ enabled: open });
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -106,6 +112,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       setMakeRecurring(false);
       setSuggestedCategory(null);
       setUserSelectedCategory(false);
+      setSelectedDebtId("");
+      setDebtPaymentAmount("");
     }
   }, [open, defaultType]);
 
@@ -148,6 +156,26 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         : watchedAmount)
     : null;
 
+  // Detect if the selected account is a debt account with fixed debts
+  const fixedDebtsForAccount = debts.filter(d =>
+    d.account_id === watchedAccountId &&
+    (d.debt_category === "fixed") &&
+    d.is_active &&
+    Math.abs(d.current_balance) > 0
+  );
+
+  // Also check all fixed debts if no direct link
+  const allFixedDebts = debts.filter(d =>
+    d.debt_category === "fixed" &&
+    d.is_active &&
+    Math.abs(d.current_balance) > 0
+  );
+
+  // Is the selected account a liability type?
+  const isLiabilityAccount = selectedAccount && ['credit_card', 'personal_loan', 'mortgage', 'auto_loan', 'payable'].includes(selectedAccount.type);
+  const isTransferToDebtAccount = activeTab === "expense" && isLiabilityAccount;
+  const availableFixedDebts = fixedDebtsForAccount.length > 0 ? fixedDebtsForAccount : (isTransferToDebtAccount ? allFixedDebts : []);
+
   const onSubmit = async (data: TransactionFormValues) => {
     const account = accounts.find(a => a.id === data.account_id);
     const crossCurrency = account && data.currency !== account.currency;
@@ -187,6 +215,17 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
 
+    // Register debt payment if applicable
+    if (selectedDebtId && debtPaymentAmount && Number(debtPaymentAmount) > 0) {
+      await addDebtPayment.mutateAsync({
+        debt_id: selectedDebtId,
+        amount: Number(debtPaymentAmount),
+        payment_type: "capital",
+        payment_date: format(data.transaction_date, "yyyy-MM-dd"),
+        notes: `Abono a deuda desde movimiento: ${description}`,
+      });
+    }
+
     if (activeTab === "expense") {
       setTimeout(() => checkAlerts(), 1000);
     }
@@ -212,6 +251,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     setMakeRecurring(false);
     setSuggestedCategory(null);
     setUserSelectedCategory(false);
+    setSelectedDebtId("");
+    setDebtPaymentAmount("");
     onOpenChange(false);
   };
 
@@ -256,7 +297,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
               <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
             )}
 
-            {/* 2. Descripción (moved up) */}
+            {/* 2. Descripción */}
             <FieldRow label="Descripción" hint="Opcional">
               <Input className="h-8 text-sm" placeholder="Ej: Uber oficina" {...form.register("description")} />
             </FieldRow>
@@ -357,6 +398,9 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                             onSelect={() => {
                               form.setValue("account_id", acc.id);
                               setOpenAccountCombo(false);
+                              // Reset debt payment when account changes
+                              setSelectedDebtId("");
+                              setDebtPaymentAmount("");
                             }}
                           >
                             <Check className={cn("mr-2 h-3.5 w-3.5", watchedAccountId === acc.id ? "opacity-100" : "opacity-0")} />
@@ -372,6 +416,50 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
             </FieldRow>
             {form.formState.errors.account_id && (
               <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>
+            )}
+
+            {/* Debt payment panel for transfers to debt accounts */}
+            {isTransferToDebtAccount && availableFixedDebts.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-3 space-y-2">
+                <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                  ¿Parte de este pago cubre una deuda a plazo?
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="flex-1 h-8 text-sm rounded-md border border-input bg-background px-2"
+                    value={selectedDebtId}
+                    onChange={(e) => setSelectedDebtId(e.target.value)}
+                  >
+                    <option value="">Solo pago de consumos del mes</option>
+                    {availableFixedDebts.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} — saldo: {formatCurrency(Math.abs(d.current_balance), d.currency)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedDebtId && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground w-32 shrink-0">
+                      Abono a deuda a plazo
+                    </Label>
+                    <Input
+                      type="number"
+                      className="h-8 text-sm text-right flex-1"
+                      placeholder="0.00"
+                      step="0.01"
+                      value={debtPaymentAmount}
+                      onChange={(e) => setDebtPaymentAmount(e.target.value)}
+                    />
+                  </div>
+                )}
+                {selectedDebtId && debtPaymentAmount && Number(debtPaymentAmount) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Consumos del mes: {formatCurrency(watchedAmount - Number(debtPaymentAmount), watchedCurrency)} ·
+                    Abono a deuda: {formatCurrency(Number(debtPaymentAmount), watchedCurrency)}
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Cross-currency info */}

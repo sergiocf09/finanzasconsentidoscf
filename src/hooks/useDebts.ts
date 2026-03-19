@@ -22,6 +22,10 @@ export interface Debt {
   updated_at: string;
   account_id: string | null;
   planned_payment: number;
+  debt_category: 'current' | 'fixed';
+  monthly_commitment: number;
+  last_statement_balance: number | null;
+  last_statement_date: string | null;
 }
 
 export interface DebtPayment {
@@ -32,6 +36,9 @@ export interface DebtPayment {
   payment_date: string;
   notes: string | null;
   created_at: string;
+  payment_type: 'capital' | 'interest_insurance' | 'adjustment';
+  interest_amount: number;
+  transaction_id: string | null;
 }
 
 export interface CreateDebtData {
@@ -46,6 +53,8 @@ export interface CreateDebtData {
   cut_day?: number;
   start_date?: string;
   currency?: string;
+  debt_category?: string;
+  monthly_commitment?: number;
 }
 
 // Map debt type → account type
@@ -210,13 +219,18 @@ export function useDebts(options?: { enabled?: boolean }) {
   });
 
   const addPayment = useMutation({
-    mutationFn: async (data: { debt_id: string; amount: number; payment_date?: string; notes?: string }) => {
+    mutationFn: async (data: { debt_id: string; amount: number; payment_date?: string; notes?: string; payment_type?: string; interest_amount?: number; transaction_id?: string }) => {
       const { error } = await supabase
         .from('debt_payments')
         .insert({
-          ...data,
+          debt_id: data.debt_id,
           user_id: user!.id,
+          amount: data.amount,
           payment_date: data.payment_date ?? new Date().toISOString().split('T')[0],
+          notes: data.notes,
+          payment_type: data.payment_type || 'capital',
+          interest_amount: data.interest_amount || 0,
+          transaction_id: data.transaction_id,
         });
       if (error) throw error;
     },

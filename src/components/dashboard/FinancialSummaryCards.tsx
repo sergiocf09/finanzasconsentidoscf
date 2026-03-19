@@ -35,7 +35,6 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<"assets" | "liabilities" | null>(null);
 
-  // Normalize accounts from either source
   const accounts = useMemo(() => {
     if (accountsSummary) {
       return accountsSummary.map(a => ({
@@ -45,6 +44,7 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
         currency: a.currency,
         current_balance: a.current_balance,
         is_active: a.is_active,
+        include_in_summary: (a as any).include_in_summary !== false,
       }));
     }
     return hookAccounts.map(a => ({
@@ -54,6 +54,7 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
       currency: a.currency,
       current_balance: a.current_balance,
       is_active: a.is_active,
+      include_in_summary: a.include_in_summary !== false,
     }));
   }, [accountsSummary, hookAccounts]);
 

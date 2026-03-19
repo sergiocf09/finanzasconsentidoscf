@@ -56,8 +56,9 @@ export function ReceiptScanner() {
   // Two separate dialogs: one for mode selection, one for results
   const [selectOpen, setSelectOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
-  const [mode, setMode] = useState<"scanning" | "single" | "statement">("scanning");
+  const [mode, setMode] = useState<"scanning" | "single" | "statement" | "error">("scanning");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [scanMode, setScanMode] = useState<"single" | "statement">("single");
 
   const [singleData, setSingleData] = useState({

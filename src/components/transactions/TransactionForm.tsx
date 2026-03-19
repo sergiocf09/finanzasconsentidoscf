@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +34,9 @@ import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { useDebts } from "@/hooks/useDebts";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
@@ -71,19 +74,26 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 );
 
 export function TransactionForm({ open, onOpenChange, defaultType = "expense", voiceData }: TransactionFormProps) {
-  const [activeTab, setActiveTab] = useState<"income" | "expense">(defaultType);
+  const [activeTab, setActiveTab] = useState<"income" | "expense" | "transfer">(defaultType as any);
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
   const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
   const [userSelectedCategory, setUserSelectedCategory] = useState(false);
   const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
   const [openAccountCombo, setOpenAccountCombo] = useState(false);
+  const [openToAccountCombo, setOpenToAccountCombo] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Transfer state
+  const [toAccountId, setToAccountId] = useState("");
+  const [transferSaving, setTransferSaving] = useState(false);
 
   // Debt payment state for transfers to debt accounts
   const [selectedDebtId, setSelectedDebtId] = useState("");
   const [debtPaymentAmount, setDebtPaymentAmount] = useState("");
 
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories, categories: allCategories } = useCategories();
@@ -91,6 +101,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const { rate: fxRate } = useExchangeRate();
   const { createPayment: createRecurring } = useRecurringPayments();
   const { debts, addPayment: addDebtPayment } = useDebts({ enabled: open });
+
+  const activeAccounts = accounts.filter(a => a.is_active);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -107,13 +119,15 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   useEffect(() => {
     if (open) {
-      setActiveTab(defaultType);
-      form.setValue("type", defaultType);
+      const tab = (defaultType === "income" || defaultType === "expense") ? defaultType : "expense";
+      setActiveTab(tab);
+      form.setValue("type", tab as "income" | "expense");
       setMakeRecurring(false);
       setSuggestedCategory(null);
       setUserSelectedCategory(false);
       setSelectedDebtId("");
       setDebtPaymentAmount("");
+      setToAccountId("");
     }
   }, [open, defaultType]);
 
@@ -156,6 +170,27 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         : watchedAmount)
     : null;
 
+  // Transfer conversion preview
+  const transferConversion = useMemo(() => {
+    if (activeTab !== "transfer") return null;
+    const fromAcc = activeAccounts.find(a => a.id === watchedAccountId);
+    const toAcc = activeAccounts.find(a => a.id === toAccountId);
+    if (!fromAcc || !toAcc || fromAcc.currency === toAcc.currency) return null;
+    if (!watchedAmount || !fxRate) return null;
+    let amountTo = watchedAmount;
+    if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = watchedAmount / fxRate;
+    else if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = watchedAmount * fxRate;
+    return {
+      amountFrom: watchedAmount,
+      currencyFrom: fromAcc.currency,
+      amountTo: Math.round(amountTo * 100) / 100,
+      currencyTo: toAcc.currency,
+      rate: fxRate,
+      fromName: fromAcc.name,
+      toName: toAcc.name,
+    };
+  }, [activeTab, watchedAccountId, toAccountId, watchedAmount, fxRate, activeAccounts]);
+
   // Detect if the selected account is a debt account with fixed debts
   const fixedDebtsForAccount = debts.filter(d =>
     d.account_id === watchedAccountId &&
@@ -176,7 +211,61 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const isTransferToDebtAccount = activeTab === "expense" && isLiabilityAccount;
   const availableFixedDebts = fixedDebtsForAccount.length > 0 ? fixedDebtsForAccount : (isTransferToDebtAccount ? allFixedDebts : []);
 
+  // Transfer validation
+  const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);
+
   const onSubmit = async (data: TransactionFormValues) => {
+    // Transfer flow — direct insert to transfers table
+    if (activeTab === "transfer") {
+      if (!user || !toAccountId || toAccountId === data.account_id) return;
+      setTransferSaving(true);
+      try {
+        const fromAcc = activeAccounts.find(a => a.id === data.account_id);
+        const toAcc = activeAccounts.find(a => a.id === toAccountId);
+        if (!fromAcc || !toAcc) return;
+
+        const isCross = fromAcc.currency !== toAcc.currency;
+        let amountTo = data.amount;
+        let fxRateUsed: number | null = null;
+
+        if (isCross && fxRate > 0) {
+          if (fromAcc.currency === "MXN" && toAcc.currency === "USD") {
+            amountTo = data.amount / fxRate;
+            fxRateUsed = fxRate;
+          } else if (fromAcc.currency === "USD" && toAcc.currency === "MXN") {
+            amountTo = data.amount * fxRate;
+            fxRateUsed = fxRate;
+          }
+        }
+
+        await supabase.from("transfers").insert({
+          user_id: user.id,
+          from_account_id: data.account_id,
+          to_account_id: toAccountId,
+          amount_from: data.amount,
+          currency_from: fromAcc.currency,
+          amount_to: Math.round(amountTo * 100) / 100,
+          currency_to: toAcc.currency,
+          fx_rate: fxRateUsed,
+          transfer_date: format(data.transaction_date, "yyyy-MM-dd"),
+          description: data.description || undefined,
+          created_from: "manual",
+        });
+
+        queryClient.invalidateQueries({ queryKey: ["transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+
+        form.reset();
+        setToAccountId("");
+        onOpenChange(false);
+      } finally {
+        setTransferSaving(false);
+      }
+      return;
+    }
+
+    // Income/expense flow
     const account = accounts.find(a => a.id === data.account_id);
     const crossCurrency = account && data.currency !== account.currency;
 
@@ -211,7 +300,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       notes: notes || undefined,
       category_id: data.category_id && data.category_id.length > 0 ? data.category_id : undefined,
       description,
-      type: activeTab,
+      type: activeTab as "income" | "expense",
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
 
@@ -235,7 +324,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       await createRecurring.mutateAsync({
         name: data.description || "Pago recurrente",
         description: data.description || null,
-        type: activeTab,
+        type: activeTab as "income" | "expense",
         account_id: data.account_id,
         category_id: data.category_id || undefined,
         amount: data.amount,
@@ -253,7 +342,59 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     setUserSelectedCategory(false);
     setSelectedDebtId("");
     setDebtPaymentAmount("");
+    setToAccountId("");
     onOpenChange(false);
+  };
+
+  const isSaving = createTransaction.isPending || transferSaving;
+
+  // Account combobox renderer (reused for from/to)
+  const renderAccountCombo = (
+    value: string,
+    onChange: (id: string) => void,
+    isOpen: boolean,
+    setIsOpen: (open: boolean) => void,
+    excludeId?: string
+  ) => {
+    const filtered = excludeId ? activeAccounts.filter(a => a.id !== excludeId) : activeAccounts;
+    const selected = activeAccounts.find(a => a.id === value);
+    return (
+      <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <span className={cn(!value && "text-muted-foreground")}>
+              {selected
+                ? `${selected.name} · ${formatCurrency(selected.current_balance ?? 0, selected.currency)}`
+                : "Selecciona"}
+            </span>
+            <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
+          <Command filter={() => 1}>
+            <div className="hidden"><CommandInput /></div>
+            <CommandList className="max-h-[35vh]">
+              <CommandGroup>
+                {filtered.map((acc) => (
+                  <CommandItem
+                    key={acc.id}
+                    value={acc.name}
+                    onSelect={() => { onChange(acc.id); setIsOpen(false); }}
+                  >
+                    <Check className={cn("mr-2 h-3.5 w-3.5", value === acc.id ? "opacity-100" : "opacity-0")} />
+                    <span className="flex-1 truncate">{acc.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
   };
 
   return (
@@ -261,286 +402,405 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-base font-heading">Registrar movimiento</DialogTitle>
-          <DialogDescription className="text-xs">Agrega un ingreso o gasto.</DialogDescription>
+          <DialogDescription className="text-xs">Agrega un ingreso, gasto o transferencia.</DialogDescription>
         </DialogHeader>
 
         <div>
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as typeof activeTab); setSuggestedCategory(null); setUserSelectedCategory(false); }}>
-            <TabsList className="grid w-full grid-cols-2 h-9">
+            <TabsList className="grid w-full grid-cols-3 h-9">
               <TabsTrigger value="income" className="text-xs text-income">Ingreso</TabsTrigger>
               <TabsTrigger value="expense" className="text-xs text-expense">Gasto</TabsTrigger>
+              <TabsTrigger value="transfer" className="text-xs text-muted-foreground">Transferencia</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-3">
-            {/* 1. Monto */}
-            <FieldRow label="Monto">
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  {...form.register("amount", { valueAsNumber: true })}
-                  className="h-8 text-sm text-right flex-1"
-                />
-                <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
-                  <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
-                  <SelectContent side="bottom">
-                    <SelectItem value="MXN">MXN</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </FieldRow>
-            {form.formState.errors.amount && (
-              <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
-            )}
-
-            {/* 2. Descripción */}
-            <FieldRow label="Descripción" hint="Opcional">
-              <Input className="h-8 text-sm" placeholder="Ej: Uber oficina" {...form.register("description")} />
-            </FieldRow>
-
-            {/* 3. Categoría */}
-            <FieldRow label="Categoría" hint="Opcional">
-              <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                  >
-                    <span className={cn(!form.watch("category_id") && "text-muted-foreground")}>
-                      {form.watch("category_id")
-                        ? categories.find(c => c.id === form.watch("category_id"))?.name || "Selecciona"
-                        : "Selecciona"}
-                    </span>
-                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
-                  <Command filter={() => 1}>
-                    <div className="hidden"><CommandInput /></div>
-                    <CommandList className="max-h-[35vh]">
-                      <CommandGroup>
-                        {categories.map((cat) => (
-                          <CommandItem
-                            key={cat.id}
-                            value={cat.name}
-                            onSelect={() => {
-                              form.setValue("category_id", cat.id);
-                              setUserSelectedCategory(true);
-                              setSuggestedCategory(null);
-                              setOpenCategoryCombo(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-3.5 w-3.5", form.watch("category_id") === cat.id ? "opacity-100" : "opacity-0")} />
-                            {cat.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </FieldRow>
-
-            {/* Category suggestion badge */}
-            {suggestedCategory && !userSelectedCategory && (
-              <div className="flex items-center gap-2 pl-[40%]">
-                <span className="text-xs text-muted-foreground">¿Sugerida?</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    form.setValue("category_id", suggestedCategory.id);
-                    setUserSelectedCategory(true);
-                    setSuggestedCategory(null);
-                  }}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
-                >
-                  {suggestedCategory.name}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSuggestedCategory(null)}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            {/* 4. Cuenta */}
-            <FieldRow label="Cuenta">
-              <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo} modal={true}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                  >
-                    <span className={cn(!watchedAccountId && "text-muted-foreground")}>
-                      {selectedAccount
-                        ? `${selectedAccount.name} · ${formatCurrency(selectedAccount.current_balance ?? 0, selectedAccount.currency)}`
-                        : "Selecciona"}
-                    </span>
-                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
-                  <Command filter={() => 1}>
-                    <div className="hidden"><CommandInput /></div>
-                    <CommandList className="max-h-[35vh]">
-                      <CommandGroup>
-                        {accounts.map((acc) => (
-                          <CommandItem
-                            key={acc.id}
-                            value={acc.name}
-                            onSelect={() => {
-                              form.setValue("account_id", acc.id);
-                              setOpenAccountCombo(false);
-                              // Reset debt payment when account changes
-                              setSelectedDebtId("");
-                              setDebtPaymentAmount("");
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-3.5 w-3.5", watchedAccountId === acc.id ? "opacity-100" : "opacity-0")} />
-                            <span className="flex-1 truncate">{acc.name}</span>
-                            <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </FieldRow>
-            {form.formState.errors.account_id && (
-              <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>
-            )}
-
-            {/* Debt payment panel for transfers to debt accounts */}
-            {isTransferToDebtAccount && availableFixedDebts.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-3 space-y-2">
-                <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                  ¿Parte de este pago cubre una deuda a plazo?
-                </p>
-                <div className="flex items-center gap-2">
-                  <select
-                    className="flex-1 h-8 text-sm rounded-md border border-input bg-background px-2"
-                    value={selectedDebtId}
-                    onChange={(e) => setSelectedDebtId(e.target.value)}
-                  >
-                    <option value="">Solo pago de consumos del mes</option>
-                    {availableFixedDebts.map(d => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — saldo: {formatCurrency(Math.abs(d.current_balance), d.currency)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {selectedDebtId && (
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-muted-foreground w-32 shrink-0">
-                      Abono a deuda a plazo
-                    </Label>
+            {/* === TRANSFER TAB === */}
+            {activeTab === "transfer" ? (
+              <div className="space-y-1.5">
+                {/* Monto */}
+                <FieldRow label="Monto">
+                  <div className="flex gap-2">
                     <Input
                       type="number"
-                      className="h-8 text-sm text-right flex-1"
-                      placeholder="0.00"
                       step="0.01"
-                      value={debtPaymentAmount}
-                      onChange={(e) => setDebtPaymentAmount(e.target.value)}
+                      placeholder="0.00"
+                      {...form.register("amount", { valueAsNumber: true })}
+                      className="h-8 text-sm text-right flex-1"
                     />
+                    <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
+                      <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
+                      <SelectContent side="bottom">
+                        <SelectItem value="MXN">MXN</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </FieldRow>
+                {form.formState.errors.amount && (
+                  <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
+                )}
+
+                {/* Cuenta origen */}
+                <FieldRow label="De cuenta">
+                  {renderAccountCombo(
+                    watchedAccountId,
+                    (id) => { form.setValue("account_id", id); },
+                    openAccountCombo,
+                    setOpenAccountCombo,
+                    toAccountId
+                  )}
+                </FieldRow>
+
+                {/* Cuenta destino */}
+                <FieldRow label="A cuenta">
+                  {renderAccountCombo(
+                    toAccountId,
+                    setToAccountId,
+                    openToAccountCombo,
+                    setOpenToAccountCombo,
+                    watchedAccountId
+                  )}
+                </FieldRow>
+
+                {/* Cross-currency conversion preview */}
+                {transferConversion && (
+                  <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                    <div className="flex justify-between">
+                      <span>Sale de {transferConversion.fromName}</span>
+                      <span className="font-medium">{formatCurrency(transferConversion.amountFrom, transferConversion.currencyFrom)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Llega a {transferConversion.toName}</span>
+                      <span className="font-medium text-foreground">{formatCurrency(transferConversion.amountTo, transferConversion.currencyTo)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tipo de cambio</span>
+                      <span>TC: ${transferConversion.rate.toFixed(2)}</span>
+                    </div>
                   </div>
                 )}
-                {selectedDebtId && debtPaymentAmount && Number(debtPaymentAmount) > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Consumos del mes: {formatCurrency(watchedAmount - Number(debtPaymentAmount), watchedCurrency)} ·
-                    Abono a deuda: {formatCurrency(Number(debtPaymentAmount), watchedCurrency)}
-                  </p>
-                )}
-              </div>
-            )}
 
-            {/* Cross-currency info */}
-            {isCrossCurrency && (
-              <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
-                <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  <p className="font-medium text-foreground">Conversión automática</p>
-                  <p>La cuenta es en {selectedAccount?.currency}. TC: ${fxRate.toFixed(2)}.</p>
-                  {convertedAmount !== null && (
-                    <p className="font-semibold text-foreground">
-                      {watchedAmount.toFixed(2)} {watchedCurrency} → {convertedAmount.toFixed(2)} {selectedAccount?.currency}
+                {/* Concepto */}
+                <FieldRow label="Concepto" hint="Opcional">
+                  <Input className="h-8 text-sm" placeholder="Ej: Pago de tarjeta" {...form.register("description")} />
+                </FieldRow>
+
+                {/* Fecha */}
+                <FieldRow label="Fecha">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full h-8 text-sm justify-start font-normal",
+                          !form.watch("transaction_date") && "text-muted-foreground"
+                        )}
+                      >
+                        {form.watch("transaction_date")
+                          ? format(form.watch("transaction_date"), "PPP", { locale: es })
+                          : "Seleccionar"}
+                        <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={form.watch("transaction_date")}
+                        onSelect={(d) => d && form.setValue("transaction_date", d)}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </FieldRow>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-3 border-t border-border mt-3">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={isSaving || !isTransferValid}>
+                    {isSaving ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                    ) : "Transferir"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* === INCOME / EXPENSE TAB === */}
+                {/* 1. Monto */}
+                <FieldRow label="Monto">
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...form.register("amount", { valueAsNumber: true })}
+                      className="h-8 text-sm text-right flex-1"
+                    />
+                    <Select value={watchedCurrency} onValueChange={(v) => form.setValue("currency", v)}>
+                      <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
+                      <SelectContent side="bottom">
+                        <SelectItem value="MXN">MXN</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </FieldRow>
+                {form.formState.errors.amount && (
+                  <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
+                )}
+
+                {/* 2. Descripción */}
+                <FieldRow label="Descripción" hint="Opcional">
+                  <Input className="h-8 text-sm" placeholder="Ej: Uber oficina" {...form.register("description")} />
+                </FieldRow>
+
+                {/* 3. Categoría */}
+                <FieldRow label="Categoría" hint="Opcional">
+                  <Popover open={openCategoryCombo} onOpenChange={setOpenCategoryCombo} modal={true}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      >
+                        <span className={cn(!form.watch("category_id") && "text-muted-foreground")}>
+                          {form.watch("category_id")
+                            ? categories.find(c => c.id === form.watch("category_id"))?.name || "Selecciona"
+                            : "Selecciona"}
+                        </span>
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
+                      <Command filter={() => 1}>
+                        <div className="hidden"><CommandInput /></div>
+                        <CommandList className="max-h-[35vh]">
+                          <CommandGroup>
+                            {categories.map((cat) => (
+                              <CommandItem
+                                key={cat.id}
+                                value={cat.name}
+                                onSelect={() => {
+                                  form.setValue("category_id", cat.id);
+                                  setUserSelectedCategory(true);
+                                  setSuggestedCategory(null);
+                                  setOpenCategoryCombo(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-3.5 w-3.5", form.watch("category_id") === cat.id ? "opacity-100" : "opacity-0")} />
+                                {cat.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </FieldRow>
+
+                {/* Category suggestion badge */}
+                {suggestedCategory && !userSelectedCategory && (
+                  <div className="flex items-center gap-2 pl-[40%]">
+                    <span className="text-xs text-muted-foreground">¿Sugerida?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        form.setValue("category_id", suggestedCategory.id);
+                        setUserSelectedCategory(true);
+                        setSuggestedCategory(null);
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                    >
+                      {suggestedCategory.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestedCategory(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* 4. Cuenta */}
+                <FieldRow label="Cuenta">
+                  <Popover open={openAccountCombo} onOpenChange={setOpenAccountCombo} modal={true}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      >
+                        <span className={cn(!watchedAccountId && "text-muted-foreground")}>
+                          {selectedAccount
+                            ? `${selectedAccount.name} · ${formatCurrency(selectedAccount.current_balance ?? 0, selectedAccount.currency)}`
+                            : "Selecciona"}
+                        </span>
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 pointer-events-auto" align="start">
+                      <Command filter={() => 1}>
+                        <div className="hidden"><CommandInput /></div>
+                        <CommandList className="max-h-[35vh]">
+                          <CommandGroup>
+                            {accounts.map((acc) => (
+                              <CommandItem
+                                key={acc.id}
+                                value={acc.name}
+                                onSelect={() => {
+                                  form.setValue("account_id", acc.id);
+                                  setOpenAccountCombo(false);
+                                  setSelectedDebtId("");
+                                  setDebtPaymentAmount("");
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-3.5 w-3.5", watchedAccountId === acc.id ? "opacity-100" : "opacity-0")} />
+                                <span className="flex-1 truncate">{acc.name}</span>
+                                <span className="text-xs text-muted-foreground ml-2">{formatCurrency(acc.current_balance ?? 0, acc.currency)}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </FieldRow>
+                {form.formState.errors.account_id && (
+                  <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>
+                )}
+
+                {/* Debt payment panel for transfers to debt accounts */}
+                {isTransferToDebtAccount && availableFixedDebts.length > 0 && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-3 space-y-2">
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                      ¿Parte de este pago cubre una deuda a plazo?
                     </p>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="flex-1 h-8 text-sm rounded-md border border-input bg-background px-2"
+                        value={selectedDebtId}
+                        onChange={(e) => setSelectedDebtId(e.target.value)}
+                      >
+                        <option value="">Solo pago de consumos del mes</option>
+                        {availableFixedDebts.map(d => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} — saldo: {formatCurrency(Math.abs(d.current_balance), d.currency)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {selectedDebtId && (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground w-32 shrink-0">
+                          Abono a deuda a plazo
+                        </Label>
+                        <Input
+                          type="number"
+                          className="h-8 text-sm text-right flex-1"
+                          placeholder="0.00"
+                          step="0.01"
+                          value={debtPaymentAmount}
+                          onChange={(e) => setDebtPaymentAmount(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    {selectedDebtId && debtPaymentAmount && Number(debtPaymentAmount) > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Consumos del mes: {formatCurrency(watchedAmount - Number(debtPaymentAmount), watchedCurrency)} ·
+                        Abono a deuda: {formatCurrency(Number(debtPaymentAmount), watchedCurrency)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Cross-currency info */}
+                {isCrossCurrency && (
+                  <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
+                    <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <p className="font-medium text-foreground">Conversión automática</p>
+                      <p>La cuenta es en {selectedAccount?.currency}. TC: ${fxRate.toFixed(2)}.</p>
+                      {convertedAmount !== null && (
+                        <p className="font-semibold text-foreground">
+                          {watchedAmount.toFixed(2)} {watchedCurrency} → {convertedAmount.toFixed(2)} {selectedAccount?.currency}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Fecha */}
+                <FieldRow label="Fecha">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full h-8 text-sm justify-start font-normal",
+                          !form.watch("transaction_date") && "text-muted-foreground"
+                        )}
+                      >
+                        {form.watch("transaction_date")
+                          ? format(form.watch("transaction_date"), "PPP", { locale: es })
+                          : "Seleccionar"}
+                        <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={form.watch("transaction_date")}
+                        onSelect={(d) => d && form.setValue("transaction_date", d)}
+                        disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </FieldRow>
+
+                {/* Recurring switch */}
+                <div className="rounded-lg border border-border p-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Repeat className="h-3.5 w-3.5 text-primary" />
+                      <Label className="text-xs font-medium">Convertir en pago recurrente</Label>
+                    </div>
+                    <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
+                  </div>
+                  {makeRecurring && (
+                    <FieldRow label="Frecuencia">
+                      <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FieldRow>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* 5. Fecha */}
-            <FieldRow label="Fecha">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full h-8 text-sm justify-start font-normal",
-                      !form.watch("transaction_date") && "text-muted-foreground"
-                    )}
-                  >
-                    {form.watch("transaction_date")
-                      ? format(form.watch("transaction_date"), "PPP", { locale: es })
-                      : "Seleccionar"}
-                    <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
+                <div className="flex gap-3 pt-3 border-t border-border mt-3">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+                    Cancelar
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={form.watch("transaction_date")}
-                    onSelect={(d) => d && form.setValue("transaction_date", d)}
-                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </FieldRow>
-
-            {/* Recurring switch */}
-            <div className="rounded-lg border border-border p-2.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Repeat className="h-3.5 w-3.5 text-primary" />
-                  <Label className="text-xs font-medium">Convertir en pago recurrente</Label>
+                  <Button type="submit" className="flex-1" disabled={isSaving}>
+                    {isSaving ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                    ) : "Guardar"}
+                  </Button>
                 </div>
-                <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
-              </div>
-              {makeRecurring && (
-                <FieldRow label="Frecuencia">
-                  <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FieldRow>
-              )}
-            </div>
-
-            <div className="flex gap-3 pt-3 border-t border-border mt-3">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="flex-1" disabled={createTransaction.isPending}>
-                {createTransaction.isPending ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
-                ) : "Guardar"}
-              </Button>
-            </div>
+              </>
+            )}
           </form>
         </div>
       </DialogContent>

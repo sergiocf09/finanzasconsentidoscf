@@ -108,6 +108,29 @@ export function useFinancialIntelligence() {
   const { debts } = useDebts();
   const { fund, progress: emergencyProgress } = useEmergencyFund();
 
+  // Monthly reconciliation data
+  const reconciliationQuery = useQuery({
+    queryKey: ["reconciliation-signals", user?.id, currentMonth, currentYear],
+    queryFn: async () => {
+      const startDate = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
+      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+      const endDate = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+      const { data, error } = await supabase
+        .from("reconciliation_logs" as any)
+        .select("unregistered_expenses, financial_cost")
+        .gte("reconciliation_date", startDate)
+        .lt("reconciliation_date", endDate);
+      if (error) throw error;
+      return (data as unknown as Array<{ unregistered_expenses: number; financial_cost: number }>) ?? [];
+    },
+    enabled: !!user,
+  });
+
+  const totalUnregistered = reconciliationQuery.data?.reduce((s, r) => s + (r.unregistered_expenses || 0), 0) || 0;
+  const totalFinancialCost = reconciliationQuery.data?.reduce((s, r) => s + (r.financial_cost || 0), 0) || 0;
+
   // Historical data for comparisons (6 months)
   const sixStart = startOfMonth(subMonths(now, 5));
   const historicalQuery = useQuery({
@@ -255,8 +278,16 @@ export function useFinancialIntelligence() {
       }
     });
 
+    // Reconciliation signals
+    if (totalFinancialCost > 0) {
+      s.push({ id: "financial-cost", type: "attention", title: "Costo financiero del mes", message: `Se registraron intereses y comisiones bancarias por un total de $${totalFinancialCost.toLocaleString("es-MX")} este mes.` });
+    }
+    if (totalUnregistered > 0) {
+      s.push({ id: "unregistered-expenses", type: "attention", title: "Gastos sin registrar detectados", message: `Durante las conciliaciones se detectaron $${totalUnregistered.toLocaleString("es-MX")} en gastos no capturados. Registrar tus movimientos te da claridad real sobre tu dinero.` });
+    }
+
     return s;
-  }, [currentTxs, prevTxs, currentBlocks, prevBlocks, currentTotals, totalBudgeted, totalSpent, fund, emergencyProgress]);
+  }, [currentTxs, prevTxs, currentBlocks, prevBlocks, currentTotals, totalBudgeted, totalSpent, fund, emergencyProgress, totalFinancialCost, totalUnregistered]);
 
   // Recommendations
   const recommendations = useMemo((): Recommendation[] => {
@@ -442,5 +473,8 @@ export function useFinancialIntelligence() {
     totalSpent,
     // Accounts
     totalBalance,
+    // Reconciliation
+    totalFinancialCost,
+    totalUnregistered,
   };
 }

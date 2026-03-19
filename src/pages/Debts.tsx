@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ArrowUpDown, Pencil, RefreshCw } from "lucide-react";
+import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ArrowUpDown, Pencil, RefreshCw, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,6 +14,7 @@ import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
 import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
 import { BalanceAdjustmentSheet } from "@/components/debts/BalanceAdjustmentSheet";
+import { ReconciliationSheet } from "@/components/debts/ReconciliationSheet";
 import { useNavigate } from "react-router-dom";
 
 const typeIcons: Record<string, typeof CreditCard> = {
@@ -91,16 +92,14 @@ export default function Debts() {
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0 ml-1">
-          {/* Balance adjustment button for fixed debts */}
-          {isFixed && (
-            <Button
-              variant="ghost" size="icon" className="h-7 w-7"
-              onClick={(e) => { e.stopPropagation(); setAdjustTarget(debt); }}
-              title="Actualizar saldo real"
-            >
-              <RefreshCw className="h-3.5 w-3.5 text-primary" />
-            </Button>
-          )}
+          {/* Reconciliation button — all debts */}
+          <Button
+            variant="ghost" size="icon" className="h-7 w-7"
+            onClick={(e) => { e.stopPropagation(); setAdjustTarget(debt); }}
+            title="Actualizar saldo real"
+          >
+            <RefreshCw className="h-3.5 w-3.5 text-primary" />
+          </Button>
           <Button
             variant="ghost" size="icon" className="h-7 w-7"
             onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
@@ -221,7 +220,18 @@ export default function Debts() {
 
       <DebtForm open={formOpen} onOpenChange={setFormOpen} />
       <DebtEditSheet debt={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
-      <BalanceAdjustmentSheet debt={adjustTarget} open={!!adjustTarget} onOpenChange={(o) => !o && setAdjustTarget(null)} />
+      {adjustTarget && (
+        <ReconciliationSheet
+          open={!!adjustTarget}
+          onOpenChange={(o) => { if (!o) setAdjustTarget(null); }}
+          debtId={adjustTarget.id}
+          accountId={adjustTarget.account_id || undefined}
+          debtName={adjustTarget.name}
+          currentBalance={Math.abs(adjustTarget.current_balance)}
+          currency={adjustTarget.currency}
+          reconciliationType={adjustTarget.type === "credit_card" && adjustTarget.debt_category !== "fixed" ? "current" : "fixed"}
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

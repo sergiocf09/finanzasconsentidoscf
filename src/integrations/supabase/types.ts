@@ -723,6 +723,66 @@ export type Database = {
         }
         Relationships: []
       }
+      reconciliation_logs: {
+        Row: {
+          account_id: string | null
+          created_at: string | null
+          debt_id: string | null
+          difference: number
+          financial_cost: number | null
+          id: string
+          notes: string | null
+          previous_balance: number
+          real_balance: number
+          reconciliation_date: string
+          unregistered_expenses: number | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string | null
+          debt_id?: string | null
+          difference: number
+          financial_cost?: number | null
+          id?: string
+          notes?: string | null
+          previous_balance: number
+          real_balance: number
+          reconciliation_date?: string
+          unregistered_expenses?: number | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string | null
+          debt_id?: string | null
+          difference?: number
+          financial_cost?: number | null
+          id?: string
+          notes?: string | null
+          previous_balance?: number
+          real_balance?: number
+          reconciliation_date?: string
+          unregistered_expenses?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconciliation_logs_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_payments: {
         Row: {
           account_id: string

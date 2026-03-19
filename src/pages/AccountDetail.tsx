@@ -239,7 +239,7 @@ export default function AccountDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-3">
-        <TabsList className="grid w-full grid-cols-3 h-9">
+        <TabsList className="!grid w-full grid-cols-3 h-9">
           <TabsTrigger value="all" className="text-[11px]">Todo ({allItems.length})</TabsTrigger>
           <TabsTrigger value="movements" className="text-[11px]">Mov. ({accountTxs.length})</TabsTrigger>
           <TabsTrigger value="transfers" className="text-[11px]">Transf. ({transfers.length})</TabsTrigger>

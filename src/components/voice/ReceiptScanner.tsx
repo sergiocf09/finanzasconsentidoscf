@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, FileText, Loader2, Check, Trash2 } from "lucide-react";
+import { Camera, FileText, Loader2, Check, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,8 +56,9 @@ export function ReceiptScanner() {
   // Two separate dialogs: one for mode selection, one for results
   const [selectOpen, setSelectOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
-  const [mode, setMode] = useState<"scanning" | "single" | "statement">("scanning");
+  const [mode, setMode] = useState<"scanning" | "single" | "statement" | "error">("scanning");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [scanMode, setScanMode] = useState<"single" | "statement">("single");
 
   const [singleData, setSingleData] = useState({
@@ -202,8 +203,9 @@ export function ReceiptScanner() {
         setMode("statement");
       }
     } catch (err: any) {
-      toast.error(err.message || "No se pudo leer la imagen");
-      setResultOpen(false);
+      console.error("Receipt scan failed:", err);
+      setMode("error");
+      setErrorMessage(err.message || "No se pudo leer la imagen. Intenta con mejor iluminación.");
     } finally {
       setIsLoading(false);
     }
@@ -291,6 +293,7 @@ export function ReceiptScanner() {
 
   const reset = () => {
     setMode("scanning");
+    setErrorMessage("");
     setSingleData({
       amount: "",
       currency: "MXN",
@@ -426,6 +429,7 @@ export function ReceiptScanner() {
           <DialogHeader>
             <DialogTitle className="text-base">
               {mode === "scanning" && "Leyendo imagen..."}
+              {mode === "error" && "Error al leer imagen"}
               {mode === "single" && "Confirma el movimiento"}
               {mode === "statement" &&
                 `Confirma los movimientos (${selectedCount})`}
@@ -441,6 +445,41 @@ export function ReceiptScanner() {
                 <p className="text-xs text-muted-foreground">
                   Esto toma unos segundos
                 </p>
+              </div>
+            )}
+
+            {/* ERROR */}
+            {mode === "error" && (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <X className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">No se pudo leer la imagen</p>
+                  <p className="text-xs text-muted-foreground max-w-[260px]">{errorMessage}</p>
+                </div>
+                <div className="flex gap-2 w-full pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setResultOpen(false);
+                      reset();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setResultOpen(false);
+                      reset();
+                      setTimeout(() => setSelectOpen(true), 300);
+                    }}
+                  >
+                    Intentar de nuevo
+                  </Button>
+                </div>
               </div>
             )}
 

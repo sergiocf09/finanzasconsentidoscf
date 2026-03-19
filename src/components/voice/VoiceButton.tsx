@@ -318,7 +318,7 @@ export function VoiceButton() {
     setIsOpen(false);
   };
 
-  const activeAccounts = accounts.filter(a => a.is_active);
+  // activeAccounts already defined above
   const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia" };
   const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground" };
 

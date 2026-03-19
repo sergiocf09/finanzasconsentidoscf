@@ -293,6 +293,7 @@ export function ReceiptScanner() {
 
   const reset = () => {
     setMode("scanning");
+    setErrorMessage("");
     setSingleData({
       amount: "",
       currency: "MXN",

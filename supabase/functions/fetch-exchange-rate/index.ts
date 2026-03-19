@@ -79,9 +79,8 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('Error fetching exchange rate:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch rate';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

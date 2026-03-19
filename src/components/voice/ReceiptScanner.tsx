@@ -329,14 +329,31 @@ export function ReceiptScanner() {
 
   const selectedCount = transactions.filter((t) => t.selected).length;
 
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGalleryClick = () => {
+    setSelectOpen(false);
+    setTimeout(() => {
+      galleryInputRef.current?.click();
+    }, 300);
+  };
+
   return (
     <>
-      {/* Hidden file input — OUTSIDE any dialog */}
+      {/* Hidden file input for CAMERA */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      {/* Hidden file input for GALLERY */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
         className="hidden"
         onChange={handleFileChange}
       />

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -49,6 +50,7 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const { createTransfer } = useTransfers();
   const { rate: fxRate } = useExchangeRate();
   const activeAccounts = accounts.filter((a) => a.is_active);
+  const [selectedCurrency, setSelectedCurrency] = useState("MXN");
 
   const fmtBalance = (acc: typeof accounts[0]) =>
     new Intl.NumberFormat("es-MX", { style: "currency", currency: acc.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(acc.current_balance ?? 0);
@@ -71,38 +73,74 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const needsFx = fromAccount && toAccount && fromAccount.currency !== toAccount.currency;
   const watchedAmount = form.watch("amount");
 
+  // Bidirectional conversion calculation
+  const calcTransfer = (amount: number, userCurrency: string, from: typeof fromAccount, to: typeof toAccount) => {
+    if (!from || !to || !amount || !fxRate || fxRate <= 0) return null;
+    if (from.currency === to.currency) return null;
+
+    let amountFrom = amount;
+    let amountTo = amount;
+    let fxRateUsed: number | undefined = fxRate;
+
+    if (userCurrency === from.currency) {
+      // User expressed in origin currency → convert to destination
+      amountFrom = amount;
+      if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * fxRate;
+      else if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / fxRate;
+    } else if (userCurrency === to.currency) {
+      // User expressed in destination currency → calculate what leaves origin
+      amountTo = amount;
+      if (from.currency === "USD" && to.currency === "MXN") amountFrom = amount / fxRate;
+      else if (from.currency === "MXN" && to.currency === "USD") amountFrom = amount * fxRate;
+    } else {
+      // Fallback: treat as origin currency
+      amountFrom = amount;
+      amountTo = amount;
+      fxRateUsed = undefined;
+    }
+
+    return {
+      amountFrom: Math.round(amountFrom * 100) / 100,
+      amountTo: Math.round(amountTo * 100) / 100,
+      fxRateUsed,
+    };
+  };
+
   const onSubmit = async (data: FormValues) => {
     const from = activeAccounts.find((a) => a.id === data.from_account_id)!;
     const to = activeAccounts.find((a) => a.id === data.to_account_id)!;
     const isCross = from.currency !== to.currency;
 
+    let amountFrom = data.amount;
     let amountTo = data.amount;
     let fxRateUsed: number | undefined;
 
     if (isCross && fxRate > 0) {
-      if (from.currency === "USD" && to.currency === "MXN") {
-        amountTo = data.amount * fxRate;
-        fxRateUsed = fxRate;
-      } else if (from.currency === "MXN" && to.currency === "USD") {
-        amountTo = data.amount / fxRate;
-        fxRateUsed = fxRate;
+      const result = calcTransfer(data.amount, selectedCurrency, from, to);
+      if (result) {
+        amountFrom = result.amountFrom;
+        amountTo = result.amountTo;
+        fxRateUsed = result.fxRateUsed;
       }
     }
 
     await createTransfer.mutateAsync({
       from_account_id: data.from_account_id,
       to_account_id: data.to_account_id,
-      amount_from: data.amount,
+      amount_from: amountFrom,
       currency_from: from.currency,
-      amount_to: Math.round(amountTo * 100) / 100,
+      amount_to: amountTo,
       currency_to: to.currency,
       fx_rate: fxRateUsed,
       transfer_date: data.transfer_date,
       description: data.description || undefined,
     });
     form.reset();
+    setSelectedCurrency("MXN");
     onOpenChange(false);
   };
+
+  const conversion = needsFx ? calcTransfer(watchedAmount || 0, selectedCurrency, fromAccount, toAccount) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,37 +186,37 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.to_account_id.message}</p>
           )}
 
-          <FieldRow label={`Monto ${fromAccount ? `(${fromAccount.currency})` : ""}`}>
-            <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("amount", { valueAsNumber: true })} />
+          <FieldRow label="Monto">
+            <div className="flex gap-2">
+              <Input className="h-8 text-sm text-right flex-1" type="number" step="0.01" {...form.register("amount", { valueAsNumber: true })} />
+              <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                <SelectTrigger className="h-8 text-sm w-20"><SelectValue /></SelectTrigger>
+                <SelectContent side="bottom">
+                  <SelectItem value="MXN">MXN</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </FieldRow>
           {form.formState.errors.amount && (
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.amount.message}</p>
           )}
 
-          {needsFx && fxRate > 0 && (
+          {needsFx && fxRate > 0 && conversion && (
             <div className="rounded-lg bg-muted px-3 py-2 space-y-1 text-xs">
-              {(() => {
-                const amt = watchedAmount || 0;
-                let amountTo = amt;
-                if (fromAccount!.currency === "USD" && toAccount!.currency === "MXN") amountTo = amt * fxRate;
-                else if (fromAccount!.currency === "MXN" && toAccount!.currency === "USD") amountTo = amt / fxRate;
-                return (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Sale de {fromAccount!.name}</span>
-                      <span className="font-medium">{new Intl.NumberFormat("es-MX", { style: "currency", currency: fromAccount!.currency }).format(amt)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Llega a {toAccount!.name}</span>
-                      <span className="font-medium text-foreground">{new Intl.NumberFormat("es-MX", { style: "currency", currency: toAccount!.currency }).format(amountTo)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tipo de cambio automático</span>
-                      <span>TC: ${fxRate.toFixed(2)}</span>
-                    </div>
-                  </>
-                );
-              })()}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sale de {fromAccount!.name}</span>
+                <span className="font-medium">{new Intl.NumberFormat("es-MX", { style: "currency", currency: fromAccount!.currency }).format(conversion.amountFrom)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Llega a {toAccount!.name}</span>
+                <span className="font-medium text-foreground">{new Intl.NumberFormat("es-MX", { style: "currency", currency: toAccount!.currency }).format(conversion.amountTo)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tipo de cambio automático</span>
+                <span>TC: ${fxRate.toFixed(2)}</span>
+              </div>
             </div>
           )}
 

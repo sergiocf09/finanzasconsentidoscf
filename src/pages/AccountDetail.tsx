@@ -174,8 +174,8 @@ export default function AccountDetail() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 -mx-1 px-1 pt-1">
+    <div className="space-y-3">
+      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1 space-y-3">
         <div className="flex items-center gap-3">
           <Link to="/accounts">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
@@ -185,68 +185,64 @@ export default function AccountDetail() {
             <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
           </div>
         </div>
+
+        {/* Period selector inside sticky area */}
+        <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+          <SelectTrigger className="h-8 text-xs w-1/2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(periodLabels).map(([k, label]) => (
+              <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Period selector */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-            <SelectTrigger className="h-8 text-xs w-1/2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(periodLabels).map(([k, label]) => (
-                <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {period === "custom" && (
+        <div className="flex gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                <CalendarDays className="h-3 w-3 mr-1" />
+                {format(customStartDate, "dd MMM yyyy", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={customStartDate}
+                onSelect={(d) => d && setCustomStartDate(d)}
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                <CalendarDays className="h-3 w-3 mr-1" />
+                {format(customEndDate, "dd MMM yyyy", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={customEndDate}
+                onSelect={(d) => d && setCustomEndDate(d)}
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
+      )}
 
-        {period === "custom" && (
-          <div className="flex gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
-                  <CalendarDays className="h-3 w-3 mr-1" />
-                  {format(customStartDate, "dd MMM yyyy", { locale: es })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={customStartDate}
-                  onSelect={(d) => d && setCustomStartDate(d)}
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
-                  <CalendarDays className="h-3 w-3 mr-1" />
-                  {format(customEndDate, "dd MMM yyyy", { locale: es })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={customEndDate}
-                  onSelect={(d) => d && setCustomEndDate(d)}
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
-      </div>
-
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">Todo ({allItems.length})</TabsTrigger>
-          <TabsTrigger value="movements">Movimientos ({accountTxs.length})</TabsTrigger>
-          <TabsTrigger value="transfers">Transferencias ({transfers.length})</TabsTrigger>
+      <Tabs defaultValue="all" className="space-y-3">
+        <TabsList className="w-full">
+          <TabsTrigger value="all" className="text-[11px] flex-1">Todo ({allItems.length})</TabsTrigger>
+          <TabsTrigger value="movements" className="text-[11px] flex-1">Mov. ({accountTxs.length})</TabsTrigger>
+          <TabsTrigger value="transfers" className="text-[11px] flex-1">Transf. ({transfers.length})</TabsTrigger>
           {reconciliations.length > 0 && (
-            <TabsTrigger value="reconciliations">Conciliaciones ({reconciliations.length})</TabsTrigger>
+            <TabsTrigger value="reconciliations" className="text-[11px] flex-1">Conc. ({reconciliations.length})</TabsTrigger>
           )}
         </TabsList>
 

@@ -74,19 +74,29 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const onSubmit = async (data: FormValues) => {
     const from = activeAccounts.find((a) => a.id === data.from_account_id)!;
     const to = activeAccounts.find((a) => a.id === data.to_account_id)!;
-    const isCrossCurrency = from.currency !== to.currency;
+    const isCross = from.currency !== to.currency;
 
-    const amountTo = isCrossCurrency && data.amount_to ? data.amount_to : data.amount;
-    const fxRate = isCrossCurrency && data.fx_rate ? data.fx_rate : undefined;
+    let amountTo = data.amount;
+    let fxRateUsed: number | undefined;
+
+    if (isCross && fxRate > 0) {
+      if (from.currency === "USD" && to.currency === "MXN") {
+        amountTo = data.amount * fxRate;
+        fxRateUsed = fxRate;
+      } else if (from.currency === "MXN" && to.currency === "USD") {
+        amountTo = data.amount / fxRate;
+        fxRateUsed = fxRate;
+      }
+    }
 
     await createTransfer.mutateAsync({
       from_account_id: data.from_account_id,
       to_account_id: data.to_account_id,
       amount_from: data.amount,
       currency_from: from.currency,
-      amount_to: amountTo,
+      amount_to: Math.round(amountTo * 100) / 100,
       currency_to: to.currency,
-      fx_rate: fxRate,
+      fx_rate: fxRateUsed,
       transfer_date: data.transfer_date,
       description: data.description || undefined,
     });

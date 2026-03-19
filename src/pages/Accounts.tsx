@@ -40,6 +40,7 @@ export default function Accounts() {
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
+  const [reconcilingAccount, setReconcilingAccount] = useState<Account | null>(null);
 
   const handleDeactivate = async () => {
     if (!deleteTarget) return;

@@ -172,23 +172,28 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
             </FieldRow>
 
             <FieldRow label="Saldo actual">
-              <Input className="h-8 text-sm text-right" type="number" step="0.01" value={currentBalance} onChange={(e) => setCurrentBalance(e.target.value)} />
-            </FieldRow>
-
-            {hasDiff && (
-              <div className="rounded-lg bg-status-warning/10 border border-status-warning/20 p-2.5 space-y-1.5">
-                <p className="text-xs text-muted-foreground">
-                  Saldo anterior: <strong>{fmt(oldBalanceAbs)}</strong> → Nuevo: <strong>{fmt(newBalanceNum)}</strong>
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium text-right tabular-nums">
+                  {fmt(Math.abs(debt.current_balance))}
                 </p>
-                <Textarea
-                  placeholder="Nota de ajuste (opcional)"
-                  value={reconciliationNote}
-                  onChange={(e) => setReconciliationNote(e.target.value)}
-                  rows={2}
-                  className="text-sm"
-                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-7 text-xs gap-1.5"
+                  onClick={() => {
+                    if (onOpenReconciliation && debt) {
+                      onOpenChange(false);
+                      onOpenReconciliation(debt);
+                    }
+                  }}
+                >
+                  Actualizar saldo real
+                </Button>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  El saldo se actualiza mediante conciliación con tu estado de cuenta.
+                </p>
               </div>
-            )}
+            </FieldRow>
 
             <FieldRow label="Tasa de interés" hint="% anual">
               <Input className="h-8 text-sm text-right" type="number" step="0.01" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />

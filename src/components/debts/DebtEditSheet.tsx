@@ -43,6 +43,7 @@ interface DebtEditSheetProps {
   debt: Debt | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenReconciliation?: (debt: Debt) => void;
 }
 
 export function DebtEditSheet({ debt, open, onOpenChange }: DebtEditSheetProps) {

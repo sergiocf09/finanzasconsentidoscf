@@ -171,6 +171,10 @@ export default function Transactions() {
     source: "transfer" as const,
     accountName: getAccountName(t.from_account_id),
     secondaryInfo: `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)} · ${formatDate(t.transfer_date)}`,
+    currency_from: t.currency_from,
+    currency_to: t.currency_to,
+    amount_to: t.amount_to,
+    fx_rate: t.fx_rate,
   }));
 
   const allItems = [...txItems, ...transferItems].sort(

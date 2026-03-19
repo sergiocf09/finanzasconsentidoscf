@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, FileText, Loader2, Check, Trash2 } from "lucide-react";
+import { Camera, FileText, Loader2, Check, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,

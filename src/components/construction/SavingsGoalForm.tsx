@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, CalendarIcon } from "lucide-react";
+import { Loader2, CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState } from "react";
@@ -26,18 +26,24 @@ import { useSavingsGoals, GoalType } from "@/hooks/useSavingsGoals";
 import { useAccounts, isAssetType } from "@/hooks/useAccounts";
 
 const goalSchema = z.object({
-  name: z.string().min(1, "Ingresa un nombre"),
-  goal_type: z.string().min(1),
-  target_amount: z.coerce.number().min(1, "Ingresa un monto objetivo"),
+  name: z.string().min(1, "Ingresa un nombre para tu meta"),
+  goal_type: z.enum(["emergency", "home", "car", "travel", "education", "business", "retirement", "custom"]),
+  target_amount: z.coerce.number().min(0).optional().default(0),
   description: z.string().optional(),
-  target_date: z.date().optional(),
+  target_date: z.date().optional().nullable(),
   contribution_day: z.coerce.number().min(1).max(31).optional(),
   monthly_contribution: z.coerce.number().optional().default(0),
   currency: z.string().default("MXN"),
   initial_amount: z.coerce.number().optional().default(0),
   account_type: z.enum(["savings", "investment"]).default("savings"),
   account_id: z.string().optional(),
-});
+}).refine(
+  (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,
+  {
+    message: "Define un monto objetivo, una fecha de llegada, o ambos",
+    path: ["target_amount"],
+  }
+);
 
 type GoalFormValues = z.infer<typeof goalSchema>;
 
@@ -88,6 +94,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       goal_type: "custom",
       target_amount: 0,
       description: "",
+      target_date: null,
       currency: "MXN",
       initial_amount: 0,
       contribution_day: undefined,
@@ -104,7 +111,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
     await createGoal.mutateAsync({
       name: data.name,
       goal_type: data.goal_type as GoalType,
-      target_amount: data.target_amount,
+      target_amount: data.target_amount || 0,
       description: data.description,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : undefined,
       contribution_day: data.contribution_day,
@@ -137,7 +144,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
           )}
 
           <FieldRow label="Tipo">
-            <Select value={watchType} onValueChange={(v) => form.setValue("goal_type", v)}>
+            <Select value={watchType} onValueChange={(v) => form.setValue("goal_type", v as any)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {goalTypes.map((t) => (
@@ -162,7 +169,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
             </Select>
           </FieldRow>
 
-          <FieldRow label="Monto objetivo">
+          <FieldRow label="Monto objetivo" hint="Opcional si defines fecha">
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="100,000" {...form.register("target_amount")} />
           </FieldRow>
           {form.formState.errors.target_amount && (
@@ -181,27 +188,40 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
             />
           </FieldRow>
 
-          <FieldRow label="Fecha objetivo" hint="Opcional">
-            <Popover>
-              <PopoverTrigger asChild>
+          <FieldRow label="Fecha objetivo" hint="Opcional si defines monto">
+            <div className="flex items-center gap-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("flex-1 h-8 text-sm justify-start font-normal", !form.watch("target_date") && "text-muted-foreground")}
+                  >
+                    {form.watch("target_date") ? format(form.watch("target_date")!, "PPP", { locale: es }) : "Seleccionar fecha"}
+                    <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center" sideOffset={8}>
+                  <Calendar
+                    mode="single"
+                    selected={form.watch("target_date") ?? undefined}
+                    onSelect={(d) => form.setValue("target_date", d ?? null)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {form.watch("target_date") && (
                 <Button
                   type="button"
-                  variant="outline"
-                  className={cn("w-full h-8 text-sm justify-start font-normal", !form.watch("target_date") && "text-muted-foreground")}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => form.setValue("target_date", null)}
                 >
-                  {form.watch("target_date") ? format(form.watch("target_date")!, "PPP", { locale: es }) : "Seleccionar"}
-                  <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={form.watch("target_date")}
-                  onSelect={(d) => form.setValue("target_date", d)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+              )}
+            </div>
           </FieldRow>
 
           <FieldRow label="Día de aportación">

@@ -220,7 +220,18 @@ export default function Debts() {
 
       <DebtForm open={formOpen} onOpenChange={setFormOpen} />
       <DebtEditSheet debt={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
-      <BalanceAdjustmentSheet debt={adjustTarget} open={!!adjustTarget} onOpenChange={(o) => !o && setAdjustTarget(null)} />
+      {adjustTarget && (
+        <ReconciliationSheet
+          open={!!adjustTarget}
+          onOpenChange={(o) => { if (!o) setAdjustTarget(null); }}
+          debtId={adjustTarget.id}
+          accountId={adjustTarget.account_id || undefined}
+          debtName={adjustTarget.name}
+          currentBalance={Math.abs(adjustTarget.current_balance)}
+          currency={adjustTarget.currency}
+          reconciliationType={adjustTarget.type === "credit_card" && adjustTarget.debt_category !== "fixed" ? "current" : "fixed"}
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

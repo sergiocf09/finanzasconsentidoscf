@@ -184,10 +184,10 @@ export function VoiceButton() {
         const to = accounts.find(a => a.id === editToAccountId)!;
         const fromCurrency = from.currency;
         const toCurrency = to.currency;
-        const isCrossCurrency = fromCurrency !== toCurrency;
-        let amountTo = amount;
-        let fxRate: number | null = null;
-        if (isCrossCurrency) {
+        // Use the precomputed transferConversion if available (what the user saw)
+        let amountTo = transferConversion ? transferConversion.amountTo : amount;
+        let fxRate: number | null = transferConversion ? transferConversion.rate : null;
+        if (!transferConversion && fromCurrency !== toCurrency) {
           const usdRate = fxRates["USD"] || 1;
           if (fromCurrency === "MXN" && toCurrency === "USD") {
             amountTo = amount / usdRate;
@@ -203,7 +203,7 @@ export function VoiceButton() {
           to_account_id: editToAccountId,
           amount_from: amount,
           currency_from: fromCurrency,
-          amount_to: amountTo,
+          amount_to: Math.round(amountTo * 100) / 100,
           currency_to: toCurrency,
           fx_rate: fxRate,
           transfer_date: editDate,

@@ -189,16 +189,18 @@ export default function AccountDetail() {
       </div>
 
       {/* Period selector */}
-      <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-        <SelectTrigger className="h-8 text-xs w-1/2">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {Object.entries(periodLabels).map(([k, label]) => (
-            <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div>
+        <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+          <SelectTrigger className="h-8 text-xs w-1/2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(periodLabels).map(([k, label]) => (
+              <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {period === "custom" && (
         <div className="flex gap-2">

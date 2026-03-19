@@ -143,18 +143,19 @@ export default function AccountDetail() {
     : allItems;
 
   return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="sticky top-14 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1 space-y-2">
-        <div className="flex items-center gap-3">
+    <div className="space-y-2">
+      {/* Header — sticky, includes all controls */}
+      <div className="sticky top-12 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1 space-y-2">
+        <div className="flex items-center gap-2">
           <Link to="/accounts">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-5 w-5" /></Button>
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-heading font-bold text-foreground truncate">{account.name}</h1>
-            <p className="text-muted-foreground text-sm">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
+            <h1 className="text-lg font-heading font-bold text-foreground truncate">{account.name}</h1>
+            <p className="text-muted-foreground text-xs">{account.currency} · Saldo: {formatCurrency(account.current_balance, account.currency)}</p>
           </div>
         </div>
+
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
           <SelectTrigger className="h-8 text-xs w-44">
             <SelectValue />
@@ -165,51 +166,51 @@ export default function AccountDetail() {
             ))}
           </SelectContent>
         </Select>
-      </div>
 
-      {period === "custom" && (
-        <div className="flex gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
-                <CalendarDays className="h-3 w-3 mr-1" />
-                {format(customStartDate, "dd MMM yyyy", { locale: es })}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={customStartDate} onSelect={(d) => d && setCustomStartDate(d)} className="p-3 pointer-events-auto" />
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
-                <CalendarDays className="h-3 w-3 mr-1" />
-                {format(customEndDate, "dd MMM yyyy", { locale: es })}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar mode="single" selected={customEndDate} onSelect={(d) => d && setCustomEndDate(d)} className="p-3 pointer-events-auto" />
-            </PopoverContent>
-          </Popover>
+        {period === "custom" && (
+          <div className="flex gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {format(customStartDate, "dd MMM yyyy", { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customStartDate} onSelect={(d) => d && setCustomStartDate(d)} className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {format(customEndDate, "dd MMM yyyy", { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar mode="single" selected={customEndDate} onSelect={(d) => d && setCustomEndDate(d)} className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {/* Filter pills */}
+        <div className="flex gap-1.5">
+          {filters.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
+                filter === f.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {f.label} ({f.count})
+            </button>
+          ))}
         </div>
-      )}
-
-      {/* Filter pills */}
-      <div className="flex gap-1.5">
-        {filters.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={cn(
-              "flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
-              filter === f.key
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {f.label} ({f.count})
-          </button>
-        ))}
       </div>
 
       {/* Content */}

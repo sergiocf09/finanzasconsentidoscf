@@ -96,6 +96,16 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
     navigate(`/accounts/${accountId}`);
   };
 
+  const toggleIncludeInSummary = async (accountId: string, currentValue: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase
+      .from("accounts")
+      .update({ include_in_summary: !currentValue } as any)
+      .eq("id", accountId);
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+  };
+
   const renderAccountItem = (account: typeof accounts[0]) => {
     const Icon = typeIcons[account.type] || Wallet;
     const debt = isLiability(account.type);

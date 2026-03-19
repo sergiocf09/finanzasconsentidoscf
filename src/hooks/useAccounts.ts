@@ -21,6 +21,7 @@ export interface Account {
   color: string | null;
   icon: string | null;
   is_active: boolean;
+  include_in_summary: boolean;
   created_at: string;
   updated_at: string;
 }

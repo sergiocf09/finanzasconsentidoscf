@@ -9,6 +9,8 @@ import { formatCurrency } from "@/lib/formatters";
 import { useAccounts, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { DashboardSummary } from "@/hooks/useDashboardSummary";
 
 type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];

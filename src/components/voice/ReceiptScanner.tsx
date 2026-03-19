@@ -448,6 +448,41 @@ export function ReceiptScanner() {
               </div>
             )}
 
+            {/* ERROR */}
+            {mode === "error" && (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <X className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">No se pudo leer la imagen</p>
+                  <p className="text-xs text-muted-foreground max-w-[260px]">{errorMessage}</p>
+                </div>
+                <div className="flex gap-2 w-full pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setResultOpen(false);
+                      reset();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setResultOpen(false);
+                      reset();
+                      setTimeout(() => setSelectOpen(true), 300);
+                    }}
+                  >
+                    Intentar de nuevo
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* SINGLE RECEIPT */}
             {mode === "single" && (
               <div className="space-y-3">

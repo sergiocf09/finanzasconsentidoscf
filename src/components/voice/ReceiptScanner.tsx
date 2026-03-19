@@ -92,19 +92,31 @@ export function ReceiptScanner() {
     [expenseCategories, incomeCategories]
   );
 
+  // Resize image to max 1200px and compress to JPEG to keep payload small
   const imageToBase64 = (
     file: File
   ): Promise<{ base64: string; mediaType: string }> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(",")[1];
-        const mediaType = file.type || "image/jpeg";
-        resolve({ base64, mediaType });
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        const base64 = dataUrl.split(",")[1];
+        resolve({ base64, mediaType: "image/jpeg" });
       };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
     });
   };
 

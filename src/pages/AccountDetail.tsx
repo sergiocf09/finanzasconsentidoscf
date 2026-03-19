@@ -143,9 +143,9 @@ export default function AccountDetail() {
     : allItems;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5 -mt-1">
       {/* Header — sticky, includes all controls */}
-      <div className="sticky top-12 lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1 pt-1 space-y-2">
+      <div className="sticky top-[2.75rem] lg:top-0 z-10 bg-background/95 backdrop-blur-sm pb-1 -mx-1 px-1 space-y-1.5">
         <div className="flex items-center gap-2">
           <Link to="/accounts">
             <Button variant="ghost" size="icon" className="h-8 w-8"><ArrowLeft className="h-5 w-5" /></Button>

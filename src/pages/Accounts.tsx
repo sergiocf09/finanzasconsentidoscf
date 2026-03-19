@@ -12,6 +12,7 @@ import {
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountEditSheet } from "@/components/accounts/AccountEditSheet";
 import { SortableAccountSection } from "@/components/accounts/SortableAccountSection";
+import { ReconciliationSheet } from "@/components/debts/ReconciliationSheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -39,6 +40,7 @@ export default function Accounts() {
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
+  const [reconcilingAccount, setReconcilingAccount] = useState<Account | null>(null);
 
   const handleDeactivate = async () => {
     if (!deleteTarget) return;
@@ -198,7 +200,31 @@ export default function Accounts() {
       )}
 
       <AccountForm open={formOpen} onOpenChange={setFormOpen} />
-      <AccountEditSheet account={editTarget} open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }} />
+      <AccountEditSheet
+        account={editTarget}
+        open={!!editTarget}
+        onOpenChange={(open) => { if (!open) setEditTarget(null); }}
+        onOpenReconciliation={(account) => {
+          setEditTarget(null);
+          setReconcilingAccount(account);
+        }}
+      />
+
+      {reconcilingAccount && (
+        <ReconciliationSheet
+          open={!!reconcilingAccount}
+          onOpenChange={(o) => { if (!o) setReconcilingAccount(null); }}
+          accountId={reconcilingAccount.id}
+          debtName={reconcilingAccount.name}
+          currentBalance={Math.abs(reconcilingAccount.current_balance ?? 0)}
+          currency={reconcilingAccount.currency}
+          reconciliationType={
+            reconcilingAccount.type === "credit_card" || reconcilingAccount.type === "payable"
+              ? "current"
+              : "fixed"
+          }
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

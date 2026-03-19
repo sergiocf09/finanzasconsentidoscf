@@ -38,6 +38,7 @@ interface AccountEditSheetProps {
   account: Account | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenReconciliation?: (account: Account) => void;
 }
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
@@ -50,7 +51,9 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
   </div>
 );
 
-export function AccountEditSheet({ account, open, onOpenChange }: AccountEditSheetProps) {
+const LIABILITY_TYPES = ["credit_card", "payable", "mortgage", "auto_loan", "personal_loan", "caucion_bursatil"];
+
+export function AccountEditSheet({ account, open, onOpenChange, onOpenReconciliation }: AccountEditSheetProps) {
   const { user } = useAuth();
   const { updateAccount } = useAccounts();
   const { toast } = useToast();
@@ -75,9 +78,10 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
 
   const fmt = (v: number, currency: string) => formatCurrency(v, currency, { decimals: 2 });
 
+  const isLiabilityAccount = LIABILITY_TYPES.includes(type);
   const parsedBalance = parseFloat(newBalance);
   const balanceDiff = !isNaN(parsedBalance) && account ? parsedBalance - account.current_balance : 0;
-  const hasDiff = Math.abs(balanceDiff) > 0.01;
+  const hasDiff = !isLiabilityAccount && Math.abs(balanceDiff) > 0.01;
 
   const handleSaveClick = () => {
     if (!account) return;
@@ -155,15 +159,41 @@ export function AccountEditSheet({ account, open, onOpenChange }: AccountEditShe
               </Select>
             </FieldRow>
 
-            <FieldRow label={`Saldo actual (${account.currency})`} hint={`Registrado: ${fmt(account.current_balance, account.currency)}`}>
-              <Input
-                className="h-8 text-sm text-right"
-                type="number"
-                step="0.01"
-                value={newBalance}
-                onChange={(e) => setNewBalance(e.target.value)}
-              />
-            </FieldRow>
+            {isLiabilityAccount ? (
+              <FieldRow label={`Saldo actual (${account.currency})`}>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-right tabular-nums">
+                    {fmt(account.current_balance, account.currency)}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-xs gap-1.5"
+                    onClick={() => {
+                      if (onOpenReconciliation && account) {
+                        onOpenChange(false);
+                        onOpenReconciliation(account);
+                      }
+                    }}
+                  >
+                    Actualizar saldo real
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    El saldo de cuentas de deuda se actualiza mediante conciliación.
+                  </p>
+                </div>
+              </FieldRow>
+            ) : (
+              <FieldRow label={`Saldo actual (${account.currency})`} hint={`Registrado: ${fmt(account.current_balance, account.currency)}`}>
+                <Input
+                  className="h-8 text-sm text-right"
+                  type="number"
+                  step="0.01"
+                  value={newBalance}
+                  onChange={(e) => setNewBalance(e.target.value)}
+                />
+              </FieldRow>
+            )}
 
             {hasDiff && (
               <div className="rounded-xl bg-secondary/50 border border-border p-4 space-y-2">

@@ -219,7 +219,15 @@ export default function Debts() {
       )}
 
       <DebtForm open={formOpen} onOpenChange={setFormOpen} />
-      <DebtEditSheet debt={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
+      <DebtEditSheet
+        debt={editTarget}
+        open={!!editTarget}
+        onOpenChange={(o) => !o && setEditTarget(null)}
+        onOpenReconciliation={(debt) => {
+          setEditTarget(null);
+          setAdjustTarget(debt);
+        }}
+      />
       {adjustTarget && (
         <ReconciliationSheet
           open={!!adjustTarget}

@@ -13,6 +13,7 @@ import { useSavingsGoals } from "@/hooks/useSavingsGoals";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useAuth } from "@/contexts/AuthContext";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -84,6 +85,7 @@ export function UpcomingDueDates({
 }: UpcomingDueDatesProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { rates: fxRates } = useExchangeRate();
 
   // Only fetch from DB when no summary data provided
   const hasSummary = !!summaryDebts;
@@ -96,6 +98,7 @@ export function UpcomingDueDates({
   const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
+  const [transferCurrency, setTransferCurrency] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
@@ -321,14 +324,16 @@ export function UpcomingDueDates({
     return item.amount ? String(item.amount) : "";
   }, [editedAmounts]);
 
-  const handleStartTransfer = useCallback((itemId: string) => {
+  const handleStartTransfer = useCallback((itemId: string, itemCurrency: string) => {
     setTransferringItemId(itemId);
     setSourceAccountId("");
+    setTransferCurrency(itemCurrency);
   }, []);
 
   const handleCancelTransfer = useCallback(() => {
     setTransferringItemId(null);
     setSourceAccountId("");
+    setTransferCurrency("");
   }, []);
 
   const handleConfirmTransfer = useCallback(async (item: DueItem) => {
@@ -346,7 +351,32 @@ export function UpcomingDueDates({
     if (!item.accountId) return;
 
     const source = accounts.find(a => a.id === sourceAccountId);
-    if (!source) return;
+    const dest = accounts.find(a => a.id === item.accountId);
+    if (!source || !dest) return;
+
+    // Bidirectional FX calculation
+    const userCurrency = transferCurrency || item.currency;
+    let amountFrom = amount;
+    let amountTo = amount;
+    let fxRateUsed: number | null = null;
+
+    if (source.currency !== dest.currency) {
+      const usdRate = fxRates["USD"] || 1;
+
+      if (userCurrency === source.currency) {
+        // User expressed in source currency → convert to dest
+        amountFrom = amount;
+        if (source.currency === "USD" && dest.currency === "MXN") amountTo = amount * usdRate;
+        else if (source.currency === "MXN" && dest.currency === "USD") amountTo = amount / usdRate;
+        fxRateUsed = usdRate;
+      } else if (userCurrency === dest.currency) {
+        // User expressed in dest currency → calculate what leaves source
+        amountTo = amount;
+        if (source.currency === "USD" && dest.currency === "MXN") amountFrom = amount / usdRate;
+        else if (source.currency === "MXN" && dest.currency === "USD") amountFrom = amount * usdRate;
+        fxRateUsed = usdRate;
+      }
+    }
 
     setIsSaving(true);
     try {
@@ -355,10 +385,11 @@ export function UpcomingDueDates({
         user_id: user.id,
         from_account_id: sourceAccountId,
         to_account_id: item.accountId,
-        amount_from: amount,
-        amount_to: source.currency === item.currency ? amount : amount,
+        amount_from: Math.round(amountFrom * 100) / 100,
+        amount_to: Math.round(amountTo * 100) / 100,
         currency_from: source.currency,
-        currency_to: item.currency,
+        currency_to: dest.currency,
+        fx_rate: fxRateUsed,
         transfer_date: format(new Date(), "yyyy-MM-dd"),
         description: `${descLabel}: ${item.name}`,
         created_from: "due_dates",
@@ -369,15 +400,15 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
-      toast.success("Transferencia registrada");
       queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
+      toast.success("Transferencia registrada");
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");
     } finally {
       setIsSaving(false);
     }
-  }, [user, getDisplayAmount, sourceAccountId, accounts, queryClient, handleCancelTransfer]);
+  }, [user, getDisplayAmount, sourceAccountId, transferCurrency, accounts, fxRates, queryClient, handleCancelTransfer]);
 
   if (!hasAnyDueItems) return null;
 
@@ -479,7 +510,7 @@ export function UpcomingDueDates({
 
                   {item.accountId && !isTransferring && (
                     <button
-                      onClick={() => handleStartTransfer(item.id)}
+                      onClick={() => handleStartTransfer(item.id, item.currency)}
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-md transition-colors shrink-0",
                         "bg-primary/10 hover:bg-primary/20 text-primary"
@@ -491,57 +522,114 @@ export function UpcomingDueDates({
                   )}
                 </div>
 
-                {isTransferring && (
-                  <div className="space-y-2 mt-2 pt-2 border-t border-border">
-                    <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Selecciona cuenta de origen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sourceAccounts
-                          .filter(a => a.id !== item.accountId)
-                          .map(a => {
-                            const bal = a.current_balance ?? 0;
-                            const isNeg = bal < 0;
-                            return (
-                              <SelectItem key={a.id} value={a.id} className="text-xs">
-                                <div className="flex items-center justify-between gap-3 w-full">
-                                  <span className="truncate">{a.name}</span>
-                                  <span className={cn(
-                                    "tabular-nums shrink-0",
-                                    isNeg ? "text-expense" : "text-muted-foreground"
-                                  )}>
-                                    {isNeg ? "-" : ""}{formatCurrencyAbs(bal, a.currency)}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2 justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                        onClick={handleCancelTransfer}
-                        disabled={isSaving}
-                      >
-                        <X className="h-3.5 w-3.5 mr-1" />
-                        Cancelar
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 gap-1 px-3 text-xs"
-                        onClick={() => handleConfirmTransfer(item)}
-                        disabled={isSaving || !getDisplayAmount(item) || !sourceAccountId}
-                      >
-                        <ArrowRightLeft className="h-3.5 w-3.5" />
-                        Transferir
-                      </Button>
+                {isTransferring && (() => {
+                  const sourceAcc = accounts.find(a => a.id === sourceAccountId);
+                  const destAcc = accounts.find(a => a.id === item.accountId);
+                  const isCross = sourceAcc && destAcc && sourceAcc.currency !== destAcc.currency;
+                  const amt = parseFloat(getDisplayAmount(item)) || 0;
+                  const usdRate = fxRates["USD"] || 1;
+
+                  let previewFrom = amt;
+                  let previewTo = amt;
+                  if (isCross && amt > 0) {
+                    if (transferCurrency === sourceAcc.currency) {
+                      previewFrom = amt;
+                      if (sourceAcc.currency === "USD" && destAcc.currency === "MXN") previewTo = amt * usdRate;
+                      else if (sourceAcc.currency === "MXN" && destAcc.currency === "USD") previewTo = amt / usdRate;
+                    } else if (transferCurrency === destAcc.currency) {
+                      previewTo = amt;
+                      if (sourceAcc.currency === "USD" && destAcc.currency === "MXN") previewFrom = amt / usdRate;
+                      else if (sourceAcc.currency === "MXN" && destAcc.currency === "USD") previewFrom = amt * usdRate;
+                    }
+                  }
+
+                  return (
+                    <div className="space-y-2 mt-2 pt-2 border-t border-border">
+                      {/* Currency selector */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Moneda:</span>
+                        <Select value={transferCurrency} onValueChange={setTransferCurrency}>
+                          <SelectTrigger className="h-7 text-xs w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MXN" className="text-xs">MXN</SelectItem>
+                            <SelectItem value="USD" className="text-xs">USD</SelectItem>
+                            <SelectItem value="EUR" className="text-xs">EUR</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Source account selector */}
+                      <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Selecciona cuenta de origen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sourceAccounts
+                            .filter(a => a.id !== item.accountId)
+                            .map(a => {
+                              const bal = a.current_balance ?? 0;
+                              const isNeg = bal < 0;
+                              return (
+                                <SelectItem key={a.id} value={a.id} className="text-xs">
+                                  <div className="flex items-center justify-between gap-3 w-full">
+                                    <span className="truncate">{a.name}</span>
+                                    <span className={cn(
+                                      "tabular-nums shrink-0",
+                                      isNeg ? "text-expense" : "text-muted-foreground"
+                                    )}>
+                                      {isNeg ? "-" : ""}{formatCurrencyAbs(bal, a.currency)}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
+                        </SelectContent>
+                      </Select>
+
+                      {/* FX preview */}
+                      {isCross && amt > 0 && (
+                        <div className="rounded-lg bg-muted px-3 py-2 text-xs space-y-0.5">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Sale de {sourceAcc.name}</span>
+                            <span className="font-medium text-foreground">{formatCurrencyAbs(Math.round(previewFrom * 100) / 100, sourceAcc.currency)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Llega a {destAcc.name}</span>
+                            <span className="font-medium text-foreground">{formatCurrencyAbs(Math.round(previewTo * 100) / 100, destAcc.currency)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Tipo de cambio</span>
+                            <span>TC: ${usdRate.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={handleCancelTransfer}
+                          disabled={isSaving}
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 gap-1 px-3 text-xs"
+                          onClick={() => handleConfirmTransfer(item)}
+                          disabled={isSaving || !getDisplayAmount(item) || !sourceAccountId}
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                          Transferir
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}

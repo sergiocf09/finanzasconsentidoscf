@@ -92,14 +92,16 @@ export function ReceiptScanner() {
     [expenseCategories, incomeCategories]
   );
 
-  // Resize image to max 1200px and compress to JPEG to keep payload small
+  // Resize image aggressively and compress to keep payload under ~200KB
   const imageToBase64 = (
     file: File
   ): Promise<{ base64: string; mediaType: string }> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
-        const MAX = 1200;
+        URL.revokeObjectURL(objectUrl);
+        const MAX = 800;
         let w = img.width;
         let h = img.height;
         if (w > MAX || h > MAX) {
@@ -111,12 +113,23 @@ export function ReceiptScanner() {
         canvas.height = h;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-        const base64 = dataUrl.split(",")[1];
+        // Try quality 0.5 first; if still too big, reduce further
+        let quality = 0.5;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+        let base64 = dataUrl.split(",")[1];
+        // If base64 > 300KB (~400KB raw), reduce quality
+        if (base64.length > 300_000) {
+          dataUrl = canvas.toDataURL("image/jpeg", 0.3);
+          base64 = dataUrl.split(",")[1];
+        }
+        console.log(`[ReceiptScanner] Compressed image: ${Math.round(base64.length / 1024)}KB`);
         resolve({ base64, mediaType: "image/jpeg" });
       };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("No se pudo cargar la imagen"));
+      };
+      img.src = objectUrl;
     });
   };
 

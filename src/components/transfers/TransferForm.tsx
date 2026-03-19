@@ -13,14 +13,13 @@ import {
 } from "@/components/ui/select";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransfers } from "@/hooks/useTransfers";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
 
 const schema = z.object({
   from_account_id: z.string().min(1, "Selecciona cuenta origen"),
   to_account_id: z.string().min(1, "Selecciona cuenta destino"),
   amount: z.coerce.number().positive("Monto debe ser mayor a 0"),
-  amount_to: z.coerce.number().optional(),
-  fx_rate: z.coerce.number().optional(),
   transfer_date: z.string(),
   description: z.string().optional(),
 }).refine((d) => d.from_account_id !== d.to_account_id, {

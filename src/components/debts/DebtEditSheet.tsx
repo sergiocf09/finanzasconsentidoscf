@@ -49,14 +49,12 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [type, setType] = useState("credit_card");
   const [creditor, setCreditor] = useState("");
   const [originalAmount, setOriginalAmount] = useState("");
-  const [currentBalance, setCurrentBalance] = useState("");
   const [interestRate, setInterestRate] = useState("");
   const [minimumPayment, setMinimumPayment] = useState("");
   const [plannedPayment, setPlannedPayment] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [cutDay, setCutDay] = useState("");
-  const [reconciliationNote, setReconciliationNote] = useState("");
-  const [showBalanceConfirm, setShowBalanceConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {

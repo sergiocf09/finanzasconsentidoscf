@@ -200,7 +200,31 @@ export default function Accounts() {
       )}
 
       <AccountForm open={formOpen} onOpenChange={setFormOpen} />
-      <AccountEditSheet account={editTarget} open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }} />
+      <AccountEditSheet
+        account={editTarget}
+        open={!!editTarget}
+        onOpenChange={(open) => { if (!open) setEditTarget(null); }}
+        onOpenReconciliation={(account) => {
+          setEditTarget(null);
+          setReconcilingAccount(account);
+        }}
+      />
+
+      {reconcilingAccount && (
+        <ReconciliationSheet
+          open={!!reconcilingAccount}
+          onOpenChange={(o) => { if (!o) setReconcilingAccount(null); }}
+          accountId={reconcilingAccount.id}
+          debtName={reconcilingAccount.name}
+          currentBalance={Math.abs(reconcilingAccount.current_balance ?? 0)}
+          currency={reconcilingAccount.currency}
+          reconciliationType={
+            reconcilingAccount.type === "credit_card" || reconcilingAccount.type === "payable"
+              ? "current"
+              : "fixed"
+          }
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

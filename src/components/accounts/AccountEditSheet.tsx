@@ -159,15 +159,41 @@ export function AccountEditSheet({ account, open, onOpenChange, onOpenReconcilia
               </Select>
             </FieldRow>
 
-            <FieldRow label={`Saldo actual (${account.currency})`} hint={`Registrado: ${fmt(account.current_balance, account.currency)}`}>
-              <Input
-                className="h-8 text-sm text-right"
-                type="number"
-                step="0.01"
-                value={newBalance}
-                onChange={(e) => setNewBalance(e.target.value)}
-              />
-            </FieldRow>
+            {isLiabilityAccount ? (
+              <FieldRow label={`Saldo actual (${account.currency})`}>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-right tabular-nums">
+                    {fmt(account.current_balance, account.currency)}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-xs gap-1.5"
+                    onClick={() => {
+                      if (onOpenReconciliation && account) {
+                        onOpenChange(false);
+                        onOpenReconciliation(account);
+                      }
+                    }}
+                  >
+                    Actualizar saldo real
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    El saldo de cuentas de deuda se actualiza mediante conciliación.
+                  </p>
+                </div>
+              </FieldRow>
+            ) : (
+              <FieldRow label={`Saldo actual (${account.currency})`} hint={`Registrado: ${fmt(account.current_balance, account.currency)}`}>
+                <Input
+                  className="h-8 text-sm text-right"
+                  type="number"
+                  step="0.01"
+                  value={newBalance}
+                  onChange={(e) => setNewBalance(e.target.value)}
+                />
+              </FieldRow>
+            )}
 
             {hasDiff && (
               <div className="rounded-xl bg-secondary/50 border border-border p-4 space-y-2">

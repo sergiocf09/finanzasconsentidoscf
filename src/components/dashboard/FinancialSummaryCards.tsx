@@ -109,22 +109,51 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   const renderAccountItem = (account: typeof accounts[0]) => {
     const Icon = typeIcons[account.type] || Wallet;
     const debt = isLiability(account.type);
+    const included = account.include_in_summary !== false;
+
     return (
       <div
         key={account.id}
-        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
-        onClick={(e) => handleAccountClick(account.id, e)}
+        className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors"
       >
-        <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-income")} />
-        <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
-        <span className={cn(
-          "text-xs font-semibold tabular-nums",
-          debt
-            ? (account.current_balance > 0 ? "text-income" : "text-expense")
-            : (account.current_balance < 0 ? "text-expense" : "text-income")
-        )}>
+        <div className="cursor-pointer" onClick={(e) => handleAccountClick(account.id, e)}>
+          <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-income")} />
+        </div>
+        <span
+          className={cn("text-xs flex-1 truncate cursor-pointer", !included && "text-muted-foreground")}
+          onClick={(e) => handleAccountClick(account.id, e)}
+        >
+          {account.name}
+          {!included && (
+            <span className="ml-1 text-[10px] text-muted-foreground/60">· no suma</span>
+          )}
+        </span>
+        <span
+          className={cn(
+            "text-xs font-semibold tabular-nums cursor-pointer",
+            !included && "text-muted-foreground/50",
+            included && debt
+              ? (account.current_balance > 0 ? "text-income" : "text-expense")
+              : included && !debt
+              ? (account.current_balance < 0 ? "text-expense" : "text-income")
+              : ""
+          )}
+          onClick={(e) => handleAccountClick(account.id, e)}
+        >
           {mask(fmt(account.current_balance, account.currency))}
         </span>
+        <button
+          className={cn(
+            "ml-1 p-1 rounded-md transition-colors shrink-0",
+            included
+              ? "text-muted-foreground/40 hover:text-muted-foreground"
+              : "text-muted-foreground/60 hover:text-foreground"
+          )}
+          title={included ? "Excluir del total" : "Incluir en el total"}
+          onClick={(e) => toggleIncludeInSummary(account.id, included, e)}
+        >
+          {included ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+        </button>
       </div>
     );
   };

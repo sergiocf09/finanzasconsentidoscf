@@ -239,18 +239,14 @@ export default function AccountDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-3">
-        <div className="flex w-full rounded-md bg-muted p-1 h-9">
-          {[
-            { value: "all", label: `Todo (${allItems.length})` },
-            { value: "movements", label: `Mov. (${accountTxs.length})` },
-            { value: "transfers", label: `Transf. (${transfers.length})` },
-            ...(reconciliations.length > 0 ? [{ value: "reconciliations", label: `Conc. (${reconciliations.length})` }] : []),
-          ].map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value} className="text-[11px] flex-1 px-1">
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </div>
+        <TabsList className="grid w-full" style={{ gridTemplateColumns: reconciliations.length > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)' }}>
+          <TabsTrigger value="all" className="text-[11px] px-1">Todo ({allItems.length})</TabsTrigger>
+          <TabsTrigger value="movements" className="text-[11px] px-1">Mov. ({accountTxs.length})</TabsTrigger>
+          <TabsTrigger value="transfers" className="text-[11px] px-1">Transf. ({transfers.length})</TabsTrigger>
+          {reconciliations.length > 0 && (
+            <TabsTrigger value="reconciliations" className="text-[11px] px-1">Conc. ({reconciliations.length})</TabsTrigger>
+          )}
+        </TabsList>
 
         <TabsContent value="all">
           <div className="rounded-2xl bg-card border border-border p-4">

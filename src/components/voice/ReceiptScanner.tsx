@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, FileText, Loader2, X, Check, Trash2 } from "lucide-react";
+import { Camera, FileText, Loader2, Check, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,10 +53,10 @@ export function ReceiptScanner() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<
-    "select" | "scanning" | "single" | "statement"
-  >("select");
+  // Two separate dialogs: one for mode selection, one for results
+  const [selectOpen, setSelectOpen] = useState(false);
+  const [resultOpen, setResultOpen] = useState(false);
+  const [mode, setMode] = useState<"scanning" | "single" | "statement">("scanning");
   const [isLoading, setIsLoading] = useState(false);
   const [scanMode, setScanMode] = useState<"single" | "statement">("single");
 
@@ -109,8 +109,11 @@ export function ReceiptScanner() {
   };
 
   const processImage = async (file: File) => {
+    // Open the result dialog in scanning mode
     setIsLoading(true);
     setMode("scanning");
+    setResultOpen(true);
+
     try {
       const { base64, mediaType } = await imageToBase64(file);
       const {
@@ -175,7 +178,7 @@ export function ReceiptScanner() {
       }
     } catch (err: any) {
       toast.error(err.message || "No se pudo leer la imagen");
-      setMode("select");
+      setResultOpen(false);
     } finally {
       setIsLoading(false);
     }
@@ -185,6 +188,16 @@ export function ReceiptScanner() {
     const file = e.target.files?.[0];
     if (file) processImage(file);
     e.target.value = "";
+  };
+
+  // Called when user picks scan mode and clicks "Tomar foto"
+  const handleTakePhoto = () => {
+    // Close the selection dialog FIRST, then trigger file input
+    setSelectOpen(false);
+    // Small delay to let the dialog close before opening native picker
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 300);
   };
 
   const handleSingleConfirm = async () => {
@@ -210,7 +223,7 @@ export function ReceiptScanner() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast.success("Movimiento registrado");
-      setIsOpen(false);
+      setResultOpen(false);
       reset();
     } catch {
       toast.error("Error al guardar");
@@ -244,7 +257,7 @@ export function ReceiptScanner() {
       toast.success(
         `${selected.length} movimiento${selected.length > 1 ? "s" : ""} registrado${selected.length > 1 ? "s" : ""}`
       );
-      setIsOpen(false);
+      setResultOpen(false);
       reset();
     } catch {
       toast.error("Error al guardar los movimientos");
@@ -252,7 +265,7 @@ export function ReceiptScanner() {
   };
 
   const reset = () => {
-    setMode("select");
+    setMode("scanning");
     setSingleData({
       amount: "",
       currency: "MXN",
@@ -290,7 +303,7 @@ export function ReceiptScanner() {
 
   return (
     <>
-      {/* Hidden file input */}
+      {/* Hidden file input — OUTSIDE any dialog */}
       <input
         ref={fileInputRef}
         type="file"
@@ -302,7 +315,7 @@ export function ReceiptScanner() {
 
       {/* Floating camera button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setSelectOpen(true)}
         className={cn(
           "fixed z-50 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg transition-all hover:scale-105 active:scale-95 border border-border",
           "bottom-20 right-20 lg:bottom-6 lg:right-24"
@@ -312,19 +325,81 @@ export function ReceiptScanner() {
         <Camera className="h-6 w-6" />
       </button>
 
+      {/* ── DIALOG 1: Mode selection ────────────────────────── */}
+      <Dialog open={selectOpen} onOpenChange={setSelectOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[420px] p-4">
+          <DialogHeader>
+            <DialogTitle className="text-base">Escanear imagen</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            <p className="text-xs text-muted-foreground">
+              La imagen se lee en el momento y no se almacena.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setScanMode("single")}
+                className={cn(
+                  "rounded-xl border-2 p-3 text-left transition-all space-y-1",
+                  scanMode === "single"
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-center gap-1.5 font-medium text-sm">
+                  <Camera className="h-4 w-4" />
+                  Recibo
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Un solo gasto — ticket, factura
+                </p>
+              </button>
+              <button
+                onClick={() => setScanMode("statement")}
+                className={cn(
+                  "rounded-xl border-2 p-3 text-left transition-all space-y-1",
+                  scanMode === "statement"
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-center gap-1.5 font-medium text-sm">
+                  <FileText className="h-4 w-4" />
+                  Estado de cuenta
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Varios renglones a la vez
+                </p>
+              </button>
+            </div>
+
+            <Button className="w-full" onClick={handleTakePhoto}>
+              <Camera className="mr-2 h-4 w-4" />
+              {scanMode === "single"
+                ? "Tomar foto del recibo"
+                : "Tomar foto del estado de cuenta"}
+            </Button>
+            <p className="text-[10px] text-center text-muted-foreground">
+              También puedes seleccionar una imagen de tu galería
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── DIALOG 2: Results (scanning / single / statement) ── */}
       <Dialog
-        open={isOpen}
+        open={resultOpen}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !isLoading) {
+            setResultOpen(false);
             reset();
-            setIsOpen(false);
           }
         }}
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[420px] max-h-[85vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle className="text-base">
-              {mode === "select" && "Escanear imagen"}
               {mode === "scanning" && "Leyendo imagen..."}
               {mode === "single" && "Confirma el movimiento"}
               {mode === "statement" &&
@@ -333,65 +408,6 @@ export function ReceiptScanner() {
           </DialogHeader>
 
           <div className="space-y-3 mt-2">
-            {/* SELECT MODE */}
-            {mode === "select" && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  La imagen se lee en el momento y no se almacena.
-                </p>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setScanMode("single")}
-                    className={cn(
-                      "rounded-xl border-2 p-3 text-left transition-all space-y-1",
-                      scanMode === "single"
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-card"
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5 font-medium text-sm">
-                      <Camera className="h-4 w-4" />
-                      Recibo
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Un solo gasto — ticket, factura
-                    </p>
-                  </button>
-                  <button
-                    onClick={() => setScanMode("statement")}
-                    className={cn(
-                      "rounded-xl border-2 p-3 text-left transition-all space-y-1",
-                      scanMode === "statement"
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-card"
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5 font-medium text-sm">
-                      <FileText className="h-4 w-4" />
-                      Estado de cuenta
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Varios renglones a la vez
-                    </p>
-                  </button>
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Camera className="mr-2 h-4 w-4" />
-                  {scanMode === "single"
-                    ? "Tomar foto del recibo"
-                    : "Tomar foto del estado de cuenta"}
-                </Button>
-                <p className="text-[10px] text-center text-muted-foreground">
-                  También puedes seleccionar una imagen de tu galería
-                </p>
-              </div>
-            )}
-
             {/* SCANNING */}
             {mode === "scanning" && (
               <div className="flex flex-col items-center gap-3 py-8">
@@ -524,8 +540,11 @@ export function ReceiptScanner() {
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
+                      setResultOpen(false);
                       reset();
-                      fileInputRef.current?.click();
+                      setTimeout(() => {
+                        setSelectOpen(true);
+                      }, 300);
                     }}
                   >
                     Volver a escanear
@@ -627,7 +646,7 @@ export function ReceiptScanner() {
                         </button>
                       </div>
 
-                      {/* Row 2: details when selected */}
+                      {/* Row 2 */}
                       {tx.selected && (
                         <div className="flex items-center gap-1.5 pl-6">
                           <Input
@@ -685,8 +704,11 @@ export function ReceiptScanner() {
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
+                      setResultOpen(false);
                       reset();
-                      fileInputRef.current?.click();
+                      setTimeout(() => {
+                        setSelectOpen(true);
+                      }, 300);
                     }}
                   >
                     Volver a escanear

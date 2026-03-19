@@ -170,18 +170,31 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         : watchedAmount)
     : null;
 
-  // Transfer conversion preview
+  // Transfer conversion preview — bidirectional based on user-selected currency
   const transferConversion = useMemo(() => {
     if (activeTab !== "transfer") return null;
     const fromAcc = activeAccounts.find(a => a.id === watchedAccountId);
     const toAcc = activeAccounts.find(a => a.id === toAccountId);
     if (!fromAcc || !toAcc || fromAcc.currency === toAcc.currency) return null;
     if (!watchedAmount || !fxRate) return null;
+
+    let amountFrom = watchedAmount;
     let amountTo = watchedAmount;
-    if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = watchedAmount / fxRate;
-    else if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = watchedAmount * fxRate;
+
+    if (watchedCurrency === fromAcc.currency) {
+      // User expressed in origin currency → convert to destination
+      amountFrom = watchedAmount;
+      if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = watchedAmount * fxRate;
+      else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = watchedAmount / fxRate;
+    } else if (watchedCurrency === toAcc.currency) {
+      // User expressed in destination currency → calculate what leaves origin
+      amountTo = watchedAmount;
+      if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountFrom = watchedAmount / fxRate;
+      else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountFrom = watchedAmount * fxRate;
+    }
+
     return {
-      amountFrom: watchedAmount,
+      amountFrom: Math.round(amountFrom * 100) / 100,
       currencyFrom: fromAcc.currency,
       amountTo: Math.round(amountTo * 100) / 100,
       currencyTo: toAcc.currency,
@@ -189,7 +202,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       fromName: fromAcc.name,
       toName: toAcc.name,
     };
-  }, [activeTab, watchedAccountId, toAccountId, watchedAmount, fxRate, activeAccounts]);
+  }, [activeTab, watchedAccountId, toAccountId, watchedAmount, watchedCurrency, fxRate, activeAccounts]);
 
   // Detect if the selected account is a debt account with fixed debts
   const fixedDebtsForAccount = debts.filter(d =>

@@ -189,6 +189,7 @@ export type Database = {
           alert_sent: boolean | null
           alert_threshold: number | null
           amount: number
+          budget_type: string | null
           category_id: string | null
           created_at: string | null
           created_from: string | null
@@ -206,6 +207,7 @@ export type Database = {
           alert_sent?: boolean | null
           alert_threshold?: number | null
           amount: number
+          budget_type?: string | null
           category_id?: string | null
           created_at?: string | null
           created_from?: string | null
@@ -223,6 +225,7 @@ export type Database = {
           alert_sent?: boolean | null
           alert_threshold?: number | null
           amount?: number
+          budget_type?: string | null
           category_id?: string | null
           created_at?: string | null
           created_from?: string | null
@@ -329,8 +332,11 @@ export type Database = {
           created_at: string | null
           debt_id: string
           id: string
+          interest_amount: number | null
           notes: string | null
           payment_date: string
+          payment_type: string | null
+          transaction_id: string | null
           user_id: string
         }
         Insert: {
@@ -338,8 +344,11 @@ export type Database = {
           created_at?: string | null
           debt_id: string
           id?: string
+          interest_amount?: number | null
           notes?: string | null
           payment_date?: string
+          payment_type?: string | null
+          transaction_id?: string | null
           user_id: string
         }
         Update: {
@@ -347,8 +356,11 @@ export type Database = {
           created_at?: string | null
           debt_id?: string
           id?: string
+          interest_amount?: number | null
           notes?: string | null
           payment_date?: string
+          payment_type?: string | null
+          transaction_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -357,6 +369,13 @@ export type Database = {
             columns: ["debt_id"]
             isOneToOne: false
             referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debt_payments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -369,11 +388,15 @@ export type Database = {
           currency: string
           current_balance: number
           cut_day: number | null
+          debt_category: string | null
           due_day: number | null
           id: string
           interest_rate: number | null
           is_active: boolean | null
+          last_statement_balance: number | null
+          last_statement_date: string | null
           minimum_payment: number | null
+          monthly_commitment: number | null
           name: string
           original_amount: number
           planned_payment: number | null
@@ -389,11 +412,15 @@ export type Database = {
           currency?: string
           current_balance: number
           cut_day?: number | null
+          debt_category?: string | null
           due_day?: number | null
           id?: string
           interest_rate?: number | null
           is_active?: boolean | null
+          last_statement_balance?: number | null
+          last_statement_date?: string | null
           minimum_payment?: number | null
+          monthly_commitment?: number | null
           name: string
           original_amount: number
           planned_payment?: number | null
@@ -409,11 +436,15 @@ export type Database = {
           currency?: string
           current_balance?: number
           cut_day?: number | null
+          debt_category?: string | null
           due_day?: number | null
           id?: string
           interest_rate?: number | null
           is_active?: boolean | null
+          last_statement_balance?: number | null
+          last_statement_date?: string | null
           minimum_payment?: number | null
+          monthly_commitment?: number | null
           name?: string
           original_amount?: number
           planned_payment?: number | null

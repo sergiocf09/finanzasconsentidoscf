@@ -123,7 +123,7 @@ export function useFinancialIntelligence() {
         .gte("reconciliation_date", startDate)
         .lt("reconciliation_date", endDate);
       if (error) throw error;
-      return data as Array<{ unregistered_expenses: number; financial_cost: number }>;
+      return (data as unknown as Array<{ unregistered_expenses: number; financial_cost: number }>) ?? [];
     },
     enabled: !!user,
   });

@@ -14,6 +14,7 @@ import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
 import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
 import { BalanceAdjustmentSheet } from "@/components/debts/BalanceAdjustmentSheet";
+import { ReconciliationSheet } from "@/components/debts/ReconciliationSheet";
 import { useNavigate } from "react-router-dom";
 
 const typeIcons: Record<string, typeof CreditCard> = {

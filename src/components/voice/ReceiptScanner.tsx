@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, FileText, Loader2, Check, Trash2, X } from "lucide-react";
+import { Camera, FileText, Loader2, Check, Trash2, X, ImagePlus, Images } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,8 @@ import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+
+const MAX_IMAGES = 5;
 
 const CATEGORY_HINT_MAP: Record<string, string[]> = {
   restaurante: ["restaurante", "café", "comida"],
@@ -52,14 +54,15 @@ export function ReceiptScanner() {
   const { accounts } = useAccounts();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  // Two separate dialogs: one for mode selection, one for results
   const [selectOpen, setSelectOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
   const [mode, setMode] = useState<"scanning" | "single" | "statement" | "error">("scanning");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [scanMode, setScanMode] = useState<"single" | "statement">("single");
+  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 });
 
   const [singleData, setSingleData] = useState({
     amount: "",
@@ -93,7 +96,6 @@ export function ReceiptScanner() {
     [expenseCategories, incomeCategories]
   );
 
-  // Resize image aggressively and compress to keep payload under ~200KB
   const imageToBase64 = (
     file: File
   ): Promise<{ base64: string; mediaType: string }> => {
@@ -114,11 +116,9 @@ export function ReceiptScanner() {
         canvas.height = h;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, w, h);
-        // Try quality 0.5 first; if still too big, reduce further
         let quality = 0.5;
         let dataUrl = canvas.toDataURL("image/jpeg", quality);
         let base64 = dataUrl.split(",")[1];
-        // If base64 > 300KB (~400KB raw), reduce quality
         if (base64.length > 300_000) {
           dataUrl = canvas.toDataURL("image/jpeg", 0.3);
           base64 = dataUrl.split(",")[1];
@@ -134,39 +134,40 @@ export function ReceiptScanner() {
     });
   };
 
-  const processImage = async (file: File) => {
-    // Open the result dialog in scanning mode
+  const processImages = async (files: File[]) => {
     setIsLoading(true);
     setMode("scanning");
     setResultOpen(true);
+    setScanProgress({ current: 0, total: files.length });
 
     try {
-      const { base64, mediaType } = await imageToBase64(file);
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) throw new Error("No session");
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ imageBase64: base64, mediaType, mode: scanMode }),
+      if (scanMode === "single" && files.length === 1) {
+        // Single receipt, single image — legacy behavior
+        setScanProgress({ current: 1, total: 1 });
+        const { base64, mediaType } = await imageToBase64(files[0]);
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ imageBase64: base64, mediaType, mode: "single" }),
+          }
+        );
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || "Error al procesar la imagen");
         }
-      );
+        const result = await response.json();
+        if (result.error) throw new Error(result.error);
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || "Error al procesar la imagen");
-      }
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
-
-      if (result.mode === "single" || scanMode === "single") {
         setSingleData({
           amount: result.amount ? String(result.amount) : "",
           currency: result.currency || "MXN",
@@ -180,25 +181,68 @@ export function ReceiptScanner() {
           type: "expense",
         });
         setMode("single");
-      } else {
-        const txs: ScannedTransaction[] = (result.transactions || []).map(
-          (t: any, i: number) => ({
-            id: `scan-${i}`,
-            amount: t.amount || 0,
-            currency: t.currency || "MXN",
-            date: t.date || format(new Date(), "yyyy-MM-dd"),
-            merchant: t.merchant || "",
-            type: t.type || "expense",
-            category_hint: t.category_hint || "otro",
-            description: t.description || t.merchant || "",
-            selected: true,
-            resolvedCategoryId: resolveCategoryId(
-              t.category_hint || "otro",
-              t.type || "expense"
-            ),
-            resolvedAccountId: activeAccounts[0]?.id || "",
-          })
+      } else if (scanMode === "single" && files.length > 1) {
+        // Multiple receipts — each is independent, send all images in one request
+        setScanProgress({ current: 1, total: 1 });
+        const compressedImages = [];
+        for (let i = 0; i < files.length; i++) {
+          setScanProgress({ current: i + 1, total: files.length });
+          compressedImages.push(await imageToBase64(files[i]));
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ images: compressedImages, mode: "single" }),
+          }
         );
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || "Error al procesar las imágenes");
+        }
+        const result = await response.json();
+        if (result.error) throw new Error(result.error);
+
+        // Result should be statement-like with transactions array
+        const txs = mapTransactions(result.transactions || []);
+        setTransactions(txs);
+        setMode("statement");
+      } else {
+        // Statement mode — all images are pages of the same document
+        const compressedImages = [];
+        for (let i = 0; i < files.length; i++) {
+          setScanProgress({ current: i + 1, total: files.length });
+          compressedImages.push(await imageToBase64(files[i]));
+        }
+
+        const body = files.length === 1
+          ? { imageBase64: compressedImages[0].base64, mediaType: compressedImages[0].mediaType, mode: "statement" }
+          : { images: compressedImages, mode: "statement" };
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify(body),
+          }
+        );
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || "Error al procesar las imágenes");
+        }
+        const result = await response.json();
+        if (result.error) throw new Error(result.error);
+
+        const txs = mapTransactions(result.transactions || []);
         setTransactions(txs);
         setMode("statement");
       }
@@ -211,19 +255,44 @@ export function ReceiptScanner() {
     }
   };
 
+  const mapTransactions = (rawTxs: any[]): ScannedTransaction[] => {
+    return rawTxs.map((t: any, i: number) => ({
+      id: `scan-${i}`,
+      amount: t.amount || 0,
+      currency: t.currency || "MXN",
+      date: t.date || format(new Date(), "yyyy-MM-dd"),
+      merchant: t.merchant || "",
+      type: t.type || "expense",
+      category_hint: t.category_hint || "otro",
+      description: t.description || t.merchant || "",
+      selected: true,
+      resolvedCategoryId: resolveCategoryId(
+        t.category_hint || "otro",
+        t.type || "expense"
+      ),
+      resolvedAccountId: activeAccounts[0]?.id || "",
+    }));
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) processImage(file);
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList).slice(0, MAX_IMAGES);
+    processImages(files);
     e.target.value = "";
   };
 
-  // Called when user picks scan mode and clicks "Tomar foto"
   const handleTakePhoto = () => {
-    // Close the selection dialog FIRST, then trigger file input
     setSelectOpen(false);
-    // Small delay to let the dialog close before opening native picker
     setTimeout(() => {
       fileInputRef.current?.click();
+    }, 300);
+  };
+
+  const handleGalleryClick = () => {
+    setSelectOpen(false);
+    setTimeout(() => {
+      galleryInputRef.current?.click();
     }, 300);
   };
 
@@ -275,7 +344,7 @@ export function ReceiptScanner() {
         exchange_rate: 1,
         description: t.description || t.merchant,
         transaction_date: t.date,
-        notes: "Registrado mediante escaneo de estado de cuenta",
+        notes: "Registrado mediante escaneo de imagen",
       }));
       const { error } = await supabase.from("transactions").insert(inserts);
       if (error) throw error;
@@ -294,6 +363,7 @@ export function ReceiptScanner() {
   const reset = () => {
     setMode("scanning");
     setErrorMessage("");
+    setScanProgress({ current: 0, total: 0 });
     setSingleData({
       amount: "",
       currency: "MXN",
@@ -329,18 +399,9 @@ export function ReceiptScanner() {
 
   const selectedCount = transactions.filter((t) => t.selected).length;
 
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-
-  const handleGalleryClick = () => {
-    setSelectOpen(false);
-    setTimeout(() => {
-      galleryInputRef.current?.click();
-    }, 300);
-  };
-
   return (
     <>
-      {/* Hidden file input for CAMERA */}
+      {/* Hidden file input for CAMERA (single photo only) */}
       <input
         ref={fileInputRef}
         type="file"
@@ -349,11 +410,12 @@ export function ReceiptScanner() {
         className="hidden"
         onChange={handleFileChange}
       />
-      {/* Hidden file input for GALLERY */}
+      {/* Hidden file input for GALLERY (multiple allowed) */}
       <input
         ref={galleryInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />
@@ -397,7 +459,7 @@ export function ReceiptScanner() {
                   Recibo
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Un solo gasto — ticket, factura
+                  Un gasto por imagen
                 </p>
               </button>
               <button
@@ -425,10 +487,14 @@ export function ReceiptScanner() {
                 Tomar foto
               </Button>
               <Button variant="outline" className="w-full" onClick={handleGalleryClick}>
-                <FileText className="mr-2 h-4 w-4" />
-                Elegir imagen
+                <Images className="mr-2 h-4 w-4" />
+                Elegir imágenes
               </Button>
             </div>
+
+            <p className="text-[10px] text-center text-muted-foreground">
+              Puedes seleccionar hasta {MAX_IMAGES} imágenes de tu galería
+            </p>
           </div>
         </DialogContent>
       </Dialog>
@@ -446,7 +512,11 @@ export function ReceiptScanner() {
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[420px] max-h-[85vh] overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle className="text-base">
-              {mode === "scanning" && "Leyendo imagen..."}
+              {mode === "scanning" && (
+                scanProgress.total > 1
+                  ? `Procesando imágenes (${scanProgress.current}/${scanProgress.total})...`
+                  : "Leyendo imagen..."
+              )}
               {mode === "error" && "Error al leer imagen"}
               {mode === "single" && "Confirma el movimiento"}
               {mode === "statement" &&
@@ -459,10 +529,24 @@ export function ReceiptScanner() {
             {mode === "scanning" && (
               <div className="flex flex-col items-center gap-3 py-8">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-sm font-medium">Leyendo la imagen...</p>
-                <p className="text-xs text-muted-foreground">
-                  Esto toma unos segundos
+                <p className="text-sm font-medium">
+                  {scanProgress.total > 1
+                    ? `Comprimiendo imagen ${scanProgress.current} de ${scanProgress.total}...`
+                    : "Leyendo la imagen..."}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  {scanProgress.total > 1
+                    ? "Las imágenes se envían juntas al AI"
+                    : "Esto toma unos segundos"}
+                </p>
+                {scanProgress.total > 1 && (
+                  <div className="w-full max-w-[200px] h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-300"
+                      style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

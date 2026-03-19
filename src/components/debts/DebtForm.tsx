@@ -25,11 +25,13 @@ import { useDebts } from "@/hooks/useDebts";
 const debtSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
   type: z.enum(["credit_card", "personal_loan", "mortgage", "car_loan", "student_loan", "other"]),
+  debt_category: z.enum(["current", "fixed"]).default("current"),
   creditor: z.string().optional(),
   original_amount: z.coerce.number().min(0.01, "Ingresa el monto original"),
   current_balance: z.coerce.number().min(0, "Ingresa el saldo actual"),
   interest_rate: z.coerce.number().optional().default(0),
   minimum_payment: z.coerce.number().optional().default(0),
+  monthly_commitment: z.coerce.number().optional().default(0),
   planned_payment: z.coerce.number().optional().default(0),
   due_day: z.coerce.number().min(1).max(31).optional(),
   cut_day: z.coerce.number().min(1).max(31).optional(),
@@ -71,11 +73,13 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
     defaultValues: {
       name: "",
       type: "credit_card",
+      debt_category: "current",
       creditor: "",
       original_amount: 0,
       current_balance: 0,
       interest_rate: 0,
       minimum_payment: 0,
+      monthly_commitment: 0,
       planned_payment: 0,
       due_day: undefined,
       currency: "MXN",
@@ -83,8 +87,14 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   });
 
   const watchType = form.watch("type");
+  const watchDebtCategory = form.watch("debt_category");
+
+  // Non-credit-card types are always 'fixed'
+  const effectiveDebtCategory = watchType === "credit_card" ? watchDebtCategory : "fixed";
+  const showMonthlyCommitment = effectiveDebtCategory === "fixed";
 
   const onSubmit = async (data: DebtFormValues) => {
+    const finalDebtCategory = data.type === "credit_card" ? data.debt_category : "fixed";
     await createDebt.mutateAsync({
       name: data.name,
       type: data.type,
@@ -97,6 +107,8 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
       cut_day: data.cut_day,
       start_date: data.start_date ? format(data.start_date, "yyyy-MM-dd") : undefined,
       currency: data.currency,
+      debt_category: finalDebtCategory,
+      monthly_commitment: showMonthlyCommitment ? data.monthly_commitment : 0,
     });
     form.reset();
     onOpenChange(false);
@@ -128,6 +140,36 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
               </SelectContent>
             </Select>
           </FieldRow>
+
+          {/* debt_category — solo visible para tarjetas de crédito */}
+          {watchType === "credit_card" && (
+            <FieldRow label="Naturaleza del saldo" hint="¿Tiene deuda previa o solo consumos del mes?">
+              <Select value={watchDebtCategory} onValueChange={(v) => form.setValue("debt_category", v as any)}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current">
+                    <div>
+                      <span>Solo consumos corrientes</span>
+                      <span className="block text-[10px] text-muted-foreground">El saldo varía cada mes según lo que gastas</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="fixed">
+                    <div>
+                      <span>Tiene saldo preexistente a plazo</span>
+                      <span className="block text-[10px] text-muted-foreground">Ya hay deuda acumulada que vas abonando</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldRow>
+          )}
+
+          {/* monthly_commitment — visible cuando es deuda a plazo */}
+          {showMonthlyCommitment && (
+            <FieldRow label="Abono mensual comprometido" hint="Cuánto pagas cada mes para reducir esta deuda">
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("monthly_commitment")} />
+            </FieldRow>
+          )}
 
           <FieldRow label="Acreedor" hint="Opcional">
             <Input className="h-8 text-sm" placeholder="Ej: BBVA" {...form.register("creditor")} />

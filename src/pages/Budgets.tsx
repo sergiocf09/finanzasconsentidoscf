@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye, BarChart2 } from "lucide-react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
+import { Progress } from "@/components/ui/progress";
 import { startOfMonth, endOfMonth } from "date-fns";
 import {
   Select,
@@ -41,7 +42,7 @@ export default function Budgets() {
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1);
 
-  const { budgets, isLoading, totalBudgeted, totalSpent, deleteBudget, updateBudget } =
+  const { budgets, incomeBudgets, isLoading, totalBudgeted, totalSpent, totalIncomeExpected, totalIncomeReceived, deleteBudget, updateBudget } =
     useBudgets(currentYear, currentMonth);
   const { categories } = useCategories();
   const { signals, recommendations } = useFinancialIntelligence();
@@ -198,6 +199,51 @@ export default function Budgets() {
           </Button>
         </div>
       </div>
+
+      {/* Income budgets section */}
+      {!isLoading && incomeBudgets.length > 0 && (
+        <div className="rounded-2xl border border-income/20 bg-income/5 p-4 space-y-3 animate-fade-in-up">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-income shrink-0" />
+            <h3 className="text-sm font-heading font-semibold text-foreground">Ingresos esperados del mes</h3>
+          </div>
+
+          <div className="space-y-2">
+            {incomeBudgets.map((b) => {
+              const pct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
+              const isComplete = pct >= 100;
+              return (
+                <div key={b.id} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground truncate">{b.name}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="tabular-nums text-muted-foreground">{formatCurrency(b.spent)}</span>
+                      <span className="text-muted-foreground/60">/</span>
+                      <span className="tabular-nums font-medium">{formatCurrency(b.amount)}</span>
+                      {isComplete && <Check className="h-3.5 w-3.5 text-income" />}
+                    </div>
+                  </div>
+                  <Progress
+                    value={Math.min(pct, 100)}
+                    className="h-2 bg-income/10"
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-income/20 text-xs">
+            <span className="font-semibold text-foreground">Total esperado</span>
+            <div className="flex items-center gap-2">
+              <span className="tabular-nums font-bold text-foreground">{formatCurrency(totalIncomeExpected)}</span>
+              <span className="text-muted-foreground">Recibido</span>
+              <span className={cn("tabular-nums font-bold", totalIncomeReceived >= totalIncomeExpected ? "text-income" : "text-foreground")}>
+                {formatCurrency(totalIncomeReceived)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary */}
       {isLoading ? (
@@ -363,7 +409,7 @@ export default function Budgets() {
             <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
-      ) : budgets.length === 0 ? (
+      ) : budgets.length === 0 && incomeBudgets.length === 0 ? (
       <div className="text-center py-12 text-muted-foreground rounded-2xl bg-card border border-border p-8 animate-fade-in-up">
           {prevMonthHasBudgets && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-6 text-left">

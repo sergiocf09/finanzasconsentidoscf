@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
+import { useState } from "react";
 
 const budgetSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
@@ -58,7 +59,8 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 
 export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
   const { createBudget } = useBudgets();
-  const { expenseCategories } = useCategories();
+  const { expenseCategories, incomeCategories } = useCategories();
+  const [budgetType, setBudgetType] = useState<"expense" | "income">("expense");
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -76,6 +78,7 @@ export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
   });
 
   const period = form.watch("period");
+  const availableCategories = budgetType === "income" ? incomeCategories : expenseCategories;
 
   const onSubmit = async (data: BudgetFormValues) => {
     await createBudget.mutateAsync({
@@ -85,8 +88,10 @@ export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
       period: data.period,
       month: data.period === "monthly" ? data.month : undefined,
       year: data.year,
+      budget_type: budgetType,
     });
     form.reset();
+    setBudgetType("expense");
     onOpenChange(false);
   };
 
@@ -95,12 +100,23 @@ export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
       <DialogContent className="sm:max-w-[440px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nuevo presupuesto</DialogTitle>
-          <DialogDescription>Define cuánto planeas gastar en una categoría.</DialogDescription>
+          <DialogDescription>Define cuánto planeas gastar o recibir en una categoría.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1.5 mt-2">
+          {/* Budget type selector */}
+          <FieldRow label="Tipo de presupuesto">
+            <Select value={budgetType} onValueChange={(v) => { setBudgetType(v as any); form.setValue("category_id", ""); }}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="expense">Gasto — cuánto puedo gastar</SelectItem>
+                <SelectItem value="income">Ingreso — cuánto espero recibir</SelectItem>
+              </SelectContent>
+            </Select>
+          </FieldRow>
+
           <FieldRow label="Nombre">
-            <Input className="h-8 text-sm" placeholder="Ej: Alimentación mensual" {...form.register("name")} />
+            <Input className="h-8 text-sm" placeholder={budgetType === "income" ? "Ej: Sueldo mensual" : "Ej: Alimentación mensual"} {...form.register("name")} />
           </FieldRow>
           {form.formState.errors.name && (
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.name.message}</p>
@@ -110,7 +126,7 @@ export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
             <Select value={form.watch("category_id") || ""} onValueChange={(v) => form.setValue("category_id", v)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
               <SelectContent>
-                {expenseCategories.map((category) => (
+                {availableCategories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -119,7 +135,7 @@ export function BudgetForm({ open, onOpenChange }: BudgetFormProps) {
             </Select>
           </FieldRow>
 
-          <FieldRow label="Monto presupuestado">
+          <FieldRow label={budgetType === "income" ? "Monto esperado" : "Monto presupuestado"}>
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("amount", { valueAsNumber: true })} />
           </FieldRow>
           {form.formState.errors.amount && (

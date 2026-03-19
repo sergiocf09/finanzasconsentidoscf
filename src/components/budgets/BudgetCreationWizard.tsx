@@ -82,7 +82,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 
 export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizardProps) {
   const { user } = useAuth();
-  const { expenseCategories } = useCategories();
+  const { expenseCategories, incomeCategories } = useCategories();
   const queryClient = useQueryClient();
 
   const currentYear = new Date().getFullYear();
@@ -99,6 +99,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const [saving, setSaving] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [smartAnalysis, setSmartAnalysis] = useState<{ stabilityPct: number; lifestylePct: number; buildPct: number; message: string } | null>(null);
+  const [budgetType, setBudgetType] = useState<"expense" | "income">("expense");
 
   useEffect(() => {
     if (!open) {
@@ -107,11 +108,14 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       setCategoryBudgets([]);
       setSelectedTemplate(null);
       setSmartAnalysis(null);
+      setBudgetType("expense");
     }
   }, [open]);
 
+  const activeCategories = budgetType === "income" ? incomeCategories : expenseCategories;
+
   const initManualBudgets = () => {
-    const budgets = expenseCategories.map((c) => ({
+    const budgets = activeCategories.map((c) => ({
       category_id: c.id,
       name: c.name,
       bucket: (c as any).bucket || "lifestyle",
@@ -125,17 +129,18 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     setLoadingHistory(true);
     const end = endOfMonth(new Date());
     const start = startOfMonth(subMonths(new Date(), historyMonths));
+    const txType = budgetType === "income" ? "income" : "expense";
     const { data: txs } = await supabase
       .from("transactions")
       .select("category_id, amount")
-      .eq("type", "expense")
+      .eq("type", txType)
       .gte("transaction_date", format(start, "yyyy-MM-dd"))
       .lte("transaction_date", format(end, "yyyy-MM-dd"));
     const catTotals: Record<string, number> = {};
     (txs ?? []).forEach((tx) => {
       if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount);
     });
-    const budgets = expenseCategories.map((c) => ({
+    const budgets = activeCategories.map((c) => ({
       category_id: c.id, name: c.name, bucket: (c as any).bucket || "lifestyle",
       amount: Math.round((catTotals[c.id] || 0) / historyMonths),
       average: Math.round((catTotals[c.id] || 0) / historyMonths),
@@ -153,11 +158,11 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       build: monthlyIncome * (tmpl.build / 100),
     };
     const blockCounts: Record<string, number> = { stability: 0, lifestyle: 0, build: 0 };
-    expenseCategories.forEach((c) => {
+    activeCategories.forEach((c) => {
       const bucket = (c as any).bucket || "lifestyle";
       if (blockCounts[bucket] !== undefined) blockCounts[bucket]++;
     });
-    const budgets = expenseCategories.map((c) => {
+    const budgets = activeCategories.map((c) => {
       const bucket = (c as any).bucket || "lifestyle";
       const count = blockCounts[bucket] || 1;
       return { category_id: c.id, name: c.name, bucket, amount: Math.round((blockBudgets[bucket as keyof typeof blockBudgets] || 0) / count) };
@@ -180,7 +185,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     let totalExpense = 0;
     (txs ?? []).forEach((tx) => { totalExpense += Number(tx.amount); if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount); });
     let stabilityTotal = 0, lifestyleTotal = 0, buildTotal = 0;
-    const catMap = new Map(expenseCategories.map((c) => [c.id, c]));
+    const catMap = new Map(activeCategories.map((c) => [c.id, c]));
     Object.entries(catTotals).forEach(([catId, amount]) => {
       const cat = catMap.get(catId);
       const bucket = (cat as any)?.bucket || "lifestyle";
@@ -197,8 +202,8 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     setSmartAnalysis({ stabilityPct, lifestylePct, buildPct, message: `Actualmente destinas ${stabilityPct.toFixed(0)}% a Estabilidad, ${lifestylePct.toFixed(0)}% a Calidad de Vida y ${buildPct.toFixed(0)}% a Construcción. Te sugerimos mover gradualmente hacia una estructura más equilibrada.` });
     const suggestedBlockBudgets = { stability: totalIncome * (suggestedStability / 100), lifestyle: totalIncome * (suggestedLifestyle / 100), build: totalIncome * (suggestedBuild / 100) };
     const blockCounts: Record<string, number> = { stability: 0, lifestyle: 0, build: 0 };
-    expenseCategories.forEach((c) => { const bucket = (c as any).bucket || "lifestyle"; if (blockCounts[bucket] !== undefined) blockCounts[bucket]++; });
-    const budgets = expenseCategories.map((c) => {
+    activeCategories.forEach((c) => { const bucket = (c as any).bucket || "lifestyle"; if (blockCounts[bucket] !== undefined) blockCounts[bucket]++; });
+    const budgets = activeCategories.map((c) => {
       const bucket = (c as any).bucket || "lifestyle";
       const catAvg = (catTotals[c.id] || 0) / 3;
       const blockTotal = bucket === "stability" ? stabilityTotal / 3 : bucket === "build" ? buildTotal / 3 : lifestyleTotal / 3;
@@ -225,6 +230,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       const inserts = validBudgets.map((b) => ({
         user_id: user.id, category_id: b.category_id, name: b.name, amount: b.amount,
         period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
+        budget_type: budgetType,
       }));
       if (inserts.length > 0) {
         const { error } = await supabase.from("budgets").upsert(inserts, {
@@ -304,7 +310,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
     if (existing && existing.length > 0) {
       const budgets = existing.map((b) => {
-        const cat = expenseCategories.find((c) => c.id === b.category_id);
+        const cat = activeCategories.find((c) => c.id === b.category_id);
         return {
           category_id: b.category_id || "",
           name: b.name,
@@ -319,12 +325,25 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const renderMethodStep = () => (
     <div className="space-y-3">
+      {/* Budget type selector */}
+      <FieldRow label="Tipo de presupuesto">
+        <Select value={budgetType} onValueChange={(v) => setBudgetType(v as any)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="expense">Gasto — cuánto puedo gastar</SelectItem>
+            <SelectItem value="income">Ingreso — cuánto espero recibir</SelectItem>
+          </SelectContent>
+        </Select>
+      </FieldRow>
+
       <p className="text-sm text-muted-foreground mb-4">¿Desde dónde quieres construir tu presupuesto?</p>
       {[
         { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría" },
         { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores" },
-        { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida" },
-        { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada" },
+        ...(budgetType === "expense" ? [
+          { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida" },
+          { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada" },
+        ] : []),
       ].map((m) => (
         <button
           key={m.id}
@@ -404,10 +423,11 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const renderConfigureStep = () => {
     const blocks = ["stability", "lifestyle", "build"] as const;
+    const isIncomeType = budgetType === "income";
 
     return (
       <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-        {method === "template" && !categoryBudgets.length && (
+        {method === "template" && !categoryBudgets.length && !isIncomeType && (
           <div className="space-y-2 mb-4">
             <p className="text-sm text-muted-foreground">Elige una plantilla:</p>
             {templates.map((t) => (
@@ -426,7 +446,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           </div>
         )}
 
-        {method === "smart" && smartAnalysis && (
+        {method === "smart" && smartAnalysis && !isIncomeType && (
           <div className="rounded-xl bg-secondary/50 p-3 mb-4">
             <p className="text-xs text-muted-foreground">{smartAnalysis.message}</p>
           </div>
@@ -434,54 +454,82 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
         {categoryBudgets.length > 0 && (
           <>
-            <div className="grid grid-cols-3 gap-2">
-              {blocks.map((block) => {
-                const config = blockConfig[block];
-                const total = blockTotals(block);
-                return (
-                  <div key={block} className={cn("rounded-xl p-2 text-center", config.bg)}>
-                    <span className="text-xs">{config.emoji}</span>
-                    <p className={cn("text-xs font-medium", config.color)}>{config.label}</p>
-                    <p className="text-sm font-bold text-foreground">
-                      {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(total)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Total: {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(grandTotal)}
-            </p>
-
-            {blocks.map((block) => {
-              const config = blockConfig[block];
-              const items = categoryBudgets.filter((b) => b.bucket === block);
-              if (items.length === 0) return null;
-              return (
-                <div key={block} className="space-y-1.5">
-                  <h4 className="text-xs font-heading font-semibold text-muted-foreground flex items-center gap-1">
-                    {config.emoji} {config.label}
-                  </h4>
-                  {items.map((item) => (
-                    <div key={item.category_id} className="flex items-center gap-2">
-                      <span className="text-xs text-foreground flex-1 min-w-0 truncate">{item.name}</span>
-                      {item.average !== undefined && (
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          Prom: ${item.average.toLocaleString()}
-                        </span>
-                      )}
-                      <Input
-                        type="number"
-                        className="h-7 w-24 text-right text-xs"
-                        value={item.amount || ""}
-                        onChange={(e) => updateCategoryAmount(item.category_id, Number(e.target.value))}
-                      />
-                    </div>
-                  ))}
+            {!isIncomeType && (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  {blocks.map((block) => {
+                    const config = blockConfig[block];
+                    const total = blockTotals(block);
+                    return (
+                      <div key={block} className={cn("rounded-xl p-2 text-center", config.bg)}>
+                        <span className="text-xs">{config.emoji}</span>
+                        <p className={cn("text-xs font-medium", config.color)}>{config.label}</p>
+                        <p className="text-sm font-bold text-foreground">
+                          {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(total)}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Total: {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(grandTotal)}
+                </p>
+
+                {blocks.map((block) => {
+                  const config = blockConfig[block];
+                  const items = categoryBudgets.filter((b) => b.bucket === block);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={block} className="space-y-1.5">
+                      <h4 className="text-xs font-heading font-semibold text-muted-foreground flex items-center gap-1">
+                        {config.emoji} {config.label}
+                      </h4>
+                      {items.map((item) => (
+                        <div key={item.category_id} className="flex items-center gap-2">
+                          <span className="text-xs text-foreground flex-1 min-w-0 truncate">{item.name}</span>
+                          {item.average !== undefined && (
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              Prom: ${item.average.toLocaleString()}
+                            </span>
+                          )}
+                          <Input
+                            type="number"
+                            className="h-7 w-24 text-right text-xs"
+                            value={item.amount || ""}
+                            onChange={(e) => updateCategoryAmount(item.category_id, Number(e.target.value))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {isIncomeType && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground text-center">
+                  Total esperado: {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(grandTotal)}
+                </p>
+                {categoryBudgets.map((item) => (
+                  <div key={item.category_id} className="flex items-center gap-2">
+                    <span className="text-xs text-foreground flex-1 min-w-0 truncate">{item.name}</span>
+                    {item.average !== undefined && (
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        Prom: ${item.average.toLocaleString()}
+                      </span>
+                    )}
+                    <Input
+                      type="number"
+                      className="h-7 w-24 text-right text-xs"
+                      value={item.amount || ""}
+                      onChange={(e) => updateCategoryAmount(item.category_id, Number(e.target.value))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 

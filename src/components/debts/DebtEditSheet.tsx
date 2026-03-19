@@ -203,21 +203,6 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
           </div>
         </SheetContent>
       </Sheet>
-
-      <AlertDialog open={showBalanceConfirm} onOpenChange={setShowBalanceConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar ajuste de saldo</AlertDialogTitle>
-            <AlertDialogDescription>
-              El saldo cambiará de {fmt(oldBalanceAbs)} a {fmt(newBalanceNum)}. Se registrará un ajuste en la cuenta asociada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={executeSave}>Confirmar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

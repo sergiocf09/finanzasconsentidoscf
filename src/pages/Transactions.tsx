@@ -438,6 +438,15 @@ export default function Transactions() {
                     : `${itemDate} · ${getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null)} · ${item.accountName}`
                   }
                 </p>
+                {isTransfer && item.currency_from && item.currency_to &&
+                 item.currency_from !== item.currency_to && item.amount_to && item.fx_rate && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {item.currency_from === "MXN"
+                      ? `≈ ${formatAmount(item.amount_to, item.currency_to)} recibidos · TC: $${item.fx_rate.toFixed(2)}`
+                      : `≈ ${formatAmount(item.amount_to, item.currency_to)} recibidos · TC: $${item.fx_rate.toFixed(2)}`
+                    }
+                  </p>
+                )}
               </div>
             </div>
             );

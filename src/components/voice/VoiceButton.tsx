@@ -696,7 +696,23 @@ export function VoiceButton() {
                     <label className="text-xs font-medium text-muted-foreground">Monto</label>
                     <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="text-lg font-bold" />
                   </div>
-                  <div>
+                  {/* Transfer conversion in edit mode */}
+                  {transferConversion && (
+                    <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Sale de {transferConversion.fromName}</span>
+                        <span className="font-medium">{formatCurrency(transferConversion.amountFrom, transferConversion.currencyFrom)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Llega a {transferConversion.toName}</span>
+                        <span className="font-medium text-foreground">{formatCurrency(transferConversion.amountTo, transferConversion.currencyTo)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tipo de cambio</span>
+                        <span>TC: ${transferConversion.rate.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )
                     <label className="text-xs font-medium text-muted-foreground">{editType === "transfer" ? "Cuenta origen" : "Cuenta"}</label>
                     <Select value={editAccountId} onValueChange={setEditAccountId}>
                       <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>

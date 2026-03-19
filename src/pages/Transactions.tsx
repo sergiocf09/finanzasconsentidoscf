@@ -68,6 +68,11 @@ interface UnifiedItem {
   accountName: string;
   secondaryInfo?: string;
   isRecurring?: boolean;
+  // Transfer-specific multi-currency fields
+  currency_from?: string;
+  currency_to?: string;
+  amount_to?: number;
+  fx_rate?: number | null;
 }
 
 export default function Transactions() {

@@ -78,9 +78,10 @@ export function AccountEditSheet({ account, open, onOpenChange, onOpenReconcilia
 
   const fmt = (v: number, currency: string) => formatCurrency(v, currency, { decimals: 2 });
 
+  const isLiabilityAccount = LIABILITY_TYPES.includes(type);
   const parsedBalance = parseFloat(newBalance);
   const balanceDiff = !isNaN(parsedBalance) && account ? parsedBalance - account.current_balance : 0;
-  const hasDiff = Math.abs(balanceDiff) > 0.01;
+  const hasDiff = !isLiabilityAccount && Math.abs(balanceDiff) > 0.01;
 
   const handleSaveClick = () => {
     if (!account) return;

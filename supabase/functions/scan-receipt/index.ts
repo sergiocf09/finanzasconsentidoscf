@@ -35,9 +35,25 @@ serve(async (req) => {
       });
     }
 
-    const { imageBase64, mediaType, mode } = await req.json();
+    const body = await req.json();
+    // Support both single image (legacy) and multiple images
+    const images: { base64: string; mediaType: string }[] = [];
+    
+    if (body.images && Array.isArray(body.images)) {
+      // New multi-image format: { images: [{base64, mediaType}], mode }
+      for (const img of body.images) {
+        if (img.base64 && img.mediaType) {
+          images.push({ base64: img.base64, mediaType: img.mediaType });
+        }
+      }
+    } else if (body.imageBase64 && body.mediaType) {
+      // Legacy single-image format
+      images.push({ base64: body.imageBase64, mediaType: body.mediaType });
+    }
 
-    if (!imageBase64 || !mediaType) {
+    const mode = body.mode || "single";
+
+    if (images.length === 0) {
       return new Response(JSON.stringify({ error: "Missing image data" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,7 +80,27 @@ Formato exacto:
 }
 Si el campo no es legible usa null. El monto debe ser el TOTAL del recibo.`;
 
-    const promptStatement = `Analiza este estado de cuenta o lista de movimientos y extrae CADA transacción como un elemento del array.
+    const promptMultipleReceipts = `Analiza estas ${images.length} imágenes. Cada una es un recibo o comprobante de pago INDEPENDIENTE.
+Extrae los datos de CADA recibo por separado.
+Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin explicaciones.
+Formato exacto:
+{
+  "mode": "statement",
+  "transactions": [
+    {
+      "amount": número,
+      "currency": "MXN" o "USD",
+      "date": "YYYY-MM-DD" o null,
+      "merchant": "nombre del establecimiento",
+      "type": "expense",
+      "category_hint": uno de: "restaurante|supermercado|gasolina|farmacia|transporte|entretenimiento|ropa|servicios|salud|educacion|otro",
+      "description": "descripción corta máximo 40 caracteres"
+    }
+  ]
+}
+Cada imagen es un recibo diferente — genera una transacción por imagen.`;
+
+    const promptStatement = `Analiza ${images.length > 1 ? "estas imágenes que son páginas del mismo" : "este"} estado de cuenta o lista de movimientos y extrae CADA transacción como un elemento del array.
 Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin explicaciones.
 Formato exacto:
 {
@@ -76,16 +112,34 @@ Formato exacto:
       "date": "YYYY-MM-DD" o null,
       "merchant": "nombre o descripción del movimiento",
       "type": "expense" o "income",
-      "category_hint": uno de: "restaurante|supermercado|gasolina|farmacia|transporte|entretenimiento|ropa|servicios|salud|educacion|transferencia|otro",
+      "category_hint": uno de: "restaurante|supermercado|gasolina|farmacia|transporte|entretenimiento|ropa|servicios|salud|educacion|otro",
       "description": "descripción corta máximo 40 caracteres"
     }
   ]
 }
-Incluye solo transacciones con monto claro. Ignora saldos, totales y encabezados. Máximo 20 transacciones.`;
+${images.length > 1 ? "Las imágenes son páginas consecutivas del MISMO documento — combina todos los movimientos en un solo array." : ""}
+Incluye solo transacciones con monto claro. Ignora saldos, totales y encabezados. Máximo 30 transacciones.`;
 
-    const prompt = mode === "statement" ? promptStatement : promptSingle;
+    // Choose prompt based on mode and image count
+    let prompt: string;
+    if (mode === "statement") {
+      prompt = promptStatement;
+    } else if (images.length > 1) {
+      // Multiple images in single/receipt mode = independent receipts
+      prompt = promptMultipleReceipts;
+    } else {
+      prompt = promptSingle;
+    }
 
-    const imageUrl = `data:${mediaType};base64,${imageBase64}`;
+    // Build content array with all images + prompt
+    const contentParts: any[] = [];
+    for (const img of images) {
+      contentParts.push({
+        type: "image_url",
+        image_url: { url: `data:${img.mediaType};base64,${img.base64}` },
+      });
+    }
+    contentParts.push({ type: "text", text: prompt });
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -100,16 +154,7 @@ Incluye solo transacciones con monto claro. Ignora saldos, totales y encabezados
           messages: [
             {
               role: "user",
-              content: [
-                {
-                  type: "image_url",
-                  image_url: { url: imageUrl },
-                },
-                {
-                  type: "text",
-                  text: prompt,
-                },
-              ],
+              content: contentParts,
             },
           ],
         }),

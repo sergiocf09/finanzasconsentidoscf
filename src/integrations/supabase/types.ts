@@ -63,6 +63,7 @@ export type Database = {
           current_balance: number | null
           icon: string | null
           id: string
+          include_in_summary: boolean | null
           initial_balance: number | null
           is_active: boolean | null
           name: string
@@ -77,6 +78,7 @@ export type Database = {
           current_balance?: number | null
           icon?: string | null
           id?: string
+          include_in_summary?: boolean | null
           initial_balance?: number | null
           is_active?: boolean | null
           name: string
@@ -91,6 +93,7 @@ export type Database = {
           current_balance?: number | null
           icon?: string | null
           id?: string
+          include_in_summary?: boolean | null
           initial_balance?: number | null
           is_active?: boolean | null
           name?: string

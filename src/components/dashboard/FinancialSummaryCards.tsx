@@ -9,6 +9,8 @@ import { formatCurrency } from "@/lib/formatters";
 import { useAccounts, isAssetType, isLiabilityShort, isLiabilityLong, isLiability } from "@/hooks/useAccounts";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { DashboardSummary } from "@/hooks/useDashboardSummary";
 
 type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];
@@ -27,13 +29,12 @@ interface FinancialSummaryCardsProps {
 
 export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCardsProps) {
   const navigate = useNavigate();
-  // Only fetch accounts from DB if no summary data provided
   const { accounts: hookAccounts } = useAccounts({ enabled: !accountsSummary });
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const { convertToMXN } = useExchangeRate();
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<"assets" | "liabilities" | null>(null);
 
-  // Normalize accounts from either source
   const accounts = useMemo(() => {
     if (accountsSummary) {
       return accountsSummary.map(a => ({
@@ -43,6 +44,7 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
         currency: a.currency,
         current_balance: a.current_balance,
         is_active: a.is_active,
+        include_in_summary: (a as any).include_in_summary !== false,
       }));
     }
     return hookAccounts.map(a => ({
@@ -52,6 +54,7 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
       currency: a.currency,
       current_balance: a.current_balance,
       is_active: a.is_active,
+      include_in_summary: a.include_in_summary !== false,
     }));
   }, [accountsSummary, hookAccounts]);
 
@@ -61,13 +64,15 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   const { assetsByCurrency, liabilitiesByCurrency } = useMemo(() => {
     const assets: Record<string, number> = {};
     const liabilities: Record<string, number> = {};
-    activeOnly.forEach(acc => {
-      if (isAssetType(acc.type)) {
-        assets[acc.currency] = (assets[acc.currency] ?? 0) + (acc.current_balance ?? 0);
-      } else if (isLiability(acc.type)) {
-        liabilities[acc.currency] = (liabilities[acc.currency] ?? 0) + Math.abs(acc.current_balance ?? 0);
-      }
-    });
+    activeOnly
+      .filter(acc => acc.include_in_summary !== false)
+      .forEach(acc => {
+        if (isAssetType(acc.type)) {
+          assets[acc.currency] = (assets[acc.currency] ?? 0) + (acc.current_balance ?? 0);
+        } else if (isLiability(acc.type)) {
+          liabilities[acc.currency] = (liabilities[acc.currency] ?? 0) + Math.abs(acc.current_balance ?? 0);
+        }
+      });
     return { assetsByCurrency: assets, liabilitiesByCurrency: liabilities };
   }, [activeOnly]);
 
@@ -91,25 +96,64 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
     navigate(`/accounts/${accountId}`);
   };
 
+  const toggleIncludeInSummary = async (accountId: string, currentValue: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase
+      .from("accounts")
+      .update({ include_in_summary: !currentValue } as any)
+      .eq("id", accountId);
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+  };
+
   const renderAccountItem = (account: typeof accounts[0]) => {
     const Icon = typeIcons[account.type] || Wallet;
     const debt = isLiability(account.type);
+    const included = account.include_in_summary !== false;
+
     return (
       <div
         key={account.id}
-        className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
-        onClick={(e) => handleAccountClick(account.id, e)}
+        className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors"
       >
-        <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-income")} />
-        <span className="text-xs text-foreground flex-1 truncate">{account.name}</span>
-        <span className={cn(
-          "text-xs font-semibold tabular-nums",
-          debt
-            ? (account.current_balance > 0 ? "text-income" : "text-expense")
-            : (account.current_balance < 0 ? "text-expense" : "text-income")
-        )}>
+        <div className="cursor-pointer" onClick={(e) => handleAccountClick(account.id, e)}>
+          <Icon className={cn("h-3.5 w-3.5 shrink-0", debt ? "text-expense" : "text-income")} />
+        </div>
+        <span
+          className={cn("text-xs flex-1 truncate cursor-pointer", !included && "text-muted-foreground")}
+          onClick={(e) => handleAccountClick(account.id, e)}
+        >
+          {account.name}
+          {!included && (
+            <span className="ml-1 text-[10px] text-muted-foreground/60">· no suma</span>
+          )}
+        </span>
+        <span
+          className={cn(
+            "text-xs font-semibold tabular-nums cursor-pointer",
+            !included && "text-muted-foreground/50",
+            included && debt
+              ? (account.current_balance > 0 ? "text-income" : "text-expense")
+              : included && !debt
+              ? (account.current_balance < 0 ? "text-expense" : "text-income")
+              : ""
+          )}
+          onClick={(e) => handleAccountClick(account.id, e)}
+        >
           {mask(fmt(account.current_balance, account.currency))}
         </span>
+        <button
+          className={cn(
+            "ml-1 p-1 rounded-md transition-colors shrink-0",
+            included
+              ? "text-muted-foreground/40 hover:text-muted-foreground"
+              : "text-muted-foreground/60 hover:text-foreground"
+          )}
+          title={included ? "Excluir del total" : "Incluir en el total"}
+          onClick={(e) => toggleIncludeInSummary(account.id, included, e)}
+        >
+          {included ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+        </button>
       </div>
     );
   };

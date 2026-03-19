@@ -712,7 +712,8 @@ export function VoiceButton() {
                         <span>TC: ${transferConversion.rate.toFixed(2)}</span>
                       </div>
                     </div>
-                  )
+                  )}
+                  <div>
                     <label className="text-xs font-medium text-muted-foreground">{editType === "transfer" ? "Cuenta origen" : "Cuenta"}</label>
                     <Select value={editAccountId} onValueChange={setEditAccountId}>
                       <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>

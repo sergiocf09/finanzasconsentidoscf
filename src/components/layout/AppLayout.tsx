@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { VoiceButton } from "../voice/VoiceButton";
+import { ReceiptScanner } from "../voice/ReceiptScanner";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { useSaveLastRoute } from "@/hooks/useLastRoute";
 
@@ -27,7 +28,8 @@ export function AppLayout() {
         </div>
       </main>
 
-      {/* Floating Voice Button - Central Feature */}
+      {/* Floating Buttons */}
+      <ReceiptScanner />
       <VoiceButton />
     </div>
   );

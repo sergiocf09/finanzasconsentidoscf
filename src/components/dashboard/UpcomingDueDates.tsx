@@ -324,14 +324,16 @@ export function UpcomingDueDates({
     return item.amount ? String(item.amount) : "";
   }, [editedAmounts]);
 
-  const handleStartTransfer = useCallback((itemId: string) => {
+  const handleStartTransfer = useCallback((itemId: string, itemCurrency: string) => {
     setTransferringItemId(itemId);
     setSourceAccountId("");
+    setTransferCurrency(itemCurrency);
   }, []);
 
   const handleCancelTransfer = useCallback(() => {
     setTransferringItemId(null);
     setSourceAccountId("");
+    setTransferCurrency("");
   }, []);
 
   const handleConfirmTransfer = useCallback(async (item: DueItem) => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Mic, MicOff, Loader2, Check, Edit2, X, AlertTriangle, ArrowRight, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
@@ -148,6 +148,31 @@ export function VoiceButton() {
     return null;
   };
 
+  const activeAccounts = accounts.filter(a => a.is_active);
+
+  // Reactive transfer conversion preview
+  const transferConversion = useMemo(() => {
+    if (editType !== "transfer") return null;
+    const from = activeAccounts.find(a => a.id === editAccountId);
+    const to = activeAccounts.find(a => a.id === editToAccountId);
+    if (!from || !to || from.currency === to.currency) return null;
+    const amount = parseFloat(editAmount) || 0;
+    if (!amount) return null;
+    const usdRate = fxRates["USD"] || 1;
+    let amountTo = amount;
+    if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / usdRate;
+    else if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * usdRate;
+    return {
+      amountFrom: amount,
+      currencyFrom: from.currency,
+      amountTo: Math.round(amountTo * 100) / 100,
+      currencyTo: to.currency,
+      rate: usdRate,
+      fromName: from.name,
+      toName: to.name,
+    };
+  }, [editType, editAmount, editAccountId, editToAccountId, activeAccounts, fxRates]);
+
   const handleConfirm = async () => {
     if (!user || !canConfirm()) return;
     setIsSaving(true);
@@ -159,10 +184,10 @@ export function VoiceButton() {
         const to = accounts.find(a => a.id === editToAccountId)!;
         const fromCurrency = from.currency;
         const toCurrency = to.currency;
-        const isCrossCurrency = fromCurrency !== toCurrency;
-        let amountTo = amount;
-        let fxRate: number | null = null;
-        if (isCrossCurrency) {
+        // Use the precomputed transferConversion if available (what the user saw)
+        let amountTo = transferConversion ? transferConversion.amountTo : amount;
+        let fxRate: number | null = transferConversion ? transferConversion.rate : null;
+        if (!transferConversion && fromCurrency !== toCurrency) {
           const usdRate = fxRates["USD"] || 1;
           if (fromCurrency === "MXN" && toCurrency === "USD") {
             amountTo = amount / usdRate;
@@ -178,7 +203,7 @@ export function VoiceButton() {
           to_account_id: editToAccountId,
           amount_from: amount,
           currency_from: fromCurrency,
-          amount_to: amountTo,
+          amount_to: Math.round(amountTo * 100) / 100,
           currency_to: toCurrency,
           fx_rate: fxRate,
           transfer_date: editDate,
@@ -293,7 +318,7 @@ export function VoiceButton() {
     setIsOpen(false);
   };
 
-  const activeAccounts = accounts.filter(a => a.is_active);
+  // activeAccounts already defined above
   const typeLabels: Record<string, string> = { expense: "Gasto", income: "Ingreso", transfer: "Transferencia" };
   const typeColors: Record<string, string> = { expense: "text-expense", income: "text-income", transfer: "text-muted-foreground" };
 
@@ -489,6 +514,24 @@ export function VoiceButton() {
                     );
                   })()}
 
+                  {/* ─── TRANSFER CONVERSION PREVIEW ──── */}
+                  {transferConversion && (
+                    <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Sale de {transferConversion.fromName}</span>
+                        <span className="font-medium">{formatCurrency(transferConversion.amountFrom, transferConversion.currencyFrom)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Llega a {transferConversion.toName}</span>
+                        <span className="font-medium text-foreground">{formatCurrency(transferConversion.amountTo, transferConversion.currencyTo)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tipo de cambio</span>
+                        <span>TC: ${transferConversion.rate.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ─── RECURRING PAYMENT SWITCH ──── */}
                   {editType !== "transfer" && (
                     <div className="w-full rounded-lg border border-border p-2 space-y-1.5">
@@ -653,6 +696,23 @@ export function VoiceButton() {
                     <label className="text-xs font-medium text-muted-foreground">Monto</label>
                     <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="text-lg font-bold" />
                   </div>
+                  {/* Transfer conversion in edit mode */}
+                  {transferConversion && (
+                    <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Sale de {transferConversion.fromName}</span>
+                        <span className="font-medium">{formatCurrency(transferConversion.amountFrom, transferConversion.currencyFrom)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Llega a {transferConversion.toName}</span>
+                        <span className="font-medium text-foreground">{formatCurrency(transferConversion.amountTo, transferConversion.currencyTo)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tipo de cambio</span>
+                        <span>TC: ${transferConversion.rate.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{editType === "transfer" ? "Cuenta origen" : "Cuenta"}</label>
                     <Select value={editAccountId} onValueChange={setEditAccountId}>

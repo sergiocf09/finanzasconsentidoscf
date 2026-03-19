@@ -68,6 +68,11 @@ interface UnifiedItem {
   accountName: string;
   secondaryInfo?: string;
   isRecurring?: boolean;
+  // Transfer-specific multi-currency fields
+  currency_from?: string;
+  currency_to?: string;
+  amount_to?: number;
+  fx_rate?: number | null;
 }
 
 export default function Transactions() {
@@ -166,6 +171,10 @@ export default function Transactions() {
     source: "transfer" as const,
     accountName: getAccountName(t.from_account_id),
     secondaryInfo: `${getAccountName(t.from_account_id)} → ${getAccountName(t.to_account_id)} · ${formatDate(t.transfer_date)}`,
+    currency_from: t.currency_from,
+    currency_to: t.currency_to,
+    amount_to: t.amount_to,
+    fx_rate: t.fx_rate,
   }));
 
   const allItems = [...txItems, ...transferItems].sort(
@@ -429,6 +438,15 @@ export default function Transactions() {
                     : `${itemDate} · ${getCategoryName(transactions.find(t => t.id === item.id)?.category_id || null)} · ${item.accountName}`
                   }
                 </p>
+                {isTransfer && item.currency_from && item.currency_to &&
+                 item.currency_from !== item.currency_to && item.amount_to && item.fx_rate && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {item.currency_from === "MXN"
+                      ? `≈ ${formatAmount(item.amount_to, item.currency_to)} recibidos · TC: $${item.fx_rate.toFixed(2)}`
+                      : `≈ ${formatAmount(item.amount_to, item.currency_to)} recibidos · TC: $${item.fx_rate.toFixed(2)}`
+                    }
+                  </p>
+                )}
               </div>
             </div>
             );

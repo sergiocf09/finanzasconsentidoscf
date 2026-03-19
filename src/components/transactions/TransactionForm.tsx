@@ -238,16 +238,22 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         if (!fromAcc || !toAcc) return;
 
         const isCross = fromAcc.currency !== toAcc.currency;
+        let amountFrom = data.amount;
         let amountTo = data.amount;
         let fxRateUsed: number | null = null;
 
         if (isCross && fxRate > 0) {
-          if (fromAcc.currency === "MXN" && toAcc.currency === "USD") {
-            amountTo = data.amount / fxRate;
-            fxRateUsed = fxRate;
-          } else if (fromAcc.currency === "USD" && toAcc.currency === "MXN") {
-            amountTo = data.amount * fxRate;
-            fxRateUsed = fxRate;
+          fxRateUsed = fxRate;
+          const userCurrency = data.currency; // currency the user selected
+
+          if (userCurrency === fromAcc.currency) {
+            amountFrom = data.amount;
+            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = data.amount * fxRate;
+            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = data.amount / fxRate;
+          } else if (userCurrency === toAcc.currency) {
+            amountTo = data.amount;
+            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountFrom = data.amount / fxRate;
+            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountFrom = data.amount * fxRate;
           }
         }
 
@@ -255,7 +261,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
           user_id: user.id,
           from_account_id: data.account_id,
           to_account_id: toAccountId,
-          amount_from: data.amount,
+          amount_from: Math.round(amountFrom * 100) / 100,
           currency_from: fromAcc.currency,
           amount_to: Math.round(amountTo * 100) / 100,
           currency_to: toAcc.currency,

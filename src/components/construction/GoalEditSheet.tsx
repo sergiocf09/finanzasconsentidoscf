@@ -21,11 +21,11 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useSavingsGoals, SavingsGoal } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, SavingsGoal, GoalType } from "@/hooks/useSavingsGoals";
 
 const editSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
-  goal_type: z.enum(["emergency", "retirement", "custom"]),
+  goal_type: z.string().min(1),
   target_amount: z.coerce.number().min(1, "Ingresa un monto objetivo"),
   description: z.string().optional(),
   target_date: z.date().optional().nullable(),
@@ -36,9 +36,14 @@ const editSchema = z.object({
 type EditValues = z.infer<typeof editSchema>;
 
 const goalTypes = [
-  { value: "emergency", label: "Fondo de emergencia" },
-  { value: "retirement", label: "Ahorro para el retiro" },
-  { value: "custom", label: "Meta personalizada" },
+  { value: "emergency", label: "Fondo de emergencia", emoji: "🛡️" },
+  { value: "home", label: "Casa propia", emoji: "🏠" },
+  { value: "car", label: "Auto propio", emoji: "🚗" },
+  { value: "travel", label: "Viaje", emoji: "✈️" },
+  { value: "education", label: "Educación", emoji: "🎓" },
+  { value: "business", label: "Negocio propio", emoji: "🌱" },
+  { value: "retirement", label: "Retiro", emoji: "🌅" },
+  { value: "custom", label: "Meta personalizada", emoji: "⭐" },
 ];
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
@@ -80,8 +85,8 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
         target_amount: goal.target_amount,
         description: goal.description || "",
         target_date: goal.target_date ? new Date(goal.target_date) : undefined,
-        contribution_day: (goal as any).contribution_day || undefined,
-        monthly_contribution: (goal as any).monthly_contribution || 0,
+        contribution_day: goal.contribution_day || undefined,
+        monthly_contribution: goal.monthly_contribution || 0,
       });
     }
   }, [goal, open, form]);
@@ -91,7 +96,7 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
     await updateGoal.mutateAsync({
       id: goal.id,
       name: data.name,
-      goal_type: data.goal_type,
+      goal_type: data.goal_type as GoalType,
       target_amount: data.target_amount,
       description: data.description || null,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : null,
@@ -118,11 +123,13 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
           )}
 
           <FieldRow label="Tipo">
-            <Select value={form.watch("goal_type")} onValueChange={(v) => form.setValue("goal_type", v as any)}>
+            <Select value={form.watch("goal_type")} onValueChange={(v) => form.setValue("goal_type", v)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {goalTypes.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  <SelectItem key={t.value} value={t.value}>
+                    <span className="mr-1.5">{t.emoji}</span>{t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

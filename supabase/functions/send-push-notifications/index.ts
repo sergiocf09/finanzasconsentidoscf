@@ -50,182 +50,246 @@ Deno.serve(async (req) => {
     const userId = profile.id;
     const sub = profile.push_subscription;
 
-    // REGLA 1: Presupuesto al límite
-    const { data: budgets } = await supabase
-      .from("budgets")
-      .select("id, name, amount, spent, alert_threshold, alert_sent")
-      .eq("user_id", userId)
-      .eq("is_active", true)
-      .eq("year", currentYear)
-      .eq("month", currentMonth);
-
-    for (const b of budgets ?? []) {
-      if (!b.amount || b.alert_sent) continue;
-      const ratio = (b.spent ?? 0) / b.amount;
-      const threshold = b.alert_threshold ?? 0.8;
-      if (ratio < threshold) continue;
-
-      const pct = Math.round(ratio * 100);
-      const payload = {
-        title: pct >= 100 ? `⚠️ ${b.name} excedido` : `⚡ ${b.name} al ${pct}%`,
-        body: pct >= 100
-          ? `Ya superaste el presupuesto de ${b.name}. Revisa tus gastos.`
-          : `Llevas el ${pct}% del presupuesto de ${b.name}. Cuidado con el ritmo.`,
-        tag: `budget-${b.id}`,
-        url: "/budgets",
-      };
-
-      try {
-        await webpush.sendNotification(sub, JSON.stringify(payload));
-        await supabase.from("budgets").update({ alert_sent: true }).eq("id", b.id);
-        await supabase.from("push_logs").insert({ user_id: userId, type: "budget_alert", payload });
-        results.sent++;
-      } catch {
-        results.errors++;
-      }
-    }
-
-    // REGLA 2: Inactividad — 3+ días sin registrar
-    if (profile.last_active_at) {
-      const daysSinceActive = (now.getTime() - new Date(profile.last_active_at).getTime()) / 86400000;
-      if (daysSinceActive >= 3) {
-        const today = now.toISOString().split("T")[0];
-        const { data: recentLog } = await supabase
-          .from("push_logs")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("type", "inactivity")
-          .gte("sent_at", today)
-          .limit(1);
-
-        if (!recentLog?.length) {
-          const payload = {
-            title: "¿Cómo va tu dinero?",
-            body: `Llevas ${Math.floor(daysSinceActive)} días sin registrar. Un momento es suficiente para estar al día.`,
-            tag: "inactivity",
-            url: "/transactions",
-          };
-          try {
-            await webpush.sendNotification(sub, JSON.stringify(payload));
-            await supabase.from("push_logs").insert({ user_id: userId, type: "inactivity", payload });
-            results.sent++;
-          } catch {
-            results.errors++;
-          }
-        } else {
-          results.skipped++;
-        }
-      }
-    }
-
-    // REGLA 3: Resumen de cierre — solo el día 1
+    await checkBudgetAlerts(supabase, webpush, sub, userId, currentYear, currentMonth, results);
+    await checkInactivity(supabase, webpush, sub, userId, now, profile.last_active_at, results);
     if (isFirstDayOfMonth) {
-      const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-      const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-
-      const { data: alreadySent } = await supabase
-        .from("push_logs")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("type", "month_summary")
-        .gte("sent_at", new Date(currentYear, currentMonth - 1, 1).toISOString())
-        .limit(1);
-
-      if (!alreadySent?.length) {
-        const { data: txs } = await supabase
-          .from("transactions")
-          .select("type, amount_in_base, amount")
-          .eq("user_id", userId)
-          .gte("transaction_date", `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`)
-          .lt("transaction_date", `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`);
-
-        const income = (txs ?? [])
-          .filter((t: any) => t.type === "income")
-          .reduce((s: number, t: any) => s + (t.amount_in_base ?? t.amount), 0);
-        const expense = (txs ?? [])
-          .filter((t: any) => t.type === "expense")
-          .reduce((s: number, t: any) => s + (t.amount_in_base ?? t.amount), 0);
-        const balance = income - expense;
-        const fmt = (n: number) =>
-          new Intl.NumberFormat("es-MX", {
-            style: "currency",
-            currency: "MXN",
-            maximumFractionDigits: 0,
-          }).format(n);
-
-        const payload = {
-          title: balance >= 0 ? "✅ Cerraste el mes en positivo" : "📊 Resumen de tu mes",
-          body: `Ingresos ${fmt(income)} · Gastos ${fmt(expense)} · Balance ${fmt(balance)}`,
-          tag: "month-summary",
-          url: "/financial-dashboard",
-        };
-        try {
-          await webpush.sendNotification(sub, JSON.stringify(payload));
-          await supabase.from("push_logs").insert({ user_id: userId, type: "month_summary", payload });
-          results.sent++;
-        } catch {
-          results.errors++;
-        }
-      } else {
-        results.skipped++;
-      }
+      await checkMonthSummary(supabase, webpush, sub, userId, now, currentYear, currentMonth, results);
     }
-
-    // REGLA 4: Pago recurrente manual en 2 días
-    const in2days = new Date(now);
-    in2days.setDate(in2days.getDate() + 2);
-    const in2daysStr = in2days.toISOString().split("T")[0];
-
-    const { data: upcomingManual } = await supabase
-      .from("recurring_payments")
-      .select("id, name, amount, currency, next_execution_date, requires_manual_action")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .eq("requires_manual_action", true)
-      .eq("next_execution_date", in2daysStr)
-      .is("confirmed_at", null);
-
-    for (const r of upcomingManual ?? []) {
-      const todayCheck = now.toISOString().split("T")[0];
-      const { data: alreadySent } = await supabase
-        .from("push_logs")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("type", "recurring_reminder")
-        .gte("sent_at", todayCheck)
-        .limit(1);
-
-      if (alreadySent?.length) { results.skipped++; continue; }
-
-      const fmtAmount = (n: number) =>
-        new Intl.NumberFormat("es-MX", {
-          style: "currency",
-          currency: r.currency || "MXN",
-          maximumFractionDigits: 0,
-        }).format(n);
-
-      const payload = {
-        title: `📅 ${r.name} vence en 2 días`,
-        body: `Tienes pendiente realizar el pago de ${fmtAmount(r.amount)}. Recuerda hacerlo antes del ${r.next_execution_date}.`,
-        tag: `recurring-${r.id}`,
-        url: "/",
-      };
-
-      try {
-        await webpush.sendNotification(sub, JSON.stringify(payload));
-        await supabase.from("push_logs").insert({
-          user_id: userId,
-          type: "recurring_reminder",
-          payload,
-        });
-        results.sent++;
-      } catch {
-        results.errors++;
-      }
-    }
+    await checkRecurringReminders(supabase, webpush, sub, userId, now, results);
+    await checkSavingsGoalMilestones(supabase, webpush, sub, userId, results);
   }
 
   return new Response(JSON.stringify(results), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
+
+// REGLA 1: Presupuesto al límite
+async function checkBudgetAlerts(
+  supabase: any, webpush: any, sub: any, userId: string,
+  currentYear: number, currentMonth: number, results: any
+) {
+  const { data: budgets } = await supabase
+    .from("budgets")
+    .select("id, name, amount, spent, alert_threshold, alert_sent")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .eq("year", currentYear)
+    .eq("month", currentMonth);
+
+  for (const b of budgets ?? []) {
+    if (!b.amount || b.alert_sent) continue;
+    const ratio = (b.spent ?? 0) / b.amount;
+    const threshold = b.alert_threshold ?? 0.8;
+    if (ratio < threshold) continue;
+
+    const pct = Math.round(ratio * 100);
+    const payload = {
+      title: pct >= 100 ? `⚠️ ${b.name} excedido` : `⚡ ${b.name} al ${pct}%`,
+      body: pct >= 100
+        ? `Ya superaste el presupuesto de ${b.name}. Revisa tus gastos.`
+        : `Llevas el ${pct}% del presupuesto de ${b.name}. Cuidado con el ritmo.`,
+      tag: `budget-${b.id}`,
+      url: "/budgets",
+    };
+
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+      await supabase.from("budgets").update({ alert_sent: true }).eq("id", b.id);
+      await supabase.from("push_logs").insert({ user_id: userId, type: "budget_alert", payload });
+      results.sent++;
+    } catch {
+      results.errors++;
+    }
+  }
+}
+
+// REGLA 2: Inactividad — 3+ días sin registrar
+async function checkInactivity(
+  supabase: any, webpush: any, sub: any, userId: string,
+  now: Date, lastActiveAt: string | null, results: any
+) {
+  if (!lastActiveAt) return;
+  const daysSinceActive = (now.getTime() - new Date(lastActiveAt).getTime()) / 86400000;
+  if (daysSinceActive < 3) return;
+
+  const today = now.toISOString().split("T")[0];
+  const { data: recentLog } = await supabase
+    .from("push_logs")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("type", "inactivity")
+    .gte("sent_at", today)
+    .limit(1);
+
+  if (recentLog?.length) { results.skipped++; return; }
+
+  const payload = {
+    title: "¿Cómo va tu dinero?",
+    body: `Llevas ${Math.floor(daysSinceActive)} días sin registrar. Un momento es suficiente para estar al día.`,
+    tag: "inactivity",
+    url: "/transactions",
+  };
+  try {
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+    await supabase.from("push_logs").insert({ user_id: userId, type: "inactivity", payload });
+    results.sent++;
+  } catch {
+    results.errors++;
+  }
+}
+
+// REGLA 3: Resumen de cierre — solo el día 1
+async function checkMonthSummary(
+  supabase: any, webpush: any, sub: any, userId: string,
+  now: Date, currentYear: number, currentMonth: number, results: any
+) {
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+  const { data: alreadySent } = await supabase
+    .from("push_logs")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("type", "month_summary")
+    .gte("sent_at", new Date(currentYear, currentMonth - 1, 1).toISOString())
+    .limit(1);
+
+  if (alreadySent?.length) { results.skipped++; return; }
+
+  const { data: txs } = await supabase
+    .from("transactions")
+    .select("type, amount_in_base, amount")
+    .eq("user_id", userId)
+    .gte("transaction_date", `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`)
+    .lt("transaction_date", `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`);
+
+  const income = (txs ?? [])
+    .filter((t: any) => t.type === "income")
+    .reduce((s: number, t: any) => s + (t.amount_in_base ?? t.amount), 0);
+  const expense = (txs ?? [])
+    .filter((t: any) => t.type === "expense")
+    .reduce((s: number, t: any) => s + (t.amount_in_base ?? t.amount), 0);
+  const balance = income - expense;
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
+
+  const payload = {
+    title: balance >= 0 ? "✅ Cerraste el mes en positivo" : "📊 Resumen de tu mes",
+    body: `Ingresos ${fmt(income)} · Gastos ${fmt(expense)} · Balance ${fmt(balance)}`,
+    tag: "month-summary",
+    url: "/financial-dashboard",
+  };
+  try {
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+    await supabase.from("push_logs").insert({ user_id: userId, type: "month_summary", payload });
+    results.sent++;
+  } catch {
+    results.errors++;
+  }
+}
+
+// REGLA 4: Pago recurrente manual en 2 días
+async function checkRecurringReminders(
+  supabase: any, webpush: any, sub: any, userId: string,
+  now: Date, results: any
+) {
+  const in2days = new Date(now);
+  in2days.setDate(in2days.getDate() + 2);
+  const in2daysStr = in2days.toISOString().split("T")[0];
+
+  const { data: upcomingManual } = await supabase
+    .from("recurring_payments")
+    .select("id, name, amount, currency, next_execution_date, requires_manual_action")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .eq("requires_manual_action", true)
+    .eq("next_execution_date", in2daysStr)
+    .is("confirmed_at", null);
+
+  for (const r of upcomingManual ?? []) {
+    const todayCheck = now.toISOString().split("T")[0];
+    const { data: alreadySent } = await supabase
+      .from("push_logs")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("type", "recurring_reminder")
+      .gte("sent_at", todayCheck)
+      .limit(1);
+
+    if (alreadySent?.length) { results.skipped++; continue; }
+
+    const fmtAmount = (n: number) =>
+      new Intl.NumberFormat("es-MX", { style: "currency", currency: r.currency || "MXN", maximumFractionDigits: 0 }).format(n);
+
+    const payload = {
+      title: `📅 ${r.name} vence en 2 días`,
+      body: `Tienes pendiente realizar el pago de ${fmtAmount(r.amount)}. Recuerda hacerlo antes del ${r.next_execution_date}.`,
+      tag: `recurring-${r.id}`,
+      url: "/",
+    };
+
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+      await supabase.from("push_logs").insert({ user_id: userId, type: "recurring_reminder", payload });
+      results.sent++;
+    } catch {
+      results.errors++;
+    }
+  }
+}
+
+// REGLA 5: Hitos de metas de ahorro (25%, 50%, 75%, 100%)
+async function checkSavingsGoalMilestones(
+  supabase: any, webpush: any, sub: any, userId: string, results: any
+) {
+  const milestoneFields = [
+    { pct: 25, field: "milestone_25_notified" },
+    { pct: 50, field: "milestone_50_notified" },
+    { pct: 75, field: "milestone_75_notified" },
+    { pct: 100, field: "milestone_100_notified" },
+  ];
+
+  const { data: activeGoals } = await supabase
+    .from("savings_goals")
+    .select("id, name, goal_type, current_amount, target_amount, milestone_25_notified, milestone_50_notified, milestone_75_notified, milestone_100_notified")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .gt("target_amount", 0);
+
+  for (const goal of activeGoals ?? []) {
+    const pct = goal.target_amount > 0
+      ? (goal.current_amount / goal.target_amount) * 100
+      : 0;
+
+    for (const { pct: milestonePct, field } of milestoneFields) {
+      if (pct < milestonePct) continue;
+      if ((goal as any)[field]) continue;
+
+      const emojiMap: Record<number, string> = { 25: "🌱", 50: "⚡", 75: "🔥", 100: "🎉" };
+      const emoji = emojiMap[milestonePct] || "✓";
+      const fmt = (n: number) =>
+        new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
+
+      const payload = {
+        title: milestonePct === 100
+          ? `${emoji} ¡Lograste tu meta "${goal.name}"!`
+          : `${emoji} ${goal.name} llegó al ${milestonePct}%`,
+        body: milestonePct === 100
+          ? "La constancia hizo posible lo que parecía lejano. Tómate un momento para reconocerlo."
+          : `Llevas ${fmt(goal.current_amount)} de ${fmt(goal.target_amount)}. Vas bien.`,
+        tag: `goal-milestone-${goal.id}-${milestonePct}`,
+        url: "/construction",
+      };
+
+      try {
+        await webpush.sendNotification(sub, JSON.stringify(payload));
+        await supabase.from("savings_goals").update({ [field]: true }).eq("id", goal.id);
+        await supabase.from("push_logs").insert({ user_id: userId, type: "goal_milestone", payload });
+        results.sent++;
+      } catch {
+        results.errors++;
+      }
+    }
+  }
+}

@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { useSavingsGoals } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, GoalType } from "@/hooks/useSavingsGoals";
 import { useAccounts, isAssetType } from "@/hooks/useAccounts";
 
 const goalSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
-  goal_type: z.enum(["emergency", "retirement", "custom"]),
+  goal_type: z.string().min(1),
   target_amount: z.coerce.number().min(1, "Ingresa un monto objetivo"),
   description: z.string().optional(),
   target_date: z.date().optional(),
@@ -47,9 +47,14 @@ interface SavingsGoalFormProps {
 }
 
 const goalTypes = [
-  { value: "emergency", label: "Fondo de emergencia" },
-  { value: "retirement", label: "Ahorro para el retiro" },
-  { value: "custom", label: "Meta personalizada" },
+  { value: "emergency", label: "Fondo de emergencia", emoji: "🛡️", hint: "Tu red de seguridad ante lo inesperado" },
+  { value: "home", label: "Casa propia", emoji: "🏠", hint: "Tu propio espacio, tu mayor inversión" },
+  { value: "car", label: "Auto propio", emoji: "🚗", hint: "Tu movilidad e independencia" },
+  { value: "travel", label: "Viaje", emoji: "✈️", hint: "Ese viaje que llevas tiempo planeando" },
+  { value: "education", label: "Educación", emoji: "🎓", hint: "Invertir en conocimiento siempre rinde" },
+  { value: "business", label: "Negocio propio", emoji: "🌱", hint: "El primer paso hacia tu independencia" },
+  { value: "retirement", label: "Retiro", emoji: "🌅", hint: "Tu libertad financiera a largo plazo" },
+  { value: "custom", label: "Meta personalizada", emoji: "⭐", hint: "Lo que tú decides que vale la pena" },
 ];
 
 const accountTypes = [
@@ -93,11 +98,12 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
   });
 
   const watchType = form.watch("goal_type");
+  const selectedGoalType = goalTypes.find(t => t.value === watchType);
 
   const onSubmit = async (data: GoalFormValues) => {
     await createGoal.mutateAsync({
       name: data.name,
-      goal_type: data.goal_type,
+      goal_type: data.goal_type as GoalType,
       target_amount: data.target_amount,
       description: data.description,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : undefined,
@@ -131,15 +137,20 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
           )}
 
           <FieldRow label="Tipo">
-            <Select value={watchType} onValueChange={(v) => form.setValue("goal_type", v as any)}>
+            <Select value={watchType} onValueChange={(v) => form.setValue("goal_type", v)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {goalTypes.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  <SelectItem key={t.value} value={t.value}>
+                    <span className="mr-1.5">{t.emoji}</span>{t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </FieldRow>
+          {selectedGoalType && (
+            <p className="text-[10px] text-muted-foreground pl-[40%] -mt-0.5">{selectedGoalType.hint}</p>
+          )}
 
           <FieldRow label="Moneda">
             <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>

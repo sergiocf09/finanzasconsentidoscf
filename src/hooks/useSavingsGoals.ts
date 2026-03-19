@@ -3,12 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+export type GoalType = "emergency" | "home" | "car" | "travel" | "education" | "business" | "retirement" | "custom";
+
 export interface SavingsGoal {
   id: string;
   user_id: string;
   account_id: string | null;
   name: string;
-  goal_type: "emergency" | "retirement" | "custom";
+  goal_type: GoalType;
   target_amount: number;
   current_amount: number;
   target_date: string | null;
@@ -17,21 +19,46 @@ export interface SavingsGoal {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  monthly_contribution: number;
+  contribution_day: number | null;
+  milestone_25_notified: boolean;
+  milestone_50_notified: boolean;
+  milestone_75_notified: boolean;
+  milestone_100_notified: boolean;
 }
 
 export interface CreateSavingsGoalData {
   name: string;
-  goal_type: SavingsGoal["goal_type"];
+  goal_type: GoalType;
   target_amount: number;
   target_date?: string;
   description?: string;
   contribution_day?: number;
   monthly_contribution?: number;
-  account_id?: string; // link existing account
-  create_account?: boolean; // create new account
+  account_id?: string;
+  create_account?: boolean;
   account_type?: "savings" | "investment";
   initial_amount?: number;
   currency?: string;
+}
+
+export function getGoalProjection(goal: SavingsGoal): {
+  monthsRemaining: number | null;
+  projectedDate: Date | null;
+  projectedLabel: string;
+} {
+  if (!goal.monthly_contribution || goal.monthly_contribution <= 0) {
+    return { monthsRemaining: null, projectedDate: null, projectedLabel: "" };
+  }
+  const remaining = goal.target_amount - goal.current_amount;
+  if (remaining <= 0) {
+    return { monthsRemaining: 0, projectedDate: new Date(), projectedLabel: "¡Meta alcanzada!" };
+  }
+  const months = Math.ceil(remaining / goal.monthly_contribution);
+  const projected = new Date();
+  projected.setMonth(projected.getMonth() + months);
+  const label = new Intl.DateTimeFormat("es-MX", { month: "long", year: "numeric" }).format(projected);
+  return { monthsRemaining: months, projectedDate: projected, projectedLabel: label };
 }
 
 export function useSavingsGoals(options?: { enabled?: boolean }) {
@@ -57,7 +84,6 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
     mutationFn: async (data: CreateSavingsGoalData) => {
       let accountId = data.account_id || null;
 
-      // Create a new account if requested
       if (data.create_account && !accountId) {
         const { data: newAccount, error: accError } = await supabase
           .from("accounts")
@@ -75,7 +101,6 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
         accountId = newAccount.id;
       }
 
-      // If linking to existing account, sync current_amount from account balance
       let currentAmount = data.initial_amount || 0;
       if (accountId && !data.create_account) {
         const { data: acc } = await supabase
@@ -129,7 +154,6 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
 
   const deleteGoal = useMutation({
     mutationFn: async (id: string) => {
-      // Get linked account
       const { data: goal } = await supabase
         .from("savings_goals")
         .select("account_id")
@@ -138,7 +162,6 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
 
       await supabase.from("savings_goals").delete().eq("id", id);
 
-      // Optionally deactivate linked account
       if (goal?.account_id) {
         await supabase
           .from("accounts")

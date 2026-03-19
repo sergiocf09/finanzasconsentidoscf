@@ -278,8 +278,16 @@ export function useFinancialIntelligence() {
       }
     });
 
+    // Reconciliation signals
+    if (totalFinancialCost > 0) {
+      s.push({ id: "financial-cost", type: "attention", title: "Costo financiero del mes", message: `Se registraron intereses y comisiones bancarias por un total de $${totalFinancialCost.toLocaleString("es-MX")} este mes.` });
+    }
+    if (totalUnregistered > 0) {
+      s.push({ id: "unregistered-expenses", type: "attention", title: "Gastos sin registrar detectados", message: `Durante las conciliaciones se detectaron $${totalUnregistered.toLocaleString("es-MX")} en gastos no capturados. Registrar tus movimientos te da claridad real sobre tu dinero.` });
+    }
+
     return s;
-  }, [currentTxs, prevTxs, currentBlocks, prevBlocks, currentTotals, totalBudgeted, totalSpent, fund, emergencyProgress]);
+  }, [currentTxs, prevTxs, currentBlocks, prevBlocks, currentTotals, totalBudgeted, totalSpent, fund, emergencyProgress, totalFinancialCost, totalUnregistered]);
 
   // Recommendations
   const recommendations = useMemo((): Recommendation[] => {

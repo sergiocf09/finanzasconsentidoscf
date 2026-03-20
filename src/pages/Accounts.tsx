@@ -101,6 +101,11 @@ export default function Accounts() {
   const shortTermDebts = debts.filter(d => d.type === "credit_card");
   const longTermDebts = debts.filter(d => d.type !== "credit_card");
 
+  // Build metadata map for debt rows (due_day, interest_rate)
+  const debtMetadata = Object.fromEntries(
+    debts.map(d => [d.id, { dueDay: d.due_day, interestRate: d.interest_rate }])
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -219,6 +224,7 @@ export default function Accounts() {
                       sectionKey="debts-short"
                       accounts={debtsAsAccounts(shortTermDebts)}
                       mask={mask}
+                      metadata={debtMetadata}
                       onEdit={(acc) => setEditDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
                       onDelete={(acc) => setDeleteDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
                       onClick={(acc) => navigate(`/accounts/${debts.find(d => d.id === acc.id)?.account_id || acc.id}`)}
@@ -235,6 +241,7 @@ export default function Accounts() {
                       sectionKey="debts-long"
                       accounts={debtsAsAccounts(longTermDebts)}
                       mask={mask}
+                      metadata={debtMetadata}
                       onEdit={(acc) => setEditDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
                       onDelete={(acc) => setDeleteDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
                       onClick={(acc) => navigate(`/accounts/${debts.find(d => d.id === acc.id)?.account_id || acc.id}`)}

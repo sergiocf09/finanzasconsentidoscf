@@ -1,13 +1,10 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Wallet } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Wallet, Calendar, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Account, isLiability } from "@/hooks/useAccounts";
 import { formatCurrency } from "@/lib/formatters";
-
-const typeIcons: Record<string, typeof Wallet> = {};
-// We import the icons map from parent to keep it DRY — but for isolation we accept props
 
 interface SortableAccountRowProps {
   account: Account;
@@ -17,9 +14,11 @@ interface SortableAccountRowProps {
   onEdit: (account: Account) => void;
   onDelete: (account: Account) => void;
   onClick: (account: Account) => void;
+  dueDay?: number | null;
+  interestRate?: number | null;
 }
 
-export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdit, onDelete, onClick }: SortableAccountRowProps) {
+export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdit, onDelete, onClick, dueDay, interestRate }: SortableAccountRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: account.id });
 
   const style = {
@@ -57,7 +56,19 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
-        <p className="text-[10px] text-muted-foreground">{typeLabel}</p>
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span className="truncate">{typeLabel}</span>
+          {interestRate != null && interestRate > 0 && (
+            <span className="flex items-center gap-0.5 shrink-0">
+              <Percent className="h-2.5 w-2.5" />{interestRate}
+            </span>
+          )}
+          {dueDay != null && dueDay > 0 && (
+            <span className="flex items-center gap-0.5 shrink-0">
+              <Calendar className="h-2.5 w-2.5" />D.{dueDay}
+            </span>
+          )}
+        </div>
       </div>
       <div className="text-right mr-0.5">
         <p className={cn("text-xs font-semibold tabular-nums",
@@ -79,4 +90,3 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
     </div>
   );
 }
-

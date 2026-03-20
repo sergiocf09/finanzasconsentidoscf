@@ -138,7 +138,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
           <FieldRow label="Tipo">
             <Select value={selectedType} onValueChange={(v) => form.setValue("type", v as any)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-[min(var(--radix-select-content-available-height),280px)] overflow-y-auto">
                 <div className="px-2 py-1">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                     Lo que tengo
@@ -166,7 +166,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
           <FieldRow label="Moneda">
             <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-[min(var(--radix-select-content-available-height),280px)] overflow-y-auto">
                 <SelectItem value="MXN">Peso Mexicano (MXN)</SelectItem>
                 <SelectItem value="USD">Dólar (USD)</SelectItem>
                 <SelectItem value="EUR">Euro (EUR)</SelectItem>
@@ -207,7 +207,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
                     onValueChange={(v) => form.setValue("debt_category", v as any)}
                   >
                     <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="max-h-[min(var(--radix-select-content-available-height),280px)] overflow-y-auto">
                       <SelectItem value="current">No — solo consumos del mes</SelectItem>
                       <SelectItem value="fixed">Sí — hay saldo acumulado</SelectItem>
                     </SelectContent>

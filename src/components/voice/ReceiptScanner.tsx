@@ -53,6 +53,7 @@ export function ReceiptScanner() {
   const { user } = useAuth();
   const { categories } = useCategories();
   const { accounts } = useAccounts();
+  const { rates: fxRates } = useExchangeRate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);

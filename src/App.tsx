@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,7 +11,7 @@ import Transactions from "./pages/Transactions";
 import Budgets from "./pages/Budgets";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
-import Debts from "./pages/Debts";
+// Debts is now merged into Accounts
 import Construction from "./pages/Construction";
 import Library from "./pages/Library";
 import Categories from "./pages/Categories";
@@ -51,7 +51,7 @@ const App = () => (
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/transfers" element={<Transactions />} />
               <Route path="/categories" element={<Categories />} />
-              <Route path="/debts" element={<Debts />} />
+              <Route path="/debts" element={<Navigate to="/accounts" replace />} />
               <Route path="/recurring" element={<RecurringPayments />} />
               <Route path="/construction" element={<Construction />} />
               <Route path="/emergency-fund" element={<Construction />} />

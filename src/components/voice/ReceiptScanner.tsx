@@ -365,19 +365,28 @@ export function ReceiptScanner() {
       return;
     }
 
-    const inserts = selected.map((t) => ({
-      user_id: user!.id,
-      account_id: t.resolvedAccountId,
-      category_id: t.resolvedCategoryId || null,
-      type: t.type,
-      amount: t.amount,
-      amount_in_base: t.amount,
-      currency: t.currency || "MXN",
-      exchange_rate: 1,
-      description: (t.description || t.merchant || "Sin descripción").substring(0, 255),
-      transaction_date: t.date || format(new Date(), "yyyy-MM-dd"),
-      notes: "Registrado mediante escaneo de imagen",
-    }));
+    const inserts = selected.map((t) => {
+      const { amountInBase, exchangeRate } = calcAmountInBase(
+        t.amount,
+        t.currency,
+        t.resolvedAccountId
+      );
+      return {
+        user_id: user!.id,
+        account_id: t.resolvedAccountId,
+        category_id: t.resolvedCategoryId || null,
+        type: t.type,
+        amount: t.amount,
+        amount_in_base: amountInBase,
+        currency: t.currency || "MXN",
+        exchange_rate: exchangeRate,
+        description: (t.description || t.merchant || "Sin descripción").substring(0, 255),
+        transaction_date: t.date || format(new Date(), "yyyy-MM-dd"),
+        notes: exchangeRate !== 1
+          ? `Escaneo de estado de cuenta · TC: $${exchangeRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`
+          : "Registrado mediante escaneo de imagen",
+      };
+    });
 
     const BATCH_SIZE = 10;
     let saved = 0;

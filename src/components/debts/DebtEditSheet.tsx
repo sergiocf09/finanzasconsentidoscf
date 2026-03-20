@@ -101,6 +101,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
         planned_payment: parseFloat(plannedPayment) || 0,
         due_day: dueDay ? parseInt(dueDay) : null,
         cut_day: cutDay ? parseInt(cutDay) : null,
+        account_id: accountId || null,
       });
 
       onOpenChange(false);

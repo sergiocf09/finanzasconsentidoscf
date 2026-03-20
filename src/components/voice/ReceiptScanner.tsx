@@ -298,24 +298,54 @@ export function ReceiptScanner() {
     }, 300);
   };
 
+  const calcAmountInBase = useCallback((
+    amount: number,
+    transactionCurrency: string,
+    accountId: string
+  ): { amountInBase: number; exchangeRate: number } => {
+    const account = accounts.find(a => a.id === accountId);
+    const accountCurrency = account?.currency || "MXN";
+    const usdRate = fxRates["USD"] || 1;
+
+    if (transactionCurrency === "USD" && accountCurrency === "MXN") {
+      return { amountInBase: amount * usdRate, exchangeRate: usdRate };
+    }
+    if (transactionCurrency === "MXN" && accountCurrency === "USD") {
+      return { amountInBase: amount, exchangeRate: 1 / usdRate };
+    }
+    if (transactionCurrency === "USD" && accountCurrency === "USD") {
+      return { amountInBase: amount * usdRate, exchangeRate: usdRate };
+    }
+    return { amountInBase: amount, exchangeRate: 1 };
+  }, [accounts, fxRates]);
+
   const handleSingleConfirm = async () => {
     if (!singleData.amount || !singleData.accountId) {
       toast.error("Completa el monto y la cuenta");
       return;
     }
     try {
+      const amount = parseFloat(singleData.amount);
+      const { amountInBase, exchangeRate } = calcAmountInBase(
+        amount,
+        singleData.currency,
+        singleData.accountId
+      );
+
       const { error } = await supabase.from("transactions").insert({
         user_id: user!.id,
         account_id: singleData.accountId,
         category_id: singleData.categoryId || null,
         type: singleData.type,
-        amount: parseFloat(singleData.amount),
-        amount_in_base: parseFloat(singleData.amount),
+        amount,
+        amount_in_base: amountInBase,
         currency: singleData.currency,
-        exchange_rate: 1,
+        exchange_rate: exchangeRate,
         description: singleData.description || singleData.merchant,
         transaction_date: singleData.date,
-        notes: "Registrado mediante escaneo de recibo",
+        notes: exchangeRate !== 1
+          ? `Escaneo de recibo · TC: $${exchangeRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`
+          : "Registrado mediante escaneo de recibo",
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["transactions"] });

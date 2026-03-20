@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useDebts } from "@/hooks/useDebts";
-import { useAccounts } from "@/hooks/useAccounts";
 
 const debtSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
@@ -38,7 +37,6 @@ const debtSchema = z.object({
   cut_day: z.coerce.number().min(1).max(31).optional(),
   start_date: z.date().optional(),
   currency: z.string().default("MXN"),
-  account_id: z.string().optional(),
 });
 
 type DebtFormValues = z.infer<typeof debtSchema>;
@@ -69,11 +67,6 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 
 export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   const { createDebt } = useDebts();
-  const { accounts } = useAccounts();
-  const liabilityAccounts = accounts.filter(a =>
-    a.is_active &&
-    ['credit_card', 'mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'].includes(a.type)
-  );
 
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtSchema),
@@ -96,7 +89,6 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   const watchType = form.watch("type");
   const watchDebtCategory = form.watch("debt_category");
 
-  // Non-credit-card types are always 'fixed'
   const effectiveDebtCategory = watchType === "credit_card" ? watchDebtCategory : "fixed";
   const showMonthlyCommitment = effectiveDebtCategory === "fixed";
 
@@ -116,7 +108,6 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
       currency: data.currency,
       debt_category: finalDebtCategory,
       monthly_commitment: showMonthlyCommitment ? data.monthly_commitment : 0,
-      account_id: data.account_id || undefined,
     });
     form.reset();
     onOpenChange(false);
@@ -149,7 +140,6 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
             </Select>
           </FieldRow>
 
-          {/* debt_category — solo visible para tarjetas de crédito */}
           {watchType === "credit_card" && (
             <FieldRow label="Naturaleza del saldo" hint="¿Tiene deuda previa o solo consumos del mes?">
               <Select value={watchDebtCategory} onValueChange={(v) => form.setValue("debt_category", v as any)}>
@@ -172,7 +162,6 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
             </FieldRow>
           )}
 
-          {/* monthly_commitment — visible cuando es deuda a plazo */}
           {showMonthlyCommitment && (
             <FieldRow label="Abono mensual comprometido" hint="Cuánto pagas cada mes para reducir esta deuda">
               <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("monthly_commitment")} />
@@ -190,27 +179,6 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
           <FieldRow label="Saldo actual">
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("current_balance")} />
           </FieldRow>
-
-          <FieldRow label="Cuenta vinculada" hint="Opcional — para pago automático al transferir">
-            <Select
-              value={form.watch("account_id") || "none"}
-              onValueChange={(v) => form.setValue("account_id", v === "none" ? "" : v)}
-            >
-              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Sin cuenta vinculada" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin cuenta vinculada</SelectItem>
-                {liabilityAccounts.map((acc) => (
-                  <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldRow>
-
-          {form.watch("account_id") && form.watch("account_id") !== "none" && (
-            <p className="text-[10px] text-muted-foreground pl-[42%] -mt-1">
-              Cuando transfieras dinero a esta cuenta, la deuda se reducirá automáticamente.
-            </p>
-          )}
 
           <FieldRow label="Tasa de interés" hint="% anual">
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("interest_rate")} />

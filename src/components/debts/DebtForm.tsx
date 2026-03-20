@@ -39,6 +39,7 @@ const debtSchema = z.object({
   cut_day: z.coerce.number().min(1).max(31).optional(),
   start_date: z.date().optional(),
   currency: z.string().default("MXN"),
+  account_id: z.string().optional(),
 });
 
 type DebtFormValues = z.infer<typeof debtSchema>;

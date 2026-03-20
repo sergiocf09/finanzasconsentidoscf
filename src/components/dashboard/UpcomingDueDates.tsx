@@ -95,7 +95,17 @@ export function UpcomingDueDates({
   const { mask } = useHideAmounts("balances");
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
-  const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
+  const STORAGE_KEY = useMemo(() => {
+    const month = format(new Date(), "yyyy-MM");
+    return `due-amounts-${user?.id}-${month}`;
+  }, [user?.id]);
+
+  const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(`due-amounts-${user?.id}-${format(new Date(), "yyyy-MM")}`);
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [transferCurrency, setTransferCurrency] = useState<string>("");

@@ -88,9 +88,7 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground -mt-0.5">
             <span className="truncate">{typeLabel}</span>
             {interestRate != null && interestRate > 0 && (
-              <span className="flex items-center gap-0.5 shrink-0">
-                <Percent className="h-2.5 w-2.5" />{interestRate}%
-              </span>
+              <span className="shrink-0">{interestRate}%</span>
             )}
             {dueDay != null && dueDay > 0 && (
               <span className="flex items-center gap-0.5 shrink-0">

@@ -43,8 +43,14 @@ interface DebtEditSheetProps {
 
 export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }: DebtEditSheetProps) {
   const { updateDebt } = useDebts();
+  const { accounts } = useAccounts();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const liabilityAccounts = accounts.filter(a =>
+    a.is_active &&
+    ['credit_card', 'mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'].includes(a.type)
+  );
 
   const [name, setName] = useState("");
   const [type, setType] = useState("credit_card");
@@ -55,6 +61,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [plannedPayment, setPlannedPayment] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [cutDay, setCutDay] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {

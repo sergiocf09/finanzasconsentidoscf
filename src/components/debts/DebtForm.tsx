@@ -190,6 +190,27 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("current_balance")} />
           </FieldRow>
 
+          <FieldRow label="Cuenta vinculada" hint="Opcional — para pago automático al transferir">
+            <Select
+              value={form.watch("account_id") || "none"}
+              onValueChange={(v) => form.setValue("account_id", v === "none" ? "" : v)}
+            >
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Sin cuenta vinculada" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin cuenta vinculada</SelectItem>
+                {liabilityAccounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
+
+          {form.watch("account_id") && form.watch("account_id") !== "none" && (
+            <p className="text-[10px] text-muted-foreground pl-[42%] -mt-1">
+              Cuando transfieras dinero a esta cuenta, la deuda se reducirá automáticamente.
+            </p>
+          )}
+
           <FieldRow label="Tasa de interés" hint="% anual">
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("interest_rate")} />
           </FieldRow>

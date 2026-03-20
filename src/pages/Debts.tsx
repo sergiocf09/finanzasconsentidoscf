@@ -72,7 +72,7 @@ export default function Debts() {
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span>{typeLabels[debt.type] ?? debt.type}</span>
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
-            {isFixed && <span className="text-primary font-medium">A plazo</span>}
+            
           </div>
         </div>
         <div className="text-right shrink-0">

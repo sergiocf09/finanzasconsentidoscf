@@ -91,28 +91,29 @@ export default function Debts() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-0.5 shrink-0 ml-1">
-          {/* Reconciliation button — all debts */}
+        <div className="flex flex-col items-center shrink-0 ml-1">
+          <div className="flex items-center">
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
+              title="Editar deuda"
+            >
+              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+            <Button
+              variant="ghost" size="icon" className="h-7 w-7"
+              onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
+              title="Eliminar deuda"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          </div>
           <Button
-            variant="ghost" size="icon" className="h-7 w-7"
+            variant="ghost" size="icon" className="h-6 w-14"
             onClick={(e) => { e.stopPropagation(); setAdjustTarget(debt); }}
             title="Actualizar saldo real"
           >
-            <RefreshCw className="h-3.5 w-3.5 text-primary" />
-          </Button>
-          <Button
-            variant="ghost" size="icon" className="h-7 w-7"
-            onClick={(e) => { e.stopPropagation(); setEditTarget(debt); }}
-            title="Editar deuda"
-          >
-            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-          <Button
-            variant="ghost" size="icon" className="h-7 w-7"
-            onClick={(e) => { e.stopPropagation(); setDeleteTarget(debt); }}
-            title="Eliminar deuda"
-          >
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            <RefreshCw className="h-3 w-3 text-primary" />
           </Button>
         </div>
       </div>

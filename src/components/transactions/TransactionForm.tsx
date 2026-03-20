@@ -501,6 +501,21 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   </div>
                 )}
 
+                {/* Info note for transfers to linked debt accounts */}
+                {(() => {
+                  const toAcc = activeAccounts.find(a => a.id === toAccountId);
+                  const isToLiability = toAcc && ['credit_card', 'personal_loan', 'mortgage', 'auto_loan', 'payable', 'caucion_bursatil'].includes(toAcc.type);
+                  const linkedDebt = isToLiability ? debts.find(d => d.account_id === toAccountId && d.is_active && (d.debt_category === 'fixed' || d.debt_category === null)) : null;
+                  if (isToLiability && linkedDebt) {
+                    return (
+                      <p className="text-[10px] text-primary/70 bg-primary/5 rounded px-2 py-1.5">
+                        Esta cuenta tiene una deuda a plazo vinculada. El pago la reducirá automáticamente.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+
                 {/* Concepto */}
                 <FieldRow label="Concepto" hint="Opcional">
                   <Input className="h-8 text-sm" placeholder="Ej: Pago de tarjeta" {...form.register("description")} />

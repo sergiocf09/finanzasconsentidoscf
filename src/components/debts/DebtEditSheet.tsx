@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useDebts, Debt } from "@/hooks/useDebts";
+import { useAccounts } from "@/hooks/useAccounts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,8 +43,14 @@ interface DebtEditSheetProps {
 
 export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }: DebtEditSheetProps) {
   const { updateDebt } = useDebts();
+  const { accounts } = useAccounts();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const liabilityAccounts = accounts.filter(a =>
+    a.is_active &&
+    ['credit_card', 'mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'].includes(a.type)
+  );
 
   const [name, setName] = useState("");
   const [type, setType] = useState("credit_card");
@@ -54,6 +61,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [plannedPayment, setPlannedPayment] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [cutDay, setCutDay] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -67,6 +75,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
       setPlannedPayment(String((debt as any).planned_payment ?? 0));
       setDueDay(debt.due_day ? String(debt.due_day) : "");
       setCutDay(debt.cut_day ? String(debt.cut_day) : "");
+      setAccountId(debt.account_id || "");
     }
   }, [debt, open]);
 
@@ -92,6 +101,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
         planned_payment: parseFloat(plannedPayment) || 0,
         due_day: dueDay ? parseInt(dueDay) : null,
         cut_day: cutDay ? parseInt(cutDay) : null,
+        account_id: accountId || null,
       });
 
       onOpenChange(false);
@@ -158,6 +168,24 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
                 </p>
               </div>
             </FieldRow>
+
+            <FieldRow label="Cuenta vinculada" hint="Para pago automático al transferir">
+              <Select value={accountId || "none"} onValueChange={(v) => setAccountId(v === "none" ? "" : v)}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Sin cuenta vinculada" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin cuenta vinculada</SelectItem>
+                  {liabilityAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            {accountId && accountId !== "none" && (
+              <p className="text-[10px] text-muted-foreground pl-[42%] -mt-1">
+                Cuando transfieras dinero a esta cuenta, la deuda se reducirá automáticamente.
+              </p>
+            )}
 
             <FieldRow label="Tasa de interés" hint="% anual">
               <Input className="h-8 text-sm text-right" type="number" step="0.01" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />

@@ -1208,6 +1208,10 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
+      link_account_to_debt: {
+        Args: { p_account_id: string; p_debt_id: string }
+        Returns: undefined
+      }
       recalculate_budget_spent: {
         Args: { p_month: number; p_year: number }
         Returns: undefined

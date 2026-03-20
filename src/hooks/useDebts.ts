@@ -55,6 +55,7 @@ export interface CreateDebtData {
   currency?: string;
   debt_category?: string;
   monthly_commitment?: number;
+  account_id?: string;
 }
 
 // Map debt type → account type

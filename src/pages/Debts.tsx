@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ArrowUpDown, Pencil, RefreshCw, FileCheck } from "lucide-react";
+import { Plus, CreditCard, Calendar, TrendingDown, Trash2, Home, Car, User, Landmark, ArrowUpDown, Pencil, RefreshCw, FileCheck, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -69,6 +69,12 @@ export default function Debts() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{debt.name}</p>
+          {debt.account_id && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-primary/70 bg-primary/5 rounded px-1.5 py-0.5">
+              <ArrowRightLeft className="h-2.5 w-2.5" />
+              Pago automático al transferir
+            </span>
+          )}
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span>{typeLabels[debt.type] ?? debt.type}</span>
             {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}

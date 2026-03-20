@@ -22,13 +22,19 @@ const typeLabels: Record<string, string> = {
   auto_loan: "Crédito automotriz", personal_loan: "Crédito personal", caucion_bursatil: "Caución bursátil",
 };
 
+export interface AccountMetadata {
+  dueDay?: number | null;
+  interestRate?: number | null;
+}
+
 interface SortableAccountSectionProps {
-  sectionKey: string; // e.g. "assets-MXN", used for localStorage key
+  sectionKey: string;
   accounts: Account[];
   mask: (v: string) => string;
   onEdit: (account: Account) => void;
   onDelete: (account: Account) => void;
   onClick: (account: Account) => void;
+  metadata?: Record<string, AccountMetadata>;
 }
 
 function getStoredOrder(key: string): string[] | null {
@@ -42,21 +48,18 @@ function setStoredOrder(key: string, ids: string[]) {
   try { localStorage.setItem(`account-order-${key}`, JSON.stringify(ids)); } catch { /* noop */ }
 }
 
-export function SortableAccountSection({ sectionKey, accounts, mask, onEdit, onDelete, onClick }: SortableAccountSectionProps) {
+export function SortableAccountSection({ sectionKey, accounts, mask, onEdit, onDelete, onClick, metadata }: SortableAccountSectionProps) {
   const [orderedAccounts, setOrderedAccounts] = useState<Account[]>(accounts);
 
-  // Sync when accounts change (new account added, etc.)
   useEffect(() => {
     const stored = getStoredOrder(sectionKey);
     if (stored && stored.length > 0) {
-      // Merge: put known IDs in stored order, append any new ones at the end
       const accountMap = new Map(accounts.map(a => [a.id, a]));
       const ordered: Account[] = [];
       for (const id of stored) {
         const acc = accountMap.get(id);
         if (acc) { ordered.push(acc); accountMap.delete(id); }
       }
-      // Append remaining (new accounts)
       accountMap.forEach(acc => ordered.push(acc));
       setOrderedAccounts(ordered);
     } else {
@@ -86,18 +89,23 @@ export function SortableAccountSection({ sectionKey, accounts, mask, onEdit, onD
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={orderedAccounts.map(a => a.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-1.5">
-          {orderedAccounts.map(account => (
-            <SortableAccountRow
-              key={account.id}
-              account={account}
-              icon={typeIcons[account.type] || Wallet}
-              typeLabel={typeLabels[account.type] || account.type}
-              mask={mask}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onClick={onClick}
-            />
-          ))}
+          {orderedAccounts.map(account => {
+            const meta = metadata?.[account.id];
+            return (
+              <SortableAccountRow
+                key={account.id}
+                account={account}
+                icon={typeIcons[account.type] || Wallet}
+                typeLabel={typeLabels[account.type] || account.type}
+                mask={mask}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onClick={onClick}
+                dueDay={meta?.dueDay}
+                interestRate={meta?.interestRate}
+              />
+            );
+          })}
         </div>
       </SortableContext>
     </DndContext>

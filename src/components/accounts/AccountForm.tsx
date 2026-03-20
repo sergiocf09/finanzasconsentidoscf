@@ -207,7 +207,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
                     onValueChange={(v) => form.setValue("debt_category", v as any)}
                   >
                     <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="max-h-[min(var(--radix-select-content-available-height),280px)] overflow-y-auto">
                       <SelectItem value="current">No — solo consumos del mes</SelectItem>
                       <SelectItem value="fixed">Sí — hay saldo acumulado</SelectItem>
                     </SelectContent>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Wallet, CreditCard, TrendingUp, ShieldCheck, Eye, EyeOff,
-  Calendar, RefreshCw, Pencil, Trash2, ArrowUpDown, Home, Car, User, Landmark, TrendingDown,
+  Calendar, Pencil, Trash2, Home, Car, User, Landmark, TrendingDown,
 } from "lucide-react";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,7 @@ import {
 import { useDebts } from "@/hooks/useDebts";
 import { useDebtIntelligence } from "@/hooks/useDebtIntelligence";
 import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
-import { DebtForm } from "@/components/debts/DebtForm";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
-import { BalanceAdjustmentSheet } from "@/components/debts/BalanceAdjustmentSheet";
 import { AccountForm } from "@/components/accounts/AccountForm";
 import { AccountEditSheet } from "@/components/accounts/AccountEditSheet";
 import { SortableAccountSection } from "@/components/accounts/SortableAccountSection";
@@ -51,31 +49,9 @@ export default function Accounts() {
   const { debts, isLoading: debtsLoading, totalDebt, totalMinimumPayment,
           snowballOrder, avalancheOrder, deleteDebt } = useDebts();
   const dti = useDebtIntelligence();
-  const [debtFormOpen, setDebtFormOpen] = useState(false);
   const [editDebtTarget, setEditDebtTarget] = useState<any>(null);
   const [deleteDebtTarget, setDeleteDebtTarget] = useState<any>(null);
-  const [adjustDebtTarget, setAdjustDebtTarget] = useState<any>(null);
-  const [sortAsc, setSortAsc] = useState(false);
   const [showStrategy, setShowStrategy] = useState(false);
-
-  const typeIcons: Record<string, any> = {
-    credit_card: CreditCard, personal_loan: User,
-    mortgage: Home, car_loan: Car,
-    student_loan: Landmark, other: CreditCard,
-  };
-  const typeLabels: Record<string, string> = {
-    credit_card: "Tarjeta de crédito", personal_loan: "Crédito personal",
-    mortgage: "Crédito hipotecario", car_loan: "Crédito automotriz",
-    student_loan: "Crédito estudiantil", other: "Otro",
-  };
-
-  const sortDebts = (list: any[]) =>
-    [...list].sort((a, b) => sortAsc
-      ? Math.abs(a.current_balance) - Math.abs(b.current_balance)
-      : Math.abs(b.current_balance) - Math.abs(a.current_balance));
-
-  const shortTermDebts = sortDebts(debts.filter(d => d.type === "credit_card"));
-  const longTermDebts  = sortDebts(debts.filter(d => d.type !== "credit_card"));
 
   const handleDeactivate = async () => {
     if (!deleteTarget) return;
@@ -102,57 +78,28 @@ export default function Accounts() {
   const handleEdit = (account: Account) => setEditTarget(account);
   const handleDelete = (account: Account) => setDeleteTarget(account);
 
-  const renderDebtRow = (debt: any) => {
-    const Icon = typeIcons[debt.type] || CreditCard;
-    return (
-      <div
-        key={debt.id}
-        className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-card border border-border card-interactive cursor-pointer"
-        onClick={() => navigate(`/accounts/${debt.account_id || debt.id}`)}
-      >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-expense/10 shrink-0">
-          <Icon className="h-4 w-4 text-expense" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{debt.name}</p>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span>{typeLabels[debt.type] ?? debt.type}</span>
-            {debt.interest_rate > 0 && <span>{debt.interest_rate}%</span>}
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-sm font-bold text-expense tabular-nums">
-            {debt.current_balance !== 0 ? "-" : ""}{fmt(Math.abs(debt.current_balance), debt.currency)}
-          </p>
-          {debt.due_day && (
-            <p className="text-[10px] text-muted-foreground flex items-center justify-end gap-0.5">
-              <Calendar className="h-2.5 w-2.5" /> Día {debt.due_day}
-            </p>
-          )}
-          {debt.minimum_payment > 0 && (
-            <p className="text-[10px] text-muted-foreground tabular-nums">
-              Mín: {fmt(debt.minimum_payment, debt.currency)}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0 ml-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7"
-            onClick={(e) => { e.stopPropagation(); setAdjustDebtTarget(debt); }}
-            title="Actualizar saldo real">
-            <RefreshCw className="h-3.5 w-3.5 text-primary" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
-            onClick={(e) => { e.stopPropagation(); setEditDebtTarget(debt); }}>
-            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
-            onClick={(e) => { e.stopPropagation(); setDeleteDebtTarget(debt); }}>
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
+  // Adapter: convert debts to Account shape for SortableAccountSection
+  const debtsAsAccounts = (list: any[]): Account[] =>
+    list.map(d => ({
+      id: d.id,
+      name: d.name,
+      type: d.type === "car_loan" ? "auto_loan" :
+            d.type === "mortgage" ? "mortgage" :
+            d.type === "personal_loan" ? "personal_loan" : "credit_card",
+      currency: d.currency,
+      current_balance: -Math.abs(d.current_balance),
+      is_active: true,
+      user_id: "",
+      initial_balance: 0,
+      color: null,
+      icon: null,
+      include_in_summary: true,
+      created_at: d.created_at,
+      updated_at: d.updated_at,
+    } as Account));
+
+  const shortTermDebts = debts.filter(d => d.type === "credit_card");
+  const longTermDebts = debts.filter(d => d.type !== "credit_card");
 
   return (
     <div className="space-y-4">
@@ -241,24 +188,11 @@ export default function Accounts() {
             {/* ── DEUDAS Y CRÉDITOS ─────────────────────────────── */}
             {debts.length > 0 && (
               <div className="space-y-3" id="section-liabilities">
-                <div className="flex items-center justify-between scroll-mt-24">
-                  <div className="flex items-center gap-1.5">
-                    <CreditCard className="h-3.5 w-3.5 text-expense" />
-                    <h2 className="text-xs font-heading font-semibold text-foreground">
-                      Deudas y créditos
-                    </h2>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7"
-                      onClick={() => setSortAsc(!sortAsc)}
-                      title={sortAsc ? "Mayor a menor" : "Menor a mayor"}>
-                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
-                    <Button size="sm" className="h-7 text-xs gap-1"
-                      onClick={() => setDebtFormOpen(true)}>
-                      <Plus className="h-3 w-3" /> Nueva deuda
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-1.5 scroll-mt-24">
+                  <CreditCard className="h-3.5 w-3.5 text-expense" />
+                  <h2 className="text-xs font-heading font-semibold text-foreground">
+                    Deudas y créditos
+                  </h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -281,7 +215,14 @@ export default function Accounts() {
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1">
                       Corto plazo
                     </p>
-                    {shortTermDebts.map(renderDebtRow)}
+                    <SortableAccountSection
+                      sectionKey="debts-short"
+                      accounts={debtsAsAccounts(shortTermDebts)}
+                      mask={mask}
+                      onEdit={(acc) => setEditDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
+                      onDelete={(acc) => setDeleteDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
+                      onClick={(acc) => navigate(`/accounts/${debts.find(d => d.id === acc.id)?.account_id || acc.id}`)}
+                    />
                   </div>
                 )}
 
@@ -290,7 +231,14 @@ export default function Accounts() {
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-1">
                       Largo plazo
                     </p>
-                    {longTermDebts.map(renderDebtRow)}
+                    <SortableAccountSection
+                      sectionKey="debts-long"
+                      accounts={debtsAsAccounts(longTermDebts)}
+                      mask={mask}
+                      onEdit={(acc) => setEditDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
+                      onDelete={(acc) => setDeleteDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
+                      onClick={(acc) => navigate(`/accounts/${debts.find(d => d.id === acc.id)?.account_id || acc.id}`)}
+                    />
                   </div>
                 )}
 
@@ -343,10 +291,7 @@ export default function Accounts() {
               <div className="rounded-xl border border-dashed border-border p-4 text-center space-y-2">
                 <CreditCard className="h-6 w-6 text-muted-foreground mx-auto" />
                 <p className="text-xs text-muted-foreground">Sin deudas registradas</p>
-                <Button variant="outline" size="sm" className="text-xs h-7"
-                  onClick={() => setDebtFormOpen(true)}>
-                  <Plus className="h-3 w-3 mr-1" /> Agregar deuda
-                </Button>
+                <p className="text-[10px] text-muted-foreground">Crea una cuenta pasiva para dar seguimiento a tus deudas.</p>
               </div>
             )}
           </div>
@@ -380,27 +325,11 @@ export default function Accounts() {
         />
       )}
 
-      <DebtForm open={debtFormOpen} onOpenChange={setDebtFormOpen} />
-
       <DebtEditSheet
         debt={editDebtTarget}
         open={!!editDebtTarget}
         onOpenChange={(o) => { if (!o) setEditDebtTarget(null); }}
       />
-
-      {adjustDebtTarget && (
-        <ReconciliationSheet
-          open={!!adjustDebtTarget}
-          onOpenChange={(o) => { if (!o) setAdjustDebtTarget(null); }}
-          debtId={adjustDebtTarget.id}
-          debtName={adjustDebtTarget.name}
-          currentBalance={Math.abs(adjustDebtTarget.current_balance ?? 0)}
-          currency={adjustDebtTarget.currency}
-          reconciliationType={
-            adjustDebtTarget.type === "credit_card" ? "current" : "fixed"
-          }
-        />
-      )}
 
       <AlertDialog open={!!deleteDebtTarget} onOpenChange={(o) => !o && setDeleteDebtTarget(null)}>
         <AlertDialogContent>

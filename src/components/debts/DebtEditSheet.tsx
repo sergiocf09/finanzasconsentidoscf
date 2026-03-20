@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { useDebts, Debt } from "@/hooks/useDebts";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { ReconciliationSheet } from "@/components/debts/ReconciliationSheet";
 
 const debtTypes = [
   { value: "credit_card", label: "Tarjeta de Crédito" },
@@ -63,6 +64,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [cutDay, setCutDay] = useState("");
   const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   useEffect(() => {
     if (debt && open) {
@@ -83,11 +85,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
 
   const fmt = (v: number) => formatCurrency(v, debt.currency);
 
-  const handleSave = () => {
-    executeSave();
-  };
-
-  const executeSave = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
       await updateDebt.mutateAsync({
@@ -103,7 +101,6 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
         cut_day: cutDay ? parseInt(cutDay) : null,
         account_id: accountId || null,
       });
-
       onOpenChange(false);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -150,19 +147,6 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
                 <p className="text-sm font-medium text-right tabular-nums">
                   {fmt(Math.abs(debt.current_balance))}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-7 text-xs gap-1.5"
-                  onClick={() => {
-                    if (onOpenReconciliation && debt) {
-                      onOpenChange(false);
-                      onOpenReconciliation(debt);
-                    }
-                  }}
-                >
-                  Actualizar saldo real
-                </Button>
                 <p className="text-[10px] text-muted-foreground leading-tight">
                   El saldo se actualiza mediante conciliación con tu estado de cuenta.
                 </p>
@@ -209,6 +193,18 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
               <Input className="h-8 text-sm text-right" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" />
             </FieldRow>
 
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 text-primary border-primary/30 hover:bg-primary/5 h-8 text-xs"
+                onClick={() => setReconcileOpen(true)}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Actualizar saldo real
+              </Button>
+            </div>
+
             <div className="flex gap-3 pt-3 border-t border-border mt-3">
               <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
                 Cancelar
@@ -220,6 +216,18 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
           </div>
         </SheetContent>
       </Sheet>
+
+      {debt && (
+        <ReconciliationSheet
+          open={reconcileOpen}
+          onOpenChange={setReconcileOpen}
+          debtId={debt.id}
+          debtName={debt.name}
+          currentBalance={Math.abs(debt.current_balance ?? 0)}
+          currency={debt.currency}
+          reconciliationType={debt.type === "credit_card" ? "current" : "fixed"}
+        />
+      )}
     </>
   );
 }

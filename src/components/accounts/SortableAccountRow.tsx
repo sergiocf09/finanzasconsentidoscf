@@ -31,6 +31,8 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
   const debt = isLiability(account.type);
   const fmt = (value: number, currency: string) => formatCurrency(value, currency);
 
+  const hasDebtMeta = debt && ((interestRate != null && interestRate > 0) || (dueDay != null && dueDay > 0));
+
   return (
     <div
       ref={setNodeRef}
@@ -45,48 +47,59 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
       <button
         {...attributes}
         {...listeners}
-        className="touch-none shrink-0 p-0.5 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing"
+        className="touch-none shrink-0 p-0.5 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing self-center"
         onClick={(e) => e.stopPropagation()}
       >
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0", debt ? "bg-expense/10" : "bg-income/10")}>
+      <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg shrink-0 self-center", debt ? "bg-expense/10" : "bg-income/10")}>
         <Icon className={cn("h-4 w-4", debt ? "text-expense" : "text-income")} />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span className="truncate">{typeLabel}</span>
-          {interestRate != null && interestRate > 0 && (
-            <span className="flex items-center gap-0.5 shrink-0">
-              <Percent className="h-2.5 w-2.5" />{interestRate}
-            </span>
-          )}
-          {dueDay != null && dueDay > 0 && (
-            <span className="flex items-center gap-0.5 shrink-0">
-              <Calendar className="h-2.5 w-2.5" />D.{dueDay}
-            </span>
-          )}
+
+      {/* Content area — single row for assets, stacked for debts with meta */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
+            {!hasDebtMeta && (
+              <p className="text-[10px] text-muted-foreground truncate">{typeLabel}</p>
+            )}
+          </div>
+          <div className="text-right mr-0.5 shrink-0">
+            <p className={cn("text-xs font-semibold tabular-nums",
+              debt
+                ? (account.current_balance > 0 ? "text-income" : "text-expense")
+                : (account.current_balance < 0 ? "text-expense" : "text-income")
+            )}>
+              {mask(fmt(account.current_balance, account.currency))}
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" className="shrink-0 h-6 w-6 text-muted-foreground hover:text-primary"
+            onClick={(e) => { e.stopPropagation(); onEdit(account); }}>
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="shrink-0 h-6 w-6 text-muted-foreground hover:text-destructive"
+            onClick={(e) => { e.stopPropagation(); onDelete(account); }}>
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
+        {hasDebtMeta && (
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground -mt-0.5">
+            <span className="truncate">{typeLabel}</span>
+            {interestRate != null && interestRate > 0 && (
+              <span className="flex items-center gap-0.5 shrink-0">
+                <Percent className="h-2.5 w-2.5" />{interestRate}%
+              </span>
+            )}
+            {dueDay != null && dueDay > 0 && (
+              <span className="flex items-center gap-0.5 shrink-0">
+                <Calendar className="h-2.5 w-2.5" />Día {dueDay}
+              </span>
+            )}
+          </div>
+        )}
       </div>
-      <div className="text-right mr-0.5">
-        <p className={cn("text-xs font-semibold tabular-nums",
-          debt
-            ? (account.current_balance > 0 ? "text-income" : "text-expense")
-            : (account.current_balance < 0 ? "text-expense" : "text-income")
-        )}>
-          {mask(fmt(account.current_balance, account.currency))}
-        </p>
-      </div>
-      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-primary"
-        onClick={(e) => { e.stopPropagation(); onEdit(account); }}>
-        <Pencil className="h-3.5 w-3.5" />
-      </Button>
-      <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
-        onClick={(e) => { e.stopPropagation(); onDelete(account); }}>
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
     </div>
   );
 }

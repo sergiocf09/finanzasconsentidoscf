@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { Camera, FileText, Loader2, Check, Trash2, X, ImagePlus, Images } from "lucide-react";
 import {
   Dialog,

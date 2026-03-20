@@ -326,8 +326,12 @@ export function UpcomingDueDates({
   }, [summaryDebts, summaryGoals, hookDebts, hookGoals, recurringItems]);
 
   const handleAmountChange = useCallback((itemId: string, value: string) => {
-    setEditedAmounts(prev => ({ ...prev, [itemId]: value }));
-  }, []);
+    setEditedAmounts(prev => {
+      const next = { ...prev, [itemId]: value };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  }, [STORAGE_KEY]);
 
   const getDisplayAmount = useCallback((item: DueItem): string => {
     if (editedAmounts[item.id] !== undefined) return editedAmounts[item.id];

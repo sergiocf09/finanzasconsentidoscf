@@ -429,7 +429,7 @@ export function UpcomingDueDates({
     } finally {
       setIsSaving(false);
     }
-  }, [user, getDisplayAmount, sourceAccountId, transferCurrency, accounts, fxRates, queryClient, handleCancelTransfer]);
+  }, [user, getDisplayAmount, sourceAccountId, transferCurrency, accounts, fxRates, queryClient, handleCancelTransfer, STORAGE_KEY]);
 
   if (!hasAnyDueItems) return null;
 

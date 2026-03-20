@@ -95,7 +95,17 @@ export function UpcomingDueDates({
   const { mask } = useHideAmounts("balances");
 
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
-  const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>({});
+  const STORAGE_KEY = useMemo(() => {
+    const month = format(new Date(), "yyyy-MM");
+    return `due-amounts-${user?.id}-${month}`;
+  }, [user?.id]);
+
+  const [editedAmounts, setEditedAmounts] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(`due-amounts-${user?.id}-${format(new Date(), "yyyy-MM")}`);
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
   const [transferringItemId, setTransferringItemId] = useState<string | null>(null);
   const [sourceAccountId, setSourceAccountId] = useState<string>("");
   const [transferCurrency, setTransferCurrency] = useState<string>("");
@@ -316,8 +326,12 @@ export function UpcomingDueDates({
   }, [summaryDebts, summaryGoals, hookDebts, hookGoals, recurringItems]);
 
   const handleAmountChange = useCallback((itemId: string, value: string) => {
-    setEditedAmounts(prev => ({ ...prev, [itemId]: value }));
-  }, []);
+    setEditedAmounts(prev => {
+      const next = { ...prev, [itemId]: value };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  }, [STORAGE_KEY]);
 
   const getDisplayAmount = useCallback((item: DueItem): string => {
     if (editedAmounts[item.id] !== undefined) return editedAmounts[item.id];
@@ -402,13 +416,20 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
       toast.success("Transferencia registrada");
+      // Limpiar monto editado del item ya pagado
+      setEditedAmounts(prev => {
+        const next = { ...prev };
+        delete next[item.id];
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+        return next;
+      });
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");
     } finally {
       setIsSaving(false);
     }
-  }, [user, getDisplayAmount, sourceAccountId, transferCurrency, accounts, fxRates, queryClient, handleCancelTransfer]);
+  }, [user, getDisplayAmount, sourceAccountId, transferCurrency, accounts, fxRates, queryClient, handleCancelTransfer, STORAGE_KEY]);
 
   if (!hasAnyDueItems) return null;
 

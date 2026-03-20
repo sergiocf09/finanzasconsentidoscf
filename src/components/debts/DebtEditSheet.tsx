@@ -75,6 +75,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
       setPlannedPayment(String((debt as any).planned_payment ?? 0));
       setDueDay(debt.due_day ? String(debt.due_day) : "");
       setCutDay(debt.cut_day ? String(debt.cut_day) : "");
+      setAccountId(debt.account_id || "");
     }
   }, [debt, open]);
 

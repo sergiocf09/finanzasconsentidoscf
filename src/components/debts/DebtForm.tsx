@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useDebts } from "@/hooks/useDebts";
+import { useAccounts } from "@/hooks/useAccounts";
 
 const debtSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),

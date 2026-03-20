@@ -69,6 +69,11 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 
 export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   const { createDebt } = useDebts();
+  const { accounts } = useAccounts();
+  const liabilityAccounts = accounts.filter(a =>
+    a.is_active &&
+    ['credit_card', 'mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'].includes(a.type)
+  );
 
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtSchema),

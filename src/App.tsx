@@ -11,7 +11,7 @@ import Transactions from "./pages/Transactions";
 import Budgets from "./pages/Budgets";
 import Accounts from "./pages/Accounts";
 import AccountDetail from "./pages/AccountDetail";
-import Debts from "./pages/Debts";
+// Debts is now merged into Accounts
 import Construction from "./pages/Construction";
 import Library from "./pages/Library";
 import Categories from "./pages/Categories";

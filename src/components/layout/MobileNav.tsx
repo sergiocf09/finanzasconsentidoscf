@@ -6,7 +6,6 @@ import {
   Receipt,
   Wallet,
   PiggyBank,
-  CreditCard,
   MoreHorizontal,
   CircleHelp,
   Leaf,

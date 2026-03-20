@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { Camera, FileText, Loader2, Check, Trash2, X, ImagePlus, Images } from "lucide-react";
 import {
   Dialog,
@@ -52,6 +53,7 @@ export function ReceiptScanner() {
   const { user } = useAuth();
   const { categories } = useCategories();
   const { accounts } = useAccounts();
+  const { rates: fxRates } = useExchangeRate();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -296,24 +298,54 @@ export function ReceiptScanner() {
     }, 300);
   };
 
+  const calcAmountInBase = useCallback((
+    amount: number,
+    transactionCurrency: string,
+    accountId: string
+  ): { amountInBase: number; exchangeRate: number } => {
+    const account = accounts.find(a => a.id === accountId);
+    const accountCurrency = account?.currency || "MXN";
+    const usdRate = fxRates["USD"] || 1;
+
+    if (transactionCurrency === "USD" && accountCurrency === "MXN") {
+      return { amountInBase: amount * usdRate, exchangeRate: usdRate };
+    }
+    if (transactionCurrency === "MXN" && accountCurrency === "USD") {
+      return { amountInBase: amount, exchangeRate: 1 / usdRate };
+    }
+    if (transactionCurrency === "USD" && accountCurrency === "USD") {
+      return { amountInBase: amount * usdRate, exchangeRate: usdRate };
+    }
+    return { amountInBase: amount, exchangeRate: 1 };
+  }, [accounts, fxRates]);
+
   const handleSingleConfirm = async () => {
     if (!singleData.amount || !singleData.accountId) {
       toast.error("Completa el monto y la cuenta");
       return;
     }
     try {
+      const amount = parseFloat(singleData.amount);
+      const { amountInBase, exchangeRate } = calcAmountInBase(
+        amount,
+        singleData.currency,
+        singleData.accountId
+      );
+
       const { error } = await supabase.from("transactions").insert({
         user_id: user!.id,
         account_id: singleData.accountId,
         category_id: singleData.categoryId || null,
         type: singleData.type,
-        amount: parseFloat(singleData.amount),
-        amount_in_base: parseFloat(singleData.amount),
+        amount,
+        amount_in_base: amountInBase,
         currency: singleData.currency,
-        exchange_rate: 1,
+        exchange_rate: exchangeRate,
         description: singleData.description || singleData.merchant,
         transaction_date: singleData.date,
-        notes: "Registrado mediante escaneo de recibo",
+        notes: exchangeRate !== 1
+          ? `Escaneo de recibo · TC: $${exchangeRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`
+          : "Registrado mediante escaneo de recibo",
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -333,19 +365,28 @@ export function ReceiptScanner() {
       return;
     }
 
-    const inserts = selected.map((t) => ({
-      user_id: user!.id,
-      account_id: t.resolvedAccountId,
-      category_id: t.resolvedCategoryId || null,
-      type: t.type,
-      amount: t.amount,
-      amount_in_base: t.amount,
-      currency: t.currency || "MXN",
-      exchange_rate: 1,
-      description: (t.description || t.merchant || "Sin descripción").substring(0, 255),
-      transaction_date: t.date || format(new Date(), "yyyy-MM-dd"),
-      notes: "Registrado mediante escaneo de imagen",
-    }));
+    const inserts = selected.map((t) => {
+      const { amountInBase, exchangeRate } = calcAmountInBase(
+        t.amount,
+        t.currency,
+        t.resolvedAccountId
+      );
+      return {
+        user_id: user!.id,
+        account_id: t.resolvedAccountId,
+        category_id: t.resolvedCategoryId || null,
+        type: t.type,
+        amount: t.amount,
+        amount_in_base: amountInBase,
+        currency: t.currency || "MXN",
+        exchange_rate: exchangeRate,
+        description: (t.description || t.merchant || "Sin descripción").substring(0, 255),
+        transaction_date: t.date || format(new Date(), "yyyy-MM-dd"),
+        notes: exchangeRate !== 1
+          ? `Escaneo de estado de cuenta · TC: $${exchangeRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`
+          : "Registrado mediante escaneo de imagen",
+      };
+    });
 
     const BATCH_SIZE = 10;
     let saved = 0;

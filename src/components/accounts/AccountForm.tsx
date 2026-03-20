@@ -166,7 +166,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
           <FieldRow label="Moneda">
             <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-[min(var(--radix-select-content-available-height),280px)] overflow-y-auto">
                 <SelectItem value="MXN">Peso Mexicano (MXN)</SelectItem>
                 <SelectItem value="USD">Dólar (USD)</SelectItem>
                 <SelectItem value="EUR">Euro (EUR)</SelectItem>

@@ -116,6 +116,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
       currency: data.currency,
       debt_category: finalDebtCategory,
       monthly_commitment: showMonthlyCommitment ? data.monthly_commitment : 0,
+      account_id: data.account_id || undefined,
     });
     form.reset();
     onOpenChange(false);

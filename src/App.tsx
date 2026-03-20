@@ -51,7 +51,7 @@ const App = () => (
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/transfers" element={<Transactions />} />
               <Route path="/categories" element={<Categories />} />
-              <Route path="/debts" element={<Debts />} />
+              <Route path="/debts" element={<Navigate to="/accounts" replace />} />
               <Route path="/recurring" element={<RecurringPayments />} />
               <Route path="/construction" element={<Construction />} />
               <Route path="/emergency-fund" element={<Construction />} />

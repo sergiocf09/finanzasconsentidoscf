@@ -26,7 +26,6 @@ const mobileNavItems = [
   { name: "Movimientos", href: "/transactions", icon: Receipt },
   { name: "Cuentas", href: "/accounts", icon: Wallet },
   { name: "Presupuestos", href: "/budgets", icon: PiggyBank },
-  { name: "Deudas", href: "/debts", icon: CreditCard },
 ];
 
 interface HelpEntry {

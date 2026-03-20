@@ -101,6 +101,11 @@ export default function Accounts() {
   const shortTermDebts = debts.filter(d => d.type === "credit_card");
   const longTermDebts = debts.filter(d => d.type !== "credit_card");
 
+  // Build metadata map for debt rows (due_day, interest_rate)
+  const debtMetadata = Object.fromEntries(
+    debts.map(d => [d.id, { dueDay: d.due_day, interestRate: d.interest_rate }])
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}

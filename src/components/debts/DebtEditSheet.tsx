@@ -169,6 +169,24 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
               </div>
             </FieldRow>
 
+            <FieldRow label="Cuenta vinculada" hint="Para pago automático al transferir">
+              <Select value={accountId || "none"} onValueChange={(v) => setAccountId(v === "none" ? "" : v)}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Sin cuenta vinculada" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin cuenta vinculada</SelectItem>
+                  {liabilityAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            {accountId && accountId !== "none" && (
+              <p className="text-[10px] text-muted-foreground pl-[42%] -mt-1">
+                Cuando transfieras dinero a esta cuenta, la deuda se reducirá automáticamente.
+              </p>
+            )}
+
             <FieldRow label="Tasa de interés" hint="% anual">
               <Input className="h-8 text-sm text-right" type="number" step="0.01" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
             </FieldRow>

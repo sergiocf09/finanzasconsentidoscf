@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Wallet, Calendar, Percent } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Wallet, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Account, isLiability } from "@/hooks/useAccounts";

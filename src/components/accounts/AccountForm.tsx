@@ -138,7 +138,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
           <FieldRow label="Tipo">
             <Select value={selectedType} onValueChange={(v) => form.setValue("type", v as any)}>
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-[min(var(--radix-select-content-available-height),280px)] overflow-y-auto">
                 <div className="px-2 py-1">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                     Lo que tengo

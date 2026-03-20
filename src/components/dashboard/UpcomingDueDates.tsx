@@ -416,6 +416,13 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
       toast.success("Transferencia registrada");
+      // Limpiar monto editado del item ya pagado
+      setEditedAmounts(prev => {
+        const next = { ...prev };
+        delete next[item.id];
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+        return next;
+      });
       handleCancelTransfer();
     } catch (err: any) {
       toast.error(err.message || "Error al registrar transferencia");

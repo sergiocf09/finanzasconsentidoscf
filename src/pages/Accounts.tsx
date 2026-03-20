@@ -241,6 +241,7 @@ export default function Accounts() {
                       sectionKey="debts-long"
                       accounts={debtsAsAccounts(longTermDebts)}
                       mask={mask}
+                      metadata={debtMetadata}
                       onEdit={(acc) => setEditDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
                       onDelete={(acc) => setDeleteDebtTarget(debts.find(d => d.id === acc.id) ?? null)}
                       onClick={(acc) => navigate(`/accounts/${debts.find(d => d.id === acc.id)?.account_id || acc.id}`)}

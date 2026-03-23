@@ -252,6 +252,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
           queryClient.invalidateQueries({ queryKey: ["accounts"] });
           queryClient.invalidateQueries({ queryKey: ["budgets"] });
           queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+          queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
         } finally {
           setIsSavingRetro(false);
         }

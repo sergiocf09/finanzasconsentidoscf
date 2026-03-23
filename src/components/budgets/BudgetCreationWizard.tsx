@@ -89,6 +89,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const currentMonth = new Date().getMonth() + 1;
 
   const [step, setStep] = useState<WizardStep>("method");
+  const [periodLoading, setPeriodLoading] = useState(false);
   const [method, setMethod] = useState<Method | null>(null);
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState(currentMonth);
@@ -115,7 +116,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const activeCategories = budgetType === "income" ? incomeCategories : expenseCategories;
 
   const initManualBudgets = () => {
-    const budgets = activeCategories.map((c) => ({
+    const cats = budgetType === "income" ? incomeCategories : expenseCategories;
+    if (!cats || cats.length === 0) {
+      toast.error("Las categorías aún están cargando. Intenta de nuevo.");
+      return;
+    }
+    const budgets = cats.map((c) => ({
       category_id: c.id,
       name: c.name,
       bucket: (c as any).bucket || "lifestyle",
@@ -267,20 +273,33 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const handlePeriodNext = async () => {
     if (!user) return;
-    // Check for existing budgets
-    const { count } = await supabase
-      .from("budgets")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("year", year)
-      .eq("month", month)
-      .eq("is_active", true);
+    setPeriodLoading(true);
+    try {
+      const { count, error } = await supabase
+        .from("budgets")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("year", year)
+        .eq("month", month)
+        .eq("is_active", true);
 
-    if ((count ?? 0) > 0) {
-      setExistingCount(count ?? 0);
-      setExistingBudgetDialog(true);
-    } else {
+      if (error) {
+        console.error("Budget check error:", error);
+        await proceedAfterPeriod();
+        return;
+      }
+
+      if ((count ?? 0) > 0) {
+        setExistingCount(count ?? 0);
+        setExistingBudgetDialog(true);
+      } else {
+        await proceedAfterPeriod();
+      }
+    } catch (err) {
+      console.error("handlePeriodNext error:", err);
       await proceedAfterPeriod();
+    } finally {
+      setPeriodLoading(false);
     }
   };
 
@@ -414,9 +433,11 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
         </FieldRow>
       )}
 
-      <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={loadingHistory}>
-        {loadingHistory ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        Continuar
+      <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={periodLoading}>
+        {periodLoading
+          ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Verificando...</>
+          : "Continuar"
+        }
       </Button>
     </div>
   );
@@ -449,6 +470,17 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
         {method === "smart" && smartAnalysis && !isIncomeType && (
           <div className="rounded-xl bg-secondary/50 p-3 mb-4">
             <p className="text-xs text-muted-foreground">{smartAnalysis.message}</p>
+          </div>
+        )}
+
+        {method === "manual" && categoryBudgets.length === 0 && (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              No se pudieron cargar las categorías.
+            </p>
+            <Button variant="outline" size="sm" onClick={initManualBudgets}>
+              Reintentar
+            </Button>
           </div>
         )}
 
@@ -533,10 +565,19 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           </>
         )}
 
-        <Button className="w-full" onClick={handleSave} disabled={saving || grandTotal <= 0}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-          Guardar presupuesto
-        </Button>
+        <div className="space-y-2 pt-2 border-t border-border">
+          {grandTotal <= 0 && categoryBudgets.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center">
+              Ingresa al menos un monto para continuar
+            </p>
+          )}
+          <Button className="w-full" onClick={handleSave} disabled={saving || grandTotal <= 0}>
+            {saving
+              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</>
+              : <><Check className="h-4 w-4 mr-2" />Guardar presupuesto</>
+            }
+          </Button>
+        </div>
       </div>
     );
   };

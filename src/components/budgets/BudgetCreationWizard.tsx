@@ -565,10 +565,19 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           </>
         )}
 
-        <Button className="w-full" onClick={handleSave} disabled={saving || grandTotal <= 0}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-          Guardar presupuesto
-        </Button>
+        <div className="space-y-2 pt-2 border-t border-border">
+          {grandTotal <= 0 && categoryBudgets.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center">
+              Ingresa al menos un monto para continuar
+            </p>
+          )}
+          <Button className="w-full" onClick={handleSave} disabled={saving || grandTotal <= 0}>
+            {saving
+              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</>
+              : <><Check className="h-4 w-4 mr-2" />Guardar presupuesto</>
+            }
+          </Button>
+        </div>
       </div>
     );
   };

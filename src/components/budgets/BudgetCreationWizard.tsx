@@ -273,20 +273,33 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
 
   const handlePeriodNext = async () => {
     if (!user) return;
-    // Check for existing budgets
-    const { count } = await supabase
-      .from("budgets")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("year", year)
-      .eq("month", month)
-      .eq("is_active", true);
+    setPeriodLoading(true);
+    try {
+      const { count, error } = await supabase
+        .from("budgets")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("year", year)
+        .eq("month", month)
+        .eq("is_active", true);
 
-    if ((count ?? 0) > 0) {
-      setExistingCount(count ?? 0);
-      setExistingBudgetDialog(true);
-    } else {
+      if (error) {
+        console.error("Budget check error:", error);
+        await proceedAfterPeriod();
+        return;
+      }
+
+      if ((count ?? 0) > 0) {
+        setExistingCount(count ?? 0);
+        setExistingBudgetDialog(true);
+      } else {
+        await proceedAfterPeriod();
+      }
+    } catch (err) {
+      console.error("handlePeriodNext error:", err);
       await proceedAfterPeriod();
+    } finally {
+      setPeriodLoading(false);
     }
   };
 

@@ -292,6 +292,7 @@ export function VoiceButton() {
           requires_manual_action: requiresManualAction,
         });
         queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+        queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
       }
 
       toast.success("Registrado correctamente");

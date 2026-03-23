@@ -36,18 +36,51 @@ serve(async (req) => {
     }
 
     const body = await req.json();
+
+    const ALLOWED_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    const MAX_IMAGE_COUNT = 10;
+    const MAX_BASE64_LENGTH = 7_000_000; // ~5 MB per image
+
     // Support both single image (legacy) and multiple images
     const images: { base64: string; mediaType: string }[] = [];
     
     if (body.images && Array.isArray(body.images)) {
-      // New multi-image format: { images: [{base64, mediaType}], mode }
+      if (body.images.length > MAX_IMAGE_COUNT) {
+        return new Response(JSON.stringify({ error: "Máximo 10 imágenes por solicitud." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       for (const img of body.images) {
         if (img.base64 && img.mediaType) {
+          if (!ALLOWED_MEDIA_TYPES.has(img.mediaType)) {
+            return new Response(JSON.stringify({ error: "Tipo de imagen no soportado." }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (img.base64.length > MAX_BASE64_LENGTH) {
+            return new Response(JSON.stringify({ error: "Imagen demasiado grande (máx ~5 MB)." }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           images.push({ base64: img.base64, mediaType: img.mediaType });
         }
       }
     } else if (body.imageBase64 && body.mediaType) {
-      // Legacy single-image format
+      if (!ALLOWED_MEDIA_TYPES.has(body.mediaType)) {
+        return new Response(JSON.stringify({ error: "Tipo de imagen no soportado." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (body.imageBase64.length > MAX_BASE64_LENGTH) {
+        return new Response(JSON.stringify({ error: "Imagen demasiado grande (máx ~5 MB)." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       images.push({ base64: body.imageBase64, mediaType: body.mediaType });
     }
 

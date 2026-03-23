@@ -433,9 +433,11 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
         </FieldRow>
       )}
 
-      <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={loadingHistory}>
-        {loadingHistory ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        Continuar
+      <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={periodLoading}>
+        {periodLoading
+          ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Verificando...</>
+          : "Continuar"
+        }
       </Button>
     </div>
   );

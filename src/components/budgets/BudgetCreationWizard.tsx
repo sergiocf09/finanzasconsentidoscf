@@ -116,7 +116,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const activeCategories = budgetType === "income" ? incomeCategories : expenseCategories;
 
   const initManualBudgets = () => {
-    const budgets = activeCategories.map((c) => ({
+    const cats = budgetType === "income" ? incomeCategories : expenseCategories;
+    if (!cats || cats.length === 0) {
+      toast.error("Las categorías aún están cargando. Intenta de nuevo.");
+      return;
+    }
+    const budgets = cats.map((c) => ({
       category_id: c.id,
       name: c.name,
       bucket: (c as any).bucket || "lifestyle",

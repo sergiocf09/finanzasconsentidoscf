@@ -134,6 +134,8 @@ export function UpcomingDueDates({
       return (data ?? []) as any[];
     },
     enabled: !!user,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const recurringItems = useMemo<RecurringDueItem[]>(() => {

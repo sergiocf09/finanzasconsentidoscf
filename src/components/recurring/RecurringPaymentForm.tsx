@@ -296,11 +296,15 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
           queryClient.invalidateQueries({ queryKey: ["transactions"] });
           queryClient.invalidateQueries({ queryKey: ["accounts"] });
           queryClient.invalidateQueries({ queryKey: ["budgets"] });
+          queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
+          queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
         } finally {
           setIsSavingRetro(false);
         }
       }
     }
+    queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
     setRetroConfirmOpen(false);
     onOpenChange(false);
   };

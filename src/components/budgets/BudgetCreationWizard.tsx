@@ -89,6 +89,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const currentMonth = new Date().getMonth() + 1;
 
   const [step, setStep] = useState<WizardStep>("method");
+  const [periodLoading, setPeriodLoading] = useState(false);
   const [method, setMethod] = useState<Method | null>(null);
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState(currentMonth);

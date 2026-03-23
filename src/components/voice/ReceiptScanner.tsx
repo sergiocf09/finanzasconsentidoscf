@@ -33,6 +33,7 @@ const CATEGORY_HINT_MAP: Record<string, string[]> = {
   salud: ["salud"],
   educacion: ["educación"],
   transferencia: ["transferencia"],
+  seguro: ["seguro", "seguros", "insurance"],
 };
 
 interface ScannedTransaction {

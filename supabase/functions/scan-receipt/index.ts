@@ -65,60 +65,74 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const promptSingle = `Analiza este recibo o comprobante de pago y extrae los datos.
-Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin explicaciones.
-Formato exacto:
+    const promptSingle = `Analiza este recibo o comprobante de pago.
+
+REGLAS CRÍTICAS:
+1. MONTO: El símbolo $ va pegado al número sin espacio. "$947.60" = 947.60. NUNCA omitas el primer dígito después del $. Extrae el TOTAL del recibo.
+2. FECHA: La fecha de emisión del recibo en formato YYYY-MM-DD.
+3. ESTABLECIMIENTO: El nombre del negocio tal como aparece.
+
+Responde ÚNICAMENTE con JSON válido sin backticks:
 {
   "mode": "single",
   "amount": número o null,
-  "currency": "MXN" o "USD" o "EUR",
-  "date": "YYYY-MM-DD" o null,
-  "merchant": "nombre del establecimiento" o null,
-  "category_hint": uno de: "restaurante|supermercado|gasolina|farmacia|transporte|entretenimiento|ropa|servicios|salud|educacion|otro",
-  "description": "descripción corta máximo 40 caracteres" o null,
-  "confidence": número del 0 al 1
-}
-Si el campo no es legible usa null. El monto debe ser el TOTAL del recibo.`;
+  "currency": "MXN",
+  "date": "YYYY-MM-DD o null",
+  "merchant": "nombre del establecimiento",
+  "category_hint": "restaurante" o "supermercado" o "gasolina" o "farmacia" o "transporte" o "entretenimiento" o "ropa" o "servicios" o "salud" o "educacion" o "otro",
+  "description": "descripción máximo 50 caracteres"
+}`;
 
     const promptMultipleReceipts = `Analiza estas ${images.length} imágenes. Cada una es un recibo o comprobante de pago INDEPENDIENTE.
-Extrae los datos de CADA recibo por separado.
-Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin explicaciones.
-Formato exacto:
+
+REGLAS CRÍTICAS:
+1. MONTOS: El símbolo $ va pegado al número. "$338" = 338, "$2794.98" = 2794.98. NUNCA omitas dígitos después del $.
+2. Extrae el TOTAL de cada recibo, no subtotales.
+3. Un recibo = una transacción en el array.
+
+Responde ÚNICAMENTE con JSON válido sin backticks:
 {
   "mode": "statement",
   "transactions": [
     {
-      "amount": número,
-      "currency": "MXN" o "USD",
-      "date": "YYYY-MM-DD" o null,
+      "amount": número positivo,
+      "currency": "MXN",
+      "date": "YYYY-MM-DD o null",
       "merchant": "nombre del establecimiento",
       "type": "expense",
-      "category_hint": uno de: "restaurante|supermercado|gasolina|farmacia|transporte|entretenimiento|ropa|servicios|salud|educacion|otro",
-      "description": "descripción corta máximo 40 caracteres"
+      "category_hint": "restaurante" o "supermercado" o "gasolina" o "farmacia" o "transporte" o "entretenimiento" o "ropa" o "servicios" o "salud" o "educacion" o "otro",
+      "description": "descripción máximo 50 caracteres"
     }
   ]
-}
-Cada imagen es un recibo diferente — genera una transacción por imagen.`;
+}`;
 
-    const promptStatement = `Analiza ${images.length > 1 ? "estas imágenes que son páginas del mismo" : "este"} estado de cuenta o lista de movimientos y extrae CADA transacción como un elemento del array.
-Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin explicaciones.
-Formato exacto:
+    const promptStatement = `Analiza ${images.length > 1 ? "estas imágenes que son páginas del mismo" : "este"} estado de cuenta bancario mexicano y extrae CADA transacción.
+
+REGLAS CRÍTICAS DE LECTURA:
+1. MONTOS: El símbolo $ va pegado al número sin espacio. "$947.60" = 947.60, "$1,214.65" = 1214.65. NUNCA omitas el primer dígito después del símbolo $. Si ves "$8661" el monto es 8661, no 661.
+2. TIPO: Si el monto tiene signo NEGATIVO o dice "PAGO" o "ABONO" en la descripción = "income" (es dinero que entró o se pagó a favor). Si es POSITIVO o es una compra/cargo = "expense".
+3. FECHAS: Usa la columna "Fecha de cargo" o "Fecha de operación". Formato YYYY-MM-DD.
+4. DESCRIPCIONES: Copia el texto del establecimiento tal como aparece, máximo 50 caracteres. No traduzcas ni abrevies el nombre del establecimiento.
+5. IGNORA: Totales, subtotales, saldos, encabezados de columna, IVA desglosado, comisiones separadas. Solo renglones de transacciones con fecha y monto.
+6. MESES SIN INTERESES: Si dice "X DE Y" (ej: "04 DE 12") es una mensualidad — incluirla como expense normal con el monto de ESA mensualidad.
+
+Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks:
 {
   "mode": "statement",
   "transactions": [
     {
-      "amount": número,
-      "currency": "MXN" o "USD",
-      "date": "YYYY-MM-DD" o null,
-      "merchant": "nombre o descripción del movimiento",
+      "amount": número positivo siempre,
+      "currency": "MXN",
+      "date": "YYYY-MM-DD",
+      "merchant": "nombre del establecimiento o descripción exacta",
       "type": "expense" o "income",
-      "category_hint": uno de: "restaurante|supermercado|gasolina|farmacia|transporte|entretenimiento|ropa|servicios|salud|educacion|otro",
-      "description": "descripción corta máximo 40 caracteres"
+      "category_hint": "restaurante" o "supermercado" o "gasolina" o "farmacia" o "transporte" o "entretenimiento" o "ropa" o "servicios" o "salud" o "educacion" o "transferencia" o "seguro" o "otro",
+      "description": "descripción máximo 50 caracteres"
     }
   ]
 }
-${images.length > 1 ? "Las imágenes son páginas consecutivas del MISMO documento — combina todos los movimientos en un solo array." : ""}
-Incluye solo transacciones con monto claro. Ignora saldos, totales y encabezados. Máximo 50 transacciones.`;
+${images.length > 1 ? "Las imágenes son páginas consecutivas del MISMO estado de cuenta — combina TODOS los movimientos de TODAS las páginas en un solo array ordenado por fecha." : ""}
+Incluye solo transacciones con fecha y monto legibles. Máximo 50 transacciones.`;
 
     // Choose prompt based on mode and image count
     let prompt: string;

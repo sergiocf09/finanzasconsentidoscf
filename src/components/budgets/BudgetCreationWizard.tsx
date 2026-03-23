@@ -473,6 +473,17 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
           </div>
         )}
 
+        {method === "manual" && categoryBudgets.length === 0 && (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              No se pudieron cargar las categorías.
+            </p>
+            <Button variant="outline" size="sm" onClick={initManualBudgets}>
+              Reintentar
+            </Button>
+          </div>
+        )}
+
         {categoryBudgets.length > 0 && (
           <>
             {!isIncomeType && (

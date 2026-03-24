@@ -152,22 +152,64 @@ export function UpcomingDueDates({
     });
   }, [upcomingRecurring, today]);
 
-  const handleConfirmRecurring = useCallback(async (id: string) => {
-    setConfirmingRecurring(id);
+  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem) => {
+    if (!user) return;
+    setConfirmingRecurring(recurringItem.id);
     try {
+      // 1. Create the transaction for the confirmed payment
+      const { error: txErr } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        account_id: (recurringItem as any).account_id,
+        category_id: (recurringItem as any).category_id || null,
+        type: (recurringItem as any).type || "expense",
+        amount: recurringItem.amount,
+        currency: recurringItem.currency,
+        exchange_rate: 1,
+        amount_in_base: recurringItem.amount,
+        description: recurringItem.name,
+        transaction_date: recurringItem.next_execution_date,
+        is_recurring: true,
+        recurring_payment_id: recurringItem.id,
+      });
+      if (txErr) throw txErr;
+
+      // 2. Advance next_execution_date, increment payments_made, reset confirmed_at
+      const freq = (recurringItem as any).frequency || "monthly";
+      const currentDate = new Date(recurringItem.next_execution_date + "T12:00:00Z");
+      const nextDate = (() => {
+        const d = new Date(currentDate);
+        switch (freq) {
+          case "weekly": d.setDate(d.getDate() + 7); break;
+          case "biweekly": d.setDate(d.getDate() + 14); break;
+          case "monthly": d.setMonth(d.getMonth() + 1); break;
+          case "bimonthly": d.setMonth(d.getMonth() + 2); break;
+          case "quarterly": d.setMonth(d.getMonth() + 3); break;
+          case "annual": d.setFullYear(d.getFullYear() + 1); break;
+        }
+        return d.toISOString().split("T")[0];
+      })();
+
       await supabase
         .from("recurring_payments" as any)
-        .update({ confirmed_at: new Date().toISOString() } as any)
-        .eq("id", id);
+        .update({
+          next_execution_date: nextDate,
+          payments_made: ((recurringItem as any).payments_made || 0) + 1,
+          confirmed_at: null,
+        } as any)
+        .eq("id", recurringItem.id);
+
       queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
-      toast.success("Pago confirmado");
-    } catch {
-      toast.error("Error al confirmar");
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+      toast.success("Pago confirmado y registrado");
+    } catch (err: any) {
+      toast.error(err.message || "Error al confirmar");
     } finally {
       setConfirmingRecurring(null);
     }
-  }, [queryClient]);
+  }, [user, queryClient]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({

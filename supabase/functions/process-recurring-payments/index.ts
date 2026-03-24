@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       continue;
     }
 
-    const nextDate = getNextDate(p.next_execution_date, p.frequency);
+    const nextDate = getNextDate(p.next_execution_date, p.frequency, p.payment_day);
     const newPaymentsMade = (p.payments_made || 0) + 1;
     const newRemaining = p.remaining_balance != null
       ? Math.max(0, p.remaining_balance - p.amount)

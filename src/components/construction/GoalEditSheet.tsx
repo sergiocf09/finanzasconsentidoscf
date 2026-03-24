@@ -90,11 +90,11 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       name: "",
       goal_type: "custom",
       target_amount: 0,
+      current_amount: 0,
       description: "",
       target_date: null,
       contribution_day: undefined,
       monthly_contribution: 0,
-      currency: "MXN",
       account_id: undefined,
     },
   });

@@ -56,6 +56,8 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
   const [period, setPeriod] = useState<PeriodKey>("current");
   const [customStart, setCustomStart] = useState<Date>(startOfMonth(new Date()));
   const [customEnd, setCustomEnd] = useState<Date>(endOfMonth(new Date()));
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   // When period = "current" and we have initial data from the RPC, skip individual queries
   const useRpcData = period === "current" && initialTotals !== undefined;

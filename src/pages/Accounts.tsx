@@ -13,6 +13,8 @@ import {
 } from "@/hooks/useAccounts";
 import { useDebts } from "@/hooks/useDebts";
 import { useDebtIntelligence } from "@/hooks/useDebtIntelligence";
+import { useNonFinancialAssets, NFA_TYPE_LABELS } from "@/hooks/useNonFinancialAssets";
+import { NonFinancialAssetSheet } from "@/components/assets/NonFinancialAssetSheet";
 import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
 import { AccountForm } from "@/components/accounts/AccountForm";

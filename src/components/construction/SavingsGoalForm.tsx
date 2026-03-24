@@ -92,7 +92,6 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       contribution_day: undefined,
       monthly_contribution: 0,
       account_type: "savings",
-      account_id: undefined,
     },
   });
 

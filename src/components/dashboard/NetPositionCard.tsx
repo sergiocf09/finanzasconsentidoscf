@@ -43,7 +43,7 @@ export function NetPositionCard({
               )}
               title="Todas las cuentas activas"
             >
-              <LayoutDashboard className="h-3 w-3" />
+              <Wallet className="h-3 w-3" />
               Todas
             </button>
             <button
@@ -56,7 +56,7 @@ export function NetPositionCard({
               )}
               title="Según selección de Inicio"
             >
-              <Home className="h-3 w-3" />
+              <LayoutDashboard className="h-3 w-3" />
               Inicio
             </button>
           </div>

@@ -136,7 +136,7 @@ export function UpcomingDueDates({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_payments" as any)
-        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency")
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency, payment_day")
         .eq("status", "active")
         .gte("next_execution_date", todayStr)
         .lte("next_execution_date", recurringMaxDate)

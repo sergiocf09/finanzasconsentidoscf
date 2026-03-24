@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Plus, TrendingUp, Pencil, Trash2, CalendarDays,
 } from "lucide-react";

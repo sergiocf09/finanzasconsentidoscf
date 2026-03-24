@@ -151,6 +151,7 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date; en
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactions_paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions_search'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });

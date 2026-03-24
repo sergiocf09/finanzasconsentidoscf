@@ -13,6 +13,7 @@ import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DashboardSummary } from "@/hooks/useDashboardSummary";
+import { useNonFinancialAssets } from "@/hooks/useNonFinancialAssets";
 
 type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];
 

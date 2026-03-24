@@ -73,6 +73,7 @@ interface GoalEditSheetProps {
 export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) {
   const { updateGoal } = useSavingsGoals();
   const { accounts } = useAccounts();
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const linkedAccount = goal?.account_id
     ? accounts.find((a) => a.id === goal.account_id)

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -73,6 +73,7 @@ interface GoalEditSheetProps {
 export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) {
   const { updateGoal } = useSavingsGoals();
   const { accounts } = useAccounts();
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const linkedAccount = goal?.account_id
     ? accounts.find((a) => a.id === goal.account_id)
@@ -155,7 +156,7 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
 
           <FieldRow label="Fecha objetivo" hint="Opcional si defines monto">
             <div className="flex items-center gap-1">
-              <Popover>
+              <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -170,7 +171,7 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
                   <Calendar
                     mode="single"
                     selected={form.watch("target_date") ?? undefined}
-                    onSelect={(d) => form.setValue("target_date", d ?? null)}
+                    onSelect={(d) => { form.setValue("target_date", d ?? null); setDatePopoverOpen(false); }}
                     initialFocus
                   />
                 </PopoverContent>

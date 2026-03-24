@@ -56,6 +56,8 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
   const [period, setPeriod] = useState<PeriodKey>("current");
   const [customStart, setCustomStart] = useState<Date>(startOfMonth(new Date()));
   const [customEnd, setCustomEnd] = useState<Date>(endOfMonth(new Date()));
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   // When period = "current" and we have initial data from the RPC, skip individual queries
   const useRpcData = period === "current" && initialTotals !== undefined;
@@ -146,7 +148,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
         {/* Custom date pickers */}
         {period === "custom" && (
           <div className="flex gap-2">
-            <Popover>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -157,12 +159,12 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 <Calendar
                   mode="single"
                   selected={customStart}
-                  onSelect={(d) => d && setCustomStart(d)}
+                  onSelect={(d) => { if (d) { setCustomStart(d); setStartDateOpen(false); } }}
                   className="p-3 pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
-            <Popover>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -173,7 +175,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 <Calendar
                   mode="single"
                   selected={customEnd}
-                  onSelect={(d) => d && setCustomEnd(d)}
+                  onSelect={(d) => { if (d) { setCustomEnd(d); setEndDateOpen(false); } }}
                   className="p-3 pointer-events-auto"
                 />
               </PopoverContent>

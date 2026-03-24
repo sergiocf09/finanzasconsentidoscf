@@ -82,6 +82,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
   const { createGoal } = useSavingsGoals();
   const { accounts } = useAccounts();
   const [linkExisting, setLinkExisting] = useState(false);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const availableAccounts = accounts.filter(
     (a) => a.is_active && isAssetType(a.type) && ["savings", "investment"].includes(a.type)
@@ -190,7 +191,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
 
           <FieldRow label="Fecha objetivo" hint="Opcional si defines monto">
             <div className="flex items-center gap-1">
-              <Popover>
+              <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -205,7 +206,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
                   <Calendar
                     mode="single"
                     selected={form.watch("target_date") ?? undefined}
-                    onSelect={(d) => form.setValue("target_date", d ?? null)}
+                    onSelect={(d) => { form.setValue("target_date", d ?? null); setDatePopoverOpen(false); }}
                     initialFocus
                   />
                 </PopoverContent>

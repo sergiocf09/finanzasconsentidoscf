@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,6 +68,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 
 export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   const { createDebt } = useDebts();
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtSchema),
@@ -214,7 +216,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
           </FieldRow>
 
           <FieldRow label="Fecha de inicio" hint="Opcional">
-            <Popover>
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   type="button"
@@ -229,7 +231,7 @@ export function DebtForm({ open, onOpenChange }: DebtFormProps) {
                 <Calendar
                   mode="single"
                   selected={form.watch("start_date")}
-                  onSelect={(d) => form.setValue("start_date", d)}
+                  onSelect={(d) => { form.setValue("start_date", d); setDatePopoverOpen(false); }}
                   initialFocus
                 />
               </PopoverContent>

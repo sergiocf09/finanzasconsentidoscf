@@ -55,6 +55,8 @@ export default function AccountDetail() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
   const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
   const { transactions } = useTransactions({ startDate, endDate });
@@ -169,7 +171,7 @@ export default function AccountDetail() {
 
         {period === "custom" && (
           <div className="flex gap-2">
-            <Popover>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -177,10 +179,10 @@ export default function AccountDetail() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={customStartDate} onSelect={(d) => d && setCustomStartDate(d)} className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={customStartDate} onSelect={(d) => { if (d) { setCustomStartDate(d); setStartDateOpen(false); } }} className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
-            <Popover>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -188,7 +190,7 @@ export default function AccountDetail() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar mode="single" selected={customEndDate} onSelect={(d) => d && setCustomEndDate(d)} className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={customEndDate} onSelect={(d) => { if (d) { setCustomEndDate(d); setEndDateOpen(false); } }} className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>

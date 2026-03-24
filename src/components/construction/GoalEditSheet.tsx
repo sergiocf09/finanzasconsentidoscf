@@ -250,7 +250,6 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
               </SelectContent>
             </Select>
           </div>
-          )}
 
           <div className="flex gap-2 pt-4 border-t border-border mt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>

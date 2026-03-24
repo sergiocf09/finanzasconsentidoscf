@@ -29,7 +29,6 @@ const editSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
   goal_type: z.enum(["emergency", "home", "car", "travel", "education", "business", "retirement", "custom"]),
   target_amount: z.coerce.number().min(0).optional().default(0),
-  current_amount: z.coerce.number().min(0).optional().default(0),
   description: z.string().optional(),
   target_date: z.date().optional().nullable(),
   contribution_day: z.coerce.number().min(1).max(31).optional().nullable(),
@@ -90,7 +89,6 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       name: "",
       goal_type: "custom",
       target_amount: 0,
-      current_amount: 0,
       description: "",
       target_date: null,
       contribution_day: undefined,
@@ -105,7 +103,6 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
         name: goal.name,
         goal_type: goal.goal_type as EditValues["goal_type"],
         target_amount: goal.target_amount || 0,
-        current_amount: goal.current_amount || 0,
         description: goal.description || "",
         target_date: goal.target_date ? new Date(goal.target_date + "T12:00:00") : null,
         contribution_day: goal.contribution_day ?? undefined,
@@ -122,7 +119,6 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       name: data.name,
       goal_type: data.goal_type,
       target_amount: data.target_amount || 0,
-      current_amount: data.current_amount || 0,
       description: data.description || null,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : null,
       contribution_day: data.contribution_day ?? null,
@@ -165,9 +161,21 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.target_amount.message}</p>
           )}
 
-          <FieldRow label="Saldo actual" hint="Monto acumulado">
-            <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("current_amount")} />
-          </FieldRow>
+          {/* Saldos — solo lectura */}
+          {linkedAccount && (
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 space-y-1 mt-1">
+              <FieldRow label="Saldo inicial">
+                <p className="text-sm font-medium text-foreground text-right tabular-nums">
+                  {formatCurrencyAbs(linkedAccount.initial_balance ?? 0, linkedAccount.currency)}
+                </p>
+              </FieldRow>
+              <FieldRow label="Saldo actual" hint="Se actualiza desde el detalle de la meta">
+                <p className="text-sm font-bold text-[hsl(var(--block-build))] text-right tabular-nums">
+                  {formatCurrencyAbs(linkedAccount.current_balance ?? 0, linkedAccount.currency)}
+                </p>
+              </FieldRow>
+            </div>
+          )}
 
           <FieldRow label="Fecha objetivo" hint="Opcional si defines monto">
             <div className="flex items-center gap-1">
@@ -221,11 +229,6 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
           <div className="rounded-lg border border-border p-2.5 space-y-1.5 mt-1">
             <div>
               <span className="text-xs text-muted-foreground">Cuenta vinculada</span>
-              {linkedAccount && (
-                <p className="text-[10px] text-muted-foreground/60">
-                  Saldo actual: {formatCurrencyAbs(linkedAccount.current_balance, linkedAccount.currency)}
-                </p>
-              )}
             </div>
             <Select
               value={form.watch("account_id") ?? "__none__"}

@@ -33,6 +33,8 @@ const editSchema = z.object({
   target_date: z.date().optional().nullable(),
   contribution_day: z.coerce.number().min(1).max(31).optional().nullable(),
   monthly_contribution: z.coerce.number().optional().default(0),
+  currency: z.string().default("MXN"),
+  account_id: z.string().optional(),
 }).refine(
   (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,
   {

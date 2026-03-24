@@ -56,6 +56,11 @@ export default function Accounts() {
   const [deleteDebtTarget, setDeleteDebtTarget] = useState<any>(null);
   const [showStrategy, setShowStrategy] = useState(false);
 
+  // Non-financial assets
+  const { assets: nfAssets } = useNonFinancialAssets();
+  const [nfaSheetOpen, setNfaSheetOpen] = useState(false);
+  const [editingNfa, setEditingNfa] = useState<any>(null);
+
   const handleDeactivate = async () => {
     if (!deleteTarget) return;
     try { await deactivateAccount.mutateAsync(deleteTarget.id); } catch { /* handled */ }

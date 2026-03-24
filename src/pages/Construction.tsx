@@ -29,11 +29,11 @@ const goalConfig: Record<string, { emoji: string; phrase: string }> = {
 };
 
 export default function Construction() {
-  const navigate = useNavigate();
   const { goals, isLoading, totalSaved, totalTarget, deleteGoal } = useSavingsGoals();
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SavingsGoal | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SavingsGoal | null>(null);
+  const [detailTarget, setDetailTarget] = useState<SavingsGoal | null>(null);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;

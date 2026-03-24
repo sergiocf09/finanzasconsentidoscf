@@ -114,7 +114,6 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       account_type: data.account_type,
     });
     form.reset();
-    setLinkExisting(false);
     onOpenChange(false);
   };
 

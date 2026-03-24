@@ -14,6 +14,7 @@ import { formatCurrencyAbs } from "@/lib/formatters";
 import { useSavingsGoals, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
 import { SavingsGoalForm } from "@/components/construction/SavingsGoalForm";
 import { GoalEditSheet } from "@/components/construction/GoalEditSheet";
+import { GoalDetailSheet } from "@/components/construction/GoalDetailSheet";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 

@@ -159,16 +159,21 @@ export function UpcomingDueDates({
     });
   }, [upcomingRecurring, today]);
 
-  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem) => {
+  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem, overrideAccountId?: string) => {
     if (!user) return;
+    const accountToUse = overrideAccountId || recurringItem.account_id;
+    if (!accountToUse) {
+      toast.error("Selecciona una cuenta");
+      return;
+    }
     setConfirmingRecurring(recurringItem.id);
     try {
       // 1. Create the transaction for the confirmed payment
       const { error: txErr } = await supabase.from("transactions").insert({
         user_id: user.id,
-        account_id: (recurringItem as any).account_id,
-        category_id: (recurringItem as any).category_id || null,
-        type: (recurringItem as any).type || "expense",
+        account_id: accountToUse,
+        category_id: recurringItem.category_id || null,
+        type: recurringItem.type || "expense",
         amount: recurringItem.amount,
         currency: recurringItem.currency,
         exchange_rate: 1,
@@ -181,7 +186,7 @@ export function UpcomingDueDates({
       if (txErr) throw txErr;
 
       // 2. Advance next_execution_date, increment payments_made, reset confirmed_at
-      const freq = (recurringItem as any).frequency || "monthly";
+      const freq = recurringItem.frequency || "monthly";
       const currentDate = new Date(recurringItem.next_execution_date + "T12:00:00Z");
       const nextDate = (() => {
         const d = new Date(currentDate);
@@ -193,6 +198,11 @@ export function UpcomingDueDates({
           case "quarterly": d.setMonth(d.getMonth() + 3); break;
           case "annual": d.setFullYear(d.getFullYear() + 1); break;
         }
+        // Adjust to payment_day if set
+        if (recurringItem.payment_day && recurringItem.payment_day >= 1 && recurringItem.payment_day <= 31) {
+          const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+          d.setDate(Math.min(recurringItem.payment_day, maxDay));
+        }
         return d.toISOString().split("T")[0];
       })();
 
@@ -200,7 +210,7 @@ export function UpcomingDueDates({
         .from("recurring_payments" as any)
         .update({
           next_execution_date: nextDate,
-          payments_made: ((recurringItem as any).payments_made || 0) + 1,
+          payments_made: (recurringItem.payments_made || 0) + 1,
           confirmed_at: null,
         } as any)
         .eq("id", recurringItem.id);
@@ -211,6 +221,7 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Pago confirmado y registrado");
+      setRecurringSourceAccountId("");
     } catch (err: any) {
       toast.error(err.message || "Error al confirmar");
     } finally {

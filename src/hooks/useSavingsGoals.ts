@@ -240,5 +240,6 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
     createGoal,
     updateGoal,
     deleteGoal,
+    reconcileGoalBalance,
   };
 }

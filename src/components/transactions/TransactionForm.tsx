@@ -528,7 +528,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
                 {/* Fecha */}
                 <FieldRow label="Fecha">
-                  <Popover>
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         type="button"
@@ -548,7 +548,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                       <Calendar
                         mode="single"
                         selected={form.watch("transaction_date")}
-                        onSelect={(d) => d && form.setValue("transaction_date", d)}
+                        onSelect={(d) => { if (d) { form.setValue("transaction_date", d); setDatePopoverOpen(false); } }}
                         disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                         initialFocus
                       />

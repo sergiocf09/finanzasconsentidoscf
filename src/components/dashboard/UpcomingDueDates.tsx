@@ -114,21 +114,26 @@ export function UpcomingDueDates({
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
-  const in7days = useMemo(() => format(addDays(today, 7), "yyyy-MM-dd"), [today]);
   const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
   const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
   const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
 
-  // Query upcoming recurring payments (next 7 days)
+  // Compute max date for recurring query based on timeFilter
+  const recurringMaxDate = useMemo(() => {
+    const maxDays = getMaxDays(timeFilter, today);
+    return format(addDays(today, maxDays), "yyyy-MM-dd");
+  }, [timeFilter, today]);
+
+  // Query upcoming recurring payments (same filter as debts/goals)
   const { data: upcomingRecurring } = useQuery({
-    queryKey: ["upcoming_recurring", user?.id, todayStr],
+    queryKey: ["upcoming_recurring", user?.id, todayStr, recurringMaxDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_payments" as any)
-        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at")
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency")
         .eq("status", "active")
         .gte("next_execution_date", todayStr)
-        .lte("next_execution_date", in7days)
+        .lte("next_execution_date", recurringMaxDate)
         .order("next_execution_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as any[];

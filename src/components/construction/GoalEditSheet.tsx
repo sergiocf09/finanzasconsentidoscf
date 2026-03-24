@@ -94,6 +94,8 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       target_date: null,
       contribution_day: undefined,
       monthly_contribution: 0,
+      currency: "MXN",
+      account_id: undefined,
     },
   });
 

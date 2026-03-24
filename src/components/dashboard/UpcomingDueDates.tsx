@@ -494,8 +494,45 @@ export function UpcomingDueDates({
   const handleConfirmTransfer = useCallback(async (item: DueItem) => {
     if (!user) return;
     const amountStr = getDisplayAmount(item);
-    const amount = parseFloat(amountStr);
-    if (!amount || amount <= 0) {
+    const amount = parseFloat(amountStr) || 0;
+
+    // Allow $0 — skip transfer but mark as paid
+    if (amount === 0) {
+      const descLabel = item.type === "debt" ? "Pago" : "Aportación";
+      // Register a zero-amount transfer to mark it as done
+      try {
+        setIsSaving(true);
+        await supabase.from("transfers").insert({
+          user_id: user.id,
+          from_account_id: item.accountId!,
+          to_account_id: item.accountId!,
+          amount_from: 0,
+          amount_to: 0,
+          currency_from: item.currency,
+          currency_to: item.currency,
+          transfer_date: format(new Date(), "yyyy-MM-dd"),
+          description: `${descLabel}: ${item.name}`,
+          created_from: "due_dates",
+        });
+        queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+        toast.success("Vencimiento marcado como cubierto ($0)");
+        setEditedAmounts(prev => {
+          const next = { ...prev };
+          delete next[item.id];
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+          return next;
+        });
+        handleCancelTransfer();
+      } catch (err: any) {
+        toast.error(err.message || "Error");
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    if (amount < 0) {
       toast.error("Ingresa un monto válido");
       return;
     }

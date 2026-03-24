@@ -148,7 +148,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
         {/* Custom date pickers */}
         {period === "custom" && (
           <div className="flex gap-2">
-            <Popover>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -159,7 +159,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 <Calendar
                   mode="single"
                   selected={customStart}
-                  onSelect={(d) => d && setCustomStart(d)}
+                  onSelect={(d) => { if (d) { setCustomStart(d); setStartDateOpen(false); } }}
                   className="p-3 pointer-events-auto"
                 />
               </PopoverContent>

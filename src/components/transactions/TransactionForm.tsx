@@ -83,6 +83,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
   const [openAccountCombo, setOpenAccountCombo] = useState(false);
   const [openToAccountCombo, setOpenToAccountCombo] = useState(false);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Transfer state

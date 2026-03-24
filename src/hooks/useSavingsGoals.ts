@@ -152,6 +152,55 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
     },
   });
 
+  const reconcileGoalBalance = useMutation({
+    mutationFn: async ({ goalId, accountId, newBalance, note }: {
+      goalId: string;
+      accountId: string;
+      newBalance: number;
+      note?: string;
+    }) => {
+      // Get current account balance
+      const { data: account, error: accErr } = await supabase
+        .from("accounts")
+        .select("current_balance")
+        .eq("id", accountId)
+        .single();
+      if (accErr) throw accErr;
+
+      const previousBalance = account.current_balance ?? 0;
+      const delta = newBalance - previousBalance;
+
+      // Update account balance (trigger syncs to savings_goals)
+      const { error: updateErr } = await supabase
+        .from("accounts")
+        .update({ current_balance: newBalance })
+        .eq("id", accountId);
+      if (updateErr) throw updateErr;
+
+      // Record reconciliation for audit
+      const { error: reconErr } = await supabase
+        .from("account_reconciliations")
+        .insert({
+          account_id: accountId,
+          user_id: user!.id,
+          previous_balance: previousBalance,
+          new_balance: newBalance,
+          delta,
+          note: note || "Actualización de saldo desde Construcción",
+        });
+      if (reconErr) throw reconErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["reconciliations"] });
+      toast({ title: "Saldo actualizado" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const deleteGoal = useMutation({
     mutationFn: async (id: string) => {
       const { data: goal } = await supabase

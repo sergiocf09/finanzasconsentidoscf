@@ -29,11 +29,11 @@ const editSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
   goal_type: z.enum(["emergency", "home", "car", "travel", "education", "business", "retirement", "custom"]),
   target_amount: z.coerce.number().min(0).optional().default(0),
+  current_amount: z.coerce.number().min(0).optional().default(0),
   description: z.string().optional(),
   target_date: z.date().optional().nullable(),
   contribution_day: z.coerce.number().min(1).max(31).optional().nullable(),
   monthly_contribution: z.coerce.number().optional().default(0),
-  currency: z.string().default("MXN"),
   account_id: z.string().optional(),
 }).refine(
   (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,

@@ -80,9 +80,14 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   }, [activeOnly]);
 
   // Compute totals in MXN (including non-financial assets)
-  const totalNFAMXN = Object.entries(totalNFAByCurrency).reduce(
-    (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
-  );
+  const totalNFAMXN = Object.entries(
+    nfAssets
+      .filter(a => a.is_active && (a as any).include_in_summary !== false)
+      .reduce<Record<string, number>>((acc, a) => {
+        acc[a.currency] = (acc[a.currency] ?? 0) + a.current_value;
+        return acc;
+      }, {})
+  ).reduce((sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0);
   const totalAssetsMXN = Object.entries(assetsByCurrency).reduce(
     (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
   ) + totalNFAMXN;

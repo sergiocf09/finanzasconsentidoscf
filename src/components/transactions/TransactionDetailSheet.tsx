@@ -142,7 +142,7 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {activeAccounts.map(a => {
-                    const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: a.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(a.current_balance ?? 0);
+                    const bal = formatCurrency(a.current_balance ?? 0, a.currency);
                     return (
                       <SelectItem key={a.id} value={a.id}>
                         <span className="flex items-center justify-between w-full gap-2">

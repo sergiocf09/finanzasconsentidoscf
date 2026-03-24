@@ -208,11 +208,11 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
             <div className="rounded-lg bg-muted px-3 py-2 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Sale de {fromAccount!.name}</span>
-                <span className="font-medium">{new Intl.NumberFormat("es-MX", { style: "currency", currency: fromAccount!.currency }).format(conversion.amountFrom)}</span>
+                <span className="font-medium">{formatCurrency(conversion.amountFrom, fromAccount!.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Llega a {toAccount!.name}</span>
-                <span className="font-medium text-foreground">{new Intl.NumberFormat("es-MX", { style: "currency", currency: toAccount!.currency }).format(conversion.amountTo)}</span>
+                <span className="font-medium text-foreground">{formatCurrency(conversion.amountTo, toAccount!.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Tipo de cambio automático</span>

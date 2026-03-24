@@ -105,11 +105,11 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
         name: goal.name,
         goal_type: goal.goal_type as EditValues["goal_type"],
         target_amount: goal.target_amount || 0,
+        current_amount: goal.current_amount || 0,
         description: goal.description || "",
         target_date: goal.target_date ? new Date(goal.target_date + "T12:00:00") : null,
         contribution_day: goal.contribution_day ?? undefined,
         monthly_contribution: goal.monthly_contribution || 0,
-        currency: (goal as any).currency ?? "MXN",
         account_id: goal.account_id ?? undefined,
       });
     }

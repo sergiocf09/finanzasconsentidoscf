@@ -65,6 +65,8 @@ export default function FinancialDashboard() {
       }));
   }, [currentBlocks]);
 
+  // Use real total expense (from transactions) to match Budgets page's adjustedTotalSpent
+  const realTotalSpent = totals.expense;
   const netFlow = totals.income - totals.expense;
 
   if (isLoading) {

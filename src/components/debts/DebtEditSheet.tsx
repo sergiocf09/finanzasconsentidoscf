@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Plus, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { useNonFinancialAssets } from "@/hooks/useNonFinancialAssets";
+import { NonFinancialAssetSheet } from "@/components/assets/NonFinancialAssetSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

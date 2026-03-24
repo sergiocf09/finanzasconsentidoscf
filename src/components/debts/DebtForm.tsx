@@ -67,6 +67,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 
 export function DebtForm({ open, onOpenChange }: DebtFormProps) {
   const { createDebt } = useDebts();
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtSchema),

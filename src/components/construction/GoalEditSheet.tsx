@@ -158,22 +158,16 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
             </Select>
           </FieldRow>
 
-          <FieldRow label="Moneda">
-            <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MXN">MXN</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldRow>
-
           <FieldRow label="Monto objetivo" hint="Opcional si defines fecha">
             <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("target_amount")} />
           </FieldRow>
           {form.formState.errors.target_amount && (
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.target_amount.message}</p>
           )}
+
+          <FieldRow label="Saldo actual" hint="Monto acumulado">
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("current_amount")} />
+          </FieldRow>
 
           <FieldRow label="Fecha objetivo" hint="Opcional si defines monto">
             <div className="flex items-center gap-1">

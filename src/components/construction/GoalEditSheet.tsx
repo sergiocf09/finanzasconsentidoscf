@@ -122,11 +122,11 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       name: data.name,
       goal_type: data.goal_type,
       target_amount: data.target_amount || 0,
+      current_amount: data.current_amount || 0,
       description: data.description || null,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : null,
       contribution_day: data.contribution_day ?? null,
       monthly_contribution: data.monthly_contribution || 0,
-      currency: data.currency,
       account_id: data.account_id ?? null,
     } as any);
     onOpenChange(false);

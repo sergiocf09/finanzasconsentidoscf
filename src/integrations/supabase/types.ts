@@ -664,6 +664,7 @@ export type Database = {
           current_value: number
           description: string | null
           id: string
+          include_in_summary: boolean | null
           is_active: boolean | null
           linked_debt_id: string | null
           name: string
@@ -679,6 +680,7 @@ export type Database = {
           current_value?: number
           description?: string | null
           id?: string
+          include_in_summary?: boolean | null
           is_active?: boolean | null
           linked_debt_id?: string | null
           name: string
@@ -694,6 +696,7 @@ export type Database = {
           current_value?: number
           description?: string | null
           id?: string
+          include_in_summary?: boolean | null
           is_active?: boolean | null
           linked_debt_id?: string | null
           name?: string

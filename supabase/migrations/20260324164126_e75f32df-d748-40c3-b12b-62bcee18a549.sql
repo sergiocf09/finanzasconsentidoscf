@@ -1,0 +1,1 @@
+ALTER TABLE public.non_financial_assets ADD COLUMN IF NOT EXISTS include_in_summary BOOLEAN DEFAULT true;

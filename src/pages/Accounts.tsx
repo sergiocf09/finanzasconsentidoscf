@@ -144,19 +144,24 @@ export default function Accounts() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-2">
-              {Object.entries(assetsByCurrency).map(([currency, total]) => (
-                <div
-                  key={`asset-${currency}`}
-                  className="rounded-xl bg-income/10 border border-income/20 p-3 cursor-pointer card-interactive"
-                  onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <ShieldCheck className="h-4 w-4 text-income" />
-                    <p className="text-xs font-bold text-foreground">Activos {currency}</p>
+              {Object.entries(assetsByCurrency).map(([currency, total]) => {
+                const nfaForCurr = nfAssets
+                  .filter(a => a.is_active && (a as any).include_in_summary !== false && a.currency === currency)
+                  .reduce((s, a) => s + a.current_value, 0);
+                return (
+                  <div
+                    key={`asset-${currency}`}
+                    className="rounded-xl bg-income/10 border border-income/20 p-3 cursor-pointer card-interactive"
+                    onClick={() => document.getElementById("section-assets")?.scrollIntoView({ behavior: "smooth" })}
+                  >
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <ShieldCheck className="h-4 w-4 text-income" />
+                      <p className="text-xs font-bold text-foreground">Activos {currency}</p>
+                    </div>
+                    <p className="text-lg font-bold font-heading text-income">{mask(fmt(total + nfaForCurr, currency))}</p>
                   </div>
-                  <p className="text-lg font-bold font-heading text-income">{mask(fmt(total, currency))}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="space-y-2">
               {Object.entries(liabilitiesByCurrency).map(([currency, total]) => (

@@ -20,6 +20,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { useNonFinancialAssets } from "@/hooks/useNonFinancialAssets";
 import { formatCurrency } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -35,6 +36,7 @@ export default function FinancialDashboard() {
   const { totals, transactions } = useTransactions({ startDate: currentStart, endDate: currentEnd });
   const { totalBudgeted, totalSpent: budgetedSpent, budgetsNearLimit } = useBudgets();
   const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
+  const { assets: nfAssets } = useNonFinancialAssets();
   const {
     isLoading,
     stage, stageName, stageMessage,
@@ -49,7 +51,11 @@ export default function FinancialDashboard() {
 
   const { convertToMXN } = useExchangeRate();
 
-  const totalAssets = Object.entries(assetsByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0);
+  const totalNFAMXN = nfAssets
+    .filter(a => a.is_active && (a as any).include_in_summary !== false)
+    .reduce((sum, a) => sum + convertToMXN(a.current_value, a.currency), 0);
+
+  const totalAssets = Object.entries(assetsByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0) + totalNFAMXN;
   const totalLiabilities = Object.entries(liabilitiesByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0);
 
   const topCategories = useMemo(() => {

@@ -16,7 +16,7 @@ import { CategoryComparisonList } from "@/components/intelligence/CategoryCompar
 import { HistoricalChart } from "@/components/intelligence/HistoricalChart";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useBudgets } from "@/hooks/useBudgets";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isAssetType, isLiability } from "@/hooks/useAccounts";
 import { useFinancialIntelligence } from "@/hooks/useFinancialIntelligence";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";

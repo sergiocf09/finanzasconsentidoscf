@@ -33,7 +33,7 @@ export default function FinancialDashboard() {
   const currentStart = startOfMonth(now);
   const currentEnd = endOfMonth(now);
   const { totals, transactions } = useTransactions({ startDate: currentStart, endDate: currentEnd });
-  const { totalBudgeted, totalSpent, budgetsNearLimit } = useBudgets();
+  const { totalBudgeted, totalSpent: budgetedSpent, budgetsNearLimit } = useBudgets();
   const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
   const {
     isLoading,

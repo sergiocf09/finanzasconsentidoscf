@@ -802,6 +802,7 @@ export type Database = {
           next_execution_date: string
           notes: string | null
           original_total_amount: number | null
+          payment_day: number | null
           payments_made: number
           remaining_balance: number | null
           requires_manual_action: boolean | null
@@ -827,6 +828,7 @@ export type Database = {
           next_execution_date: string
           notes?: string | null
           original_total_amount?: number | null
+          payment_day?: number | null
           payments_made?: number
           remaining_balance?: number | null
           requires_manual_action?: boolean | null
@@ -852,6 +854,7 @@ export type Database = {
           next_execution_date?: string
           notes?: string | null
           original_total_amount?: number | null
+          payment_day?: number | null
           payments_made?: number
           remaining_balance?: number | null
           requires_manual_action?: boolean | null

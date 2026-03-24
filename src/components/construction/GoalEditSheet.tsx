@@ -126,6 +126,8 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : null,
       contribution_day: data.contribution_day ?? null,
       monthly_contribution: data.monthly_contribution || 0,
+      currency: data.currency,
+      account_id: data.account_id ?? null,
     } as any);
     onOpenChange(false);
   };

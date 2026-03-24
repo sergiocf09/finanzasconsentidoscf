@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useSavingsGoals, SavingsGoal } from "@/hooks/useSavingsGoals";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isAssetType } from "@/hooks/useAccounts";
 import { formatCurrencyAbs } from "@/lib/formatters";
 
 const editSchema = z.object({
@@ -33,6 +33,8 @@ const editSchema = z.object({
   target_date: z.date().optional().nullable(),
   contribution_day: z.coerce.number().min(1).max(31).optional().nullable(),
   monthly_contribution: z.coerce.number().optional().default(0),
+  currency: z.string().default("MXN"),
+  account_id: z.string().optional(),
 }).refine(
   (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,
   {
@@ -73,6 +75,9 @@ interface GoalEditSheetProps {
 export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) {
   const { updateGoal } = useSavingsGoals();
   const { accounts } = useAccounts();
+  const availableAccounts = accounts.filter(
+    (a) => a.is_active && isAssetType(a.type) && ["savings", "investment"].includes(a.type)
+  );
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const linkedAccount = goal?.account_id
@@ -89,6 +94,8 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       target_date: null,
       contribution_day: undefined,
       monthly_contribution: 0,
+      currency: "MXN",
+      account_id: undefined,
     },
   });
 
@@ -102,6 +109,8 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
         target_date: goal.target_date ? new Date(goal.target_date + "T12:00:00") : null,
         contribution_day: goal.contribution_day ?? undefined,
         monthly_contribution: goal.monthly_contribution || 0,
+        currency: (goal as any).currency ?? "MXN",
+        account_id: goal.account_id ?? undefined,
       });
     }
   }, [goal, open, form]);
@@ -117,6 +126,8 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : null,
       contribution_day: data.contribution_day ?? null,
       monthly_contribution: data.monthly_contribution || 0,
+      currency: data.currency,
+      account_id: data.account_id ?? null,
     } as any);
     onOpenChange(false);
   };
@@ -143,6 +154,16 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
                 {goalTypes.map((t) => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </FieldRow>
+
+          <FieldRow label="Moneda">
+            <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MXN">MXN</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
               </SelectContent>
             </Select>
           </FieldRow>
@@ -202,22 +223,33 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
             <Textarea className="resize-none text-sm h-14" {...form.register("description")} />
           </FieldRow>
 
-          {/* Cuenta vinculada — solo lectura */}
-          {linkedAccount && (
-            <FieldRow label="Cuenta vinculada">
-              <div className="flex items-center gap-2 h-8 px-2 rounded-md border border-input bg-muted/30">
-                <span className="text-sm text-muted-foreground truncate flex-1">
-                  {linkedAccount.name}
-                </span>
-                <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                  {formatCurrencyAbs(linkedAccount.current_balance, linkedAccount.currency)}
-                </span>
-              </div>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                Para cambiarla, crea una nueva meta vinculada a otra cuenta.
-              </p>
-            </FieldRow>
-          )}
+          {/* Cuenta vinculada — editable */}
+          <div className="rounded-lg border border-border p-2.5 space-y-1.5 mt-1">
+            <div>
+              <span className="text-xs text-muted-foreground">Cuenta vinculada</span>
+              {linkedAccount && (
+                <p className="text-[10px] text-muted-foreground/60">
+                  Saldo actual: {formatCurrencyAbs(linkedAccount.current_balance, linkedAccount.currency)}
+                </p>
+              )}
+            </div>
+            <Select
+              value={form.watch("account_id") ?? ""}
+              onValueChange={(v) => form.setValue("account_id", v === "" ? undefined : v)}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Sin cuenta vinculada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Sin cuenta</SelectItem>
+                {availableAccounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.currency})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="flex gap-2 pt-4 border-t border-border mt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>

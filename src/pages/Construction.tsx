@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Plus, TrendingUp, Pencil, Trash2, CalendarDays,
 } from "lucide-react";
@@ -15,6 +14,7 @@ import { formatCurrencyAbs } from "@/lib/formatters";
 import { useSavingsGoals, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
 import { SavingsGoalForm } from "@/components/construction/SavingsGoalForm";
 import { GoalEditSheet } from "@/components/construction/GoalEditSheet";
+import { GoalDetailSheet } from "@/components/construction/GoalDetailSheet";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -30,11 +30,11 @@ const goalConfig: Record<string, { emoji: string; phrase: string }> = {
 };
 
 export default function Construction() {
-  const navigate = useNavigate();
   const { goals, isLoading, totalSaved, totalTarget, deleteGoal } = useSavingsGoals();
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SavingsGoal | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SavingsGoal | null>(null);
+  const [detailTarget, setDetailTarget] = useState<SavingsGoal | null>(null);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -67,7 +67,7 @@ export default function Construction() {
       <div
         key={goal.id}
         className="rounded-xl bg-card border border-border p-3 space-y-2.5 card-interactive cursor-pointer"
-        onClick={() => goal.account_id && navigate(`/accounts/${goal.account_id}`)}
+        onClick={() => setDetailTarget(goal)}
       >
         {/* Header */}
         <div className="flex items-start gap-2">
@@ -77,6 +77,11 @@ export default function Construction() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{goal.name}</p>
             <p className="text-[10px] text-muted-foreground">{config.phrase}</p>
+            {!goal.account_id && (
+              <span className="text-[9px] text-muted-foreground/60 italic">
+                Sin cuenta vinculada
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             <Button
@@ -250,6 +255,7 @@ export default function Construction() {
 
       <SavingsGoalForm open={formOpen} onOpenChange={setFormOpen} />
       <GoalEditSheet goal={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
+      <GoalDetailSheet goal={detailTarget} open={!!detailTarget} onOpenChange={(o) => !o && setDetailTarget(null)} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

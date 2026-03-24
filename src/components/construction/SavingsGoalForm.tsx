@@ -222,40 +222,34 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
             <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="5,000" {...form.register("monthly_contribution")} />
           </FieldRow>
 
-          {/* Account linking */}
-          <div className="rounded-lg border border-border p-2.5 space-y-1.5 mt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Vincular cuenta existente</span>
-              <Switch checked={linkExisting} onCheckedChange={setLinkExisting} />
+          <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2.5 mt-1">
+            <div className="flex items-start gap-2">
+              <span className="text-base mt-0.5">🏦</span>
+              <div>
+                <p className="text-xs font-medium text-foreground">
+                  Se creará una cuenta dedicada a esta meta
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
+                  Cada meta de construcción tiene su propia cuenta. Así el saldo 
+                  que ves aquí siempre coincide exactamente con lo que tienes ahorrado 
+                  o invertido para este fin. Mezclar fondos de distintos objetivos en 
+                  una misma cuenta complica el seguimiento y la disciplina de ahorro.
+                </p>
+              </div>
             </div>
 
-            {linkExisting ? (
-              <FieldRow label="Cuenta">
-                <Select value={form.watch("account_id")} onValueChange={(v) => form.setValue("account_id", v)}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecciona" /></SelectTrigger>
-                  <SelectContent>
-                    {availableAccounts.length === 0 ? (
-                      <SelectItem value="_none" disabled>Sin cuentas disponibles</SelectItem>
-                    ) : (
-                      availableAccounts.map((acc) => (
-                        <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </FieldRow>
-            ) : (
-              <FieldRow label="Tipo de cuenta" hint="Se creará automáticamente">
-                <Select value={form.watch("account_type")} onValueChange={(v) => form.setValue("account_type", v as any)}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {accountTypes.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FieldRow>
-            )}
+            <FieldRow label="Tipo de cuenta">
+              <Select
+                value={form.watch("account_type")}
+                onValueChange={(v) => form.setValue("account_type", v as "savings" | "investment")}
+              >
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="savings">Ahorro — para metas de corto y mediano plazo</SelectItem>
+                  <SelectItem value="investment">Inversión — para metas de largo plazo o que generan rendimiento</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldRow>
           </div>
 
           <div className="flex gap-3 pt-3 border-t border-border mt-3">

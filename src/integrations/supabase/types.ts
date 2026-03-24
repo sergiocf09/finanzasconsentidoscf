@@ -654,6 +654,62 @@ export type Database = {
         }
         Relationships: []
       }
+      non_financial_assets: {
+        Row: {
+          acquisition_date: string | null
+          acquisition_value: number | null
+          asset_type: string
+          created_at: string | null
+          currency: string
+          current_value: number
+          description: string | null
+          id: string
+          is_active: boolean | null
+          linked_debt_id: string | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          acquisition_date?: string | null
+          acquisition_value?: number | null
+          asset_type: string
+          created_at?: string | null
+          currency?: string
+          current_value?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          linked_debt_id?: string | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          acquisition_date?: string | null
+          acquisition_value?: number | null
+          asset_type?: string
+          created_at?: string | null
+          currency?: string
+          current_value?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          linked_debt_id?: string | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "non_financial_assets_linked_debt_id_fkey"
+            columns: ["linked_debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

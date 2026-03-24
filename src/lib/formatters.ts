@@ -14,12 +14,17 @@ export function formatCurrency(
   const v = options?.abs ? Math.abs(raw) : raw;
   const minDec = options?.decimals ?? 0;
   const maxDec = options?.decimals ?? 0;
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: minDec,
-    maximumFractionDigits: maxDec,
-  }).format(v);
+  try {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: minDec,
+      maximumFractionDigits: maxDec,
+    }).format(v);
+  } catch {
+    // Fallback for non-ISO currency codes (e.g. USDC, BTC)
+    return `$${v.toLocaleString("es-MX", { minimumFractionDigits: minDec, maximumFractionDigits: maxDec })} ${currency}`;
+  }
 }
 
 /**

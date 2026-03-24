@@ -96,6 +96,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [categoryId, setCategoryId] = useState("");
   const [frequency, setFrequency] = useState("monthly");
   const [startDate, setStartDate] = useState<Date>(new Date());
+  const [paymentDay, setPaymentDay] = useState<string>("");
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [totalPayments, setTotalPayments] = useState("");
   const [originalTotal, setOriginalTotal] = useState("");
@@ -105,10 +106,11 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const [isSavingRetro, setIsSavingRetro] = useState(false);
   const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
   const [openAccountCombo, setOpenAccountCombo] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const isEdit = !!editPayment;
 
-  // Populate form fields when opening (works for both controlled and uncontrolled open)
   useEffect(() => {
     if (!open) return;
     if (editPayment) {
@@ -121,6 +123,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setCategoryId(editPayment.category_id || "");
       setFrequency(editPayment.frequency);
       setStartDate(new Date(editPayment.start_date));
+      setPaymentDay(editPayment.payment_day ? String(editPayment.payment_day) : "");
       setEndDate(editPayment.end_date ? new Date(editPayment.end_date) : undefined);
       setTotalPayments(editPayment.total_payments ? String(editPayment.total_payments) : "");
       setOriginalTotal(editPayment.original_total_amount ? String(editPayment.original_total_amount) : "");
@@ -136,6 +139,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       setCategoryId(prefill?.category_id || "");
       setFrequency("monthly");
       setStartDate(prefill?.date || new Date());
+      setPaymentDay(prefill?.date ? String(prefill.date.getDate()) : "");
       setEndDate(undefined);
       setTotalPayments("");
       setOriginalTotal("");
@@ -145,11 +149,12 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
     setOpenAccountCombo(false);
     setOpenCategoryCombo(false);
+    setStartDateOpen(false);
+    setEndDateOpen(false);
   }, [open, editPayment]);
 
   const categories = type === "income" ? incomeCategories : expenseCategories;
 
-  // Calculate retroactive dates (for new payments: all past dates; for edits: only new past dates beyond existing payments_made)
   const retroDates = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -158,7 +163,6 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
     if (sDate >= today) return [];
     const allDates = getRetroactiveDates(sDate, frequency);
     if (isEdit && editPayment) {
-      // Only return dates beyond what's already been paid
       return allDates.slice(editPayment.payments_made);
     }
     return allDates;
@@ -168,7 +172,6 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
     const parsedAmount = parseFloat(amount);
     if (!name || !parsedAmount || !accountId || !frequency) return;
 
-    // If retroactive dates exist, show confirmation (both create and edit)
     if (retroDates.length > 0) {
       setRetroConfirmOpen(true);
       return;
@@ -182,14 +185,19 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
     if (!name || !parsedAmount || !accountId || !frequency || !user) return;
 
     const sDate = format(startDate, "yyyy-MM-dd");
+    const pDay = paymentDay ? parseInt(paymentDay) : null;
 
-    // Calculate next execution date (must be in the future)
+    // Calculate next execution date
     let nextDate: Date;
     if (retroDates.length > 0) {
-      // Next date is after the last retroactive date
       nextDate = getNextExecutionDate(retroDates[retroDates.length - 1], frequency);
     } else {
       nextDate = getNextExecutionDate(startDate, frequency);
+    }
+
+    // If payment_day is set, adjust the next date to use that day
+    if (pDay && pDay >= 1 && pDay <= 31) {
+      nextDate.setDate(Math.min(pDay, new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate()));
     }
 
     const payload: any = {
@@ -210,12 +218,12 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
       notes: notes || null,
       payments_made: generateRetro ? retroDates.length : 0,
       requires_manual_action: requiresManualAction,
+      payment_day: pDay,
     };
 
     if (isEdit) {
       await updatePayment.mutateAsync({ id: editPayment.id, ...payload });
 
-      // Generate retroactive transactions for edit mode too
       if (generateRetro && retroDates.length > 0) {
         setIsSavingRetro(true);
         try {
@@ -236,7 +244,6 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
           await supabase.from("transactions").insert(transactions);
 
-          // Update payments_made and remaining balance
           const newPaymentsMade = (editPayment.payments_made || 0) + retroDates.length;
           const updateData: any = { payments_made: newPaymentsMade };
           if (originalTotal) {
@@ -259,10 +266,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
         }
       }
     } else {
-      // Create the recurring payment
       const result = await createPayment.mutateAsync(payload);
 
-      // Generate retroactive transactions if confirmed
       if (generateRetro && retroDates.length > 0) {
         setIsSavingRetro(true);
         try {
@@ -283,7 +288,6 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
 
           await supabase.from("transactions").insert(transactions);
           
-          // Update remaining balance if applicable
           if (originalTotal) {
             const totalPaid = parsedAmount * retroDates.length;
             const remaining = Math.max(0, parseFloat(originalTotal) - totalPaid);
@@ -449,8 +453,8 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
               </Select>
             </FieldRow>
 
-            <FieldRow label="Fecha inicio">
-              <Popover>
+            <FieldRow label="Fecha inicio" hint="Cuándo comenzó o comienza">
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full h-8 text-xs justify-start", !startDate && "text-muted-foreground")}>
                     {startDate ? format(startDate, "dd/MM/yyyy", { locale: es }) : "Seleccionar"}
@@ -458,9 +462,33 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={startDate} onSelect={d => d && setStartDate(d)} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={d => {
+                      if (d) {
+                        setStartDate(d);
+                        // Auto-fill payment day from start date if not set
+                        if (!paymentDay) setPaymentDay(String(d.getDate()));
+                        setStartDateOpen(false);
+                      }
+                    }}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
+            </FieldRow>
+
+            <FieldRow label="Día de pago" hint="Día del mes en que se realiza (1-31)">
+              <Input
+                type="number"
+                min={1}
+                max={31}
+                value={paymentDay}
+                onChange={e => setPaymentDay(e.target.value)}
+                placeholder="Ej: 15"
+                className="h-8 text-xs"
+              />
             </FieldRow>
 
             {/* Retroactive warning */}
@@ -477,7 +505,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             )}
 
             <FieldRow label="Fecha fin" hint="Opcional">
-              <Popover>
+              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full h-8 text-xs justify-start", !endDate && "text-muted-foreground")}>
                     {endDate ? format(endDate, "dd/MM/yyyy", { locale: es }) : "Sin fecha fin"}
@@ -485,7 +513,15 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={d => {
+                      setEndDate(d || undefined);
+                      setEndDateOpen(false);
+                    }}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </FieldRow>

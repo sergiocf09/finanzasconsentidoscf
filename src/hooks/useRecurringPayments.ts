@@ -25,6 +25,7 @@ export interface RecurringPayment {
   notes: string | null;
   requires_manual_action: boolean;
   confirmed_at: string | null;
+  payment_day: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -47,6 +48,7 @@ export interface CreateRecurringPaymentData {
   remaining_balance?: number;
   requires_manual_action?: boolean;
   notes?: string;
+  payment_day?: number;
 }
 
 export const FREQUENCY_LABELS: Record<string, string> = {

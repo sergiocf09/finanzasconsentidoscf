@@ -80,6 +80,7 @@ interface RecurringDueItem {
   frequency: string;
   type: string;
   payments_made: number;
+  payment_day: number | null;
 }
 
 export function UpcomingDueDates({
@@ -117,6 +118,7 @@ export function UpcomingDueDates({
   const [isSaving, setIsSaving] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
+  const [recurringSourceAccountId, setRecurringSourceAccountId] = useState<string>("");
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
@@ -135,7 +137,7 @@ export function UpcomingDueDates({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_payments" as any)
-        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency")
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency, payment_day")
         .eq("status", "active")
         .gte("next_execution_date", todayStr)
         .lte("next_execution_date", recurringMaxDate)
@@ -157,16 +159,21 @@ export function UpcomingDueDates({
     });
   }, [upcomingRecurring, today]);
 
-  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem) => {
+  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem, overrideAccountId?: string) => {
     if (!user) return;
+    const accountToUse = overrideAccountId || recurringItem.account_id;
+    if (!accountToUse) {
+      toast.error("Selecciona una cuenta");
+      return;
+    }
     setConfirmingRecurring(recurringItem.id);
     try {
       // 1. Create the transaction for the confirmed payment
       const { error: txErr } = await supabase.from("transactions").insert({
         user_id: user.id,
-        account_id: (recurringItem as any).account_id,
-        category_id: (recurringItem as any).category_id || null,
-        type: (recurringItem as any).type || "expense",
+        account_id: accountToUse,
+        category_id: recurringItem.category_id || null,
+        type: recurringItem.type || "expense",
         amount: recurringItem.amount,
         currency: recurringItem.currency,
         exchange_rate: 1,
@@ -179,7 +186,7 @@ export function UpcomingDueDates({
       if (txErr) throw txErr;
 
       // 2. Advance next_execution_date, increment payments_made, reset confirmed_at
-      const freq = (recurringItem as any).frequency || "monthly";
+      const freq = recurringItem.frequency || "monthly";
       const currentDate = new Date(recurringItem.next_execution_date + "T12:00:00Z");
       const nextDate = (() => {
         const d = new Date(currentDate);
@@ -191,6 +198,11 @@ export function UpcomingDueDates({
           case "quarterly": d.setMonth(d.getMonth() + 3); break;
           case "annual": d.setFullYear(d.getFullYear() + 1); break;
         }
+        // Adjust to payment_day if set
+        if (recurringItem.payment_day && recurringItem.payment_day >= 1 && recurringItem.payment_day <= 31) {
+          const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+          d.setDate(Math.min(recurringItem.payment_day, maxDay));
+        }
         return d.toISOString().split("T")[0];
       })();
 
@@ -198,7 +210,7 @@ export function UpcomingDueDates({
         .from("recurring_payments" as any)
         .update({
           next_execution_date: nextDate,
-          payments_made: ((recurringItem as any).payments_made || 0) + 1,
+          payments_made: (recurringItem.payments_made || 0) + 1,
           confirmed_at: null,
         } as any)
         .eq("id", recurringItem.id);
@@ -209,6 +221,7 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Pago confirmado y registrado");
+      setRecurringSourceAccountId("");
     } catch (err: any) {
       toast.error(err.message || "Error al confirmar");
     } finally {
@@ -722,22 +735,24 @@ export function UpcomingDueDates({
             const isManual = r.requires_manual_action;
             const isConfirmed = !!r.confirmed_at;
             const isUrgent = r.daysLeft <= 2;
+            const isExpanded = confirmingRecurring === r.id;
+            const defaultAcct = accounts.find(a => a.id === r.account_id);
             return (
               <div
                 key={r.id}
                 className={cn(
                   "rounded-xl border p-3 transition-colors",
                   isManual && !isConfirmed && isUrgent
-                    ? "border-amber-500/30 bg-amber-500/5"
+                    ? "border-expense/30 bg-expense/5"
                     : "border-border bg-card"
                 )}
               >
                 <div className="flex items-center gap-2.5">
                   <div className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isManual && !isConfirmed ? "bg-amber-500/10" : "bg-primary/10"
+                    isManual && !isConfirmed ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Repeat className={cn("h-5 w-5", isManual && !isConfirmed ? "text-amber-600" : "text-primary")} />
+                    <Repeat className={cn("h-5 w-5", isManual && !isConfirmed ? "text-expense" : "text-primary")} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
@@ -746,8 +761,8 @@ export function UpcomingDueDates({
                         {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {r.daysLeft === 0 ? "Hoy" : r.daysLeft === 1 ? "Mañana" : `En ${r.daysLeft} días`}
                       </p>
                       {isManual && !isConfirmed ? (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-700 border-amber-500/30">
-                          Pendiente confirmar
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-expense/15 text-expense border-expense/30">
+                          Pendiente
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
@@ -760,18 +775,72 @@ export function UpcomingDueDates({
                     <span className="text-sm font-bold text-foreground tabular-nums">
                       {formatCurrencyAbs(r.amount, r.currency)}
                     </span>
-                    {isManual && !isConfirmed && (
+                    {isManual && !isConfirmed && !isExpanded && (
                       <button
-                        onClick={() => handleConfirmRecurring(r)}
-                        disabled={confirmingRecurring === r.id}
+                        onClick={() => {
+                          setConfirmingRecurring(r.id);
+                          setRecurringSourceAccountId(r.account_id || "");
+                        }}
                         className="flex h-7 items-center gap-1 px-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
                       >
                         <Check className="h-3.5 w-3.5" />
-                        Ya lo realicé
+                        Ejecutar
                       </button>
                     )}
                   </div>
                 </div>
+
+                {/* Account picker for manual confirmation */}
+                {isManual && !isConfirmed && isExpanded && (
+                  <div className="space-y-2 mt-2 pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      Selecciona la cuenta desde donde se realizó este pago:
+                    </p>
+                    <Select value={recurringSourceAccountId} onValueChange={setRecurringSourceAccountId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Cuenta de origen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts
+                          .filter(a => a.is_active)
+                          .map(a => (
+                            <SelectItem key={a.id} value={a.id} className="text-xs">
+                              <div className="flex items-center justify-between gap-3 w-full">
+                                <span className="truncate">{a.name}</span>
+                                <span className="tabular-nums text-muted-foreground shrink-0">
+                                  {formatCurrencyAbs(Math.abs(a.current_balance ?? 0), a.currency)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex items-center gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setConfirmingRecurring(null);
+                          setRecurringSourceAccountId("");
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Cancelar
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 gap-1 px-3 text-xs"
+                        onClick={() => handleConfirmRecurring(r, recurringSourceAccountId)}
+                        disabled={!recurringSourceAccountId}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Confirmar pago
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

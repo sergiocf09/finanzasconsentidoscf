@@ -1,0 +1,1 @@
+ALTER TABLE public.recurring_payments ADD COLUMN IF NOT EXISTS payment_day integer;

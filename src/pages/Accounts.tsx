@@ -146,7 +146,7 @@ export default function Accounts() {
             <div className="space-y-2">
               {Object.entries(assetsByCurrency).map(([currency, total]) => {
                 const nfaForCurr = nfAssets
-                  .filter(a => a.is_active && (a as any).include_in_summary !== false && a.currency === currency)
+                  .filter(a => a.is_active && a.currency === currency)
                   .reduce((s, a) => s + a.current_value, 0);
                 return (
                   <div

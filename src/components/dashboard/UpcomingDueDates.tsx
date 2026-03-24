@@ -245,6 +245,76 @@ export function UpcomingDueDates({
     enabled: !!user && !summaryPaidDueDates,
   });
 
+  // Query credit card spending since last cut date for each "current" debt
+  const { data: ccBalances } = useQuery({
+    queryKey: ["cc_cut_balances", user?.id, todayStr],
+    queryFn: async () => {
+      // Get all active current (credit card) debts with cut_day
+      const { data: currentDebts, error: dErr } = await supabase
+        .from("debts")
+        .select("id, account_id, cut_day, debt_category")
+        .eq("is_active", true)
+        .eq("debt_category", "current")
+        .not("cut_day", "is", null)
+        .not("account_id", "is", null);
+      if (dErr || !currentDebts) return {};
+
+      const balances: Record<string, number> = {};
+
+      for (const debt of currentDebts) {
+        if (!debt.account_id || !debt.cut_day) continue;
+
+        // Calculate last cut date: if today >= cut_day, it's this month's cut_day; otherwise last month's
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        let lastCutDate: Date;
+        const thisCut = new Date(y, m, debt.cut_day);
+        if (now >= thisCut) {
+          lastCutDate = thisCut;
+        } else {
+          lastCutDate = new Date(y, m - 1, debt.cut_day);
+        }
+        const cutDateStr = format(lastCutDate, "yyyy-MM-dd");
+
+        // Sum expenses on this account since last cut date
+        const { data: txData } = await supabase
+          .from("transactions")
+          .select("amount, type, amount_in_base")
+          .eq("account_id", debt.account_id)
+          .gte("transaction_date", cutDateStr)
+          .lte("transaction_date", todayStr);
+
+        let balance = 0;
+        (txData || []).forEach((tx: any) => {
+          if (tx.type === "expense") {
+            balance += (tx.amount_in_base || tx.amount);
+          } else if (tx.type === "income") {
+            balance -= (tx.amount_in_base || tx.amount);
+          }
+        });
+
+        // Also subtract transfers TO this account (payments made)
+        const { data: trData } = await supabase
+          .from("transfers")
+          .select("amount_to")
+          .eq("to_account_id", debt.account_id)
+          .gte("transfer_date", cutDateStr)
+          .lte("transfer_date", todayStr);
+
+        (trData || []).forEach((tr: any) => {
+          balance -= tr.amount_to;
+        });
+
+        balances[`debt-${debt.id}`] = Math.max(0, balance);
+      }
+
+      return balances;
+    },
+    enabled: !!user,
+    staleTime: 60000,
+  });
+
   // Normalize accounts from either source
   const accounts = useMemo(() => {
     if (summaryAccounts) {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp,
   Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff,
+  Sofa, Gem, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
@@ -12,6 +13,7 @@ import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DashboardSummary } from "@/hooks/useDashboardSummary";
+import { useNonFinancialAssets } from "@/hooks/useNonFinancialAssets";
 
 type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];
 
@@ -33,6 +35,7 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const { convertToMXN } = useExchangeRate();
   const queryClient = useQueryClient();
+  const { assets: nfAssets, totalNFAByCurrency } = useNonFinancialAssets();
   const [expanded, setExpanded] = useState<"assets" | "liabilities" | null>(null);
 
   const accounts = useMemo(() => {
@@ -76,10 +79,13 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
     return { assetsByCurrency: assets, liabilitiesByCurrency: liabilities };
   }, [activeOnly]);
 
-  // Compute totals in MXN
-  const totalAssetsMXN = Object.entries(assetsByCurrency).reduce(
+  // Compute totals in MXN (including non-financial assets)
+  const totalNFAMXN = Object.entries(totalNFAByCurrency).reduce(
     (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
   );
+  const totalAssetsMXN = Object.entries(assetsByCurrency).reduce(
+    (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
+  ) + totalNFAMXN;
   const totalLiabilitiesMXN = Object.entries(liabilitiesByCurrency).reduce(
     (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
   );
@@ -218,6 +224,30 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
                         {longAccs.map(renderAccountItem)}
                       </>
                     )}
+                  </>
+                )}
+
+                {/* Non-financial assets in the expanded assets section */}
+                {isAsset && nfAssets.filter(a => a.is_active && a.currency === currency).length > 0 && (
+                  <>
+                    <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide px-2 pt-1">
+                      Activos no financieros
+                    </p>
+                    {nfAssets.filter(a => a.is_active && a.currency === currency).map(nfa => {
+                      const NfaIconMap: Record<string, typeof Wallet> = {
+                        real_estate: Home, vehicle: Car, furniture: Sofa, valuables: Gem, other: Package,
+                      };
+                      const NfaIcon = NfaIconMap[nfa.asset_type] || Package;
+                      return (
+                        <div key={nfa.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <NfaIcon className="h-3.5 w-3.5 text-income shrink-0" />
+                          <span className="text-xs text-foreground flex-1 truncate">{nfa.name}</span>
+                          <span className="text-xs font-semibold text-income tabular-nums">
+                            {mask(fmt(nfa.current_value, nfa.currency))}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </>
                 )}
               </div>

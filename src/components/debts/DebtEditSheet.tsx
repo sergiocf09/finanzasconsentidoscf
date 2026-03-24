@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Plus, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import { useNonFinancialAssets } from "@/hooks/useNonFinancialAssets";
+import { NonFinancialAssetSheet } from "@/components/assets/NonFinancialAssetSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +47,7 @@ interface DebtEditSheetProps {
 export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }: DebtEditSheetProps) {
   const { updateDebt } = useDebts();
   const { accounts } = useAccounts();
+  const { assets: nfAssets } = useNonFinancialAssets();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -52,6 +55,9 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
     a.is_active &&
     ['credit_card', 'mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'].includes(a.type)
   );
+
+  const linkedAsset = nfAssets.find(a => a.linked_debt_id === debt?.id);
+  const isLongTerm = debt?.type !== "credit_card";
 
   const [name, setName] = useState("");
   const [type, setType] = useState("credit_card");
@@ -65,6 +71,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
   const [reconcileOpen, setReconcileOpen] = useState(false);
+  const [assetSheetOpen, setAssetSheetOpen] = useState(false);
 
   useEffect(() => {
     if (debt && open) {
@@ -193,6 +200,35 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
               <Input className="h-8 text-sm text-right" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" />
             </FieldRow>
 
+            {isLongTerm && (
+              <div className="pt-2 border-t border-border space-y-1.5">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
+                  Activo vinculado
+                </p>
+                {linkedAsset ? (
+                  <div className="flex items-center justify-between rounded-lg bg-income/5 border border-income/20 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{linkedAsset.name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Valor actual: {formatCurrency(linkedAsset.current_value, linkedAsset.currency)}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                      onClick={() => setAssetSheetOpen(true)}
+                      title="Actualizar valor del activo">
+                      <Pencil className="h-3.5 w-3.5 text-primary" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" className="w-full h-8 text-xs gap-1.5 text-income border-income/30 hover:bg-income/5"
+                    onClick={() => setAssetSheetOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Registrar activo que financió esta deuda
+                  </Button>
+                )}
+              </div>
+            )}
+
             <div className="pt-2">
               <Button
                 type="button"
@@ -226,6 +262,16 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
           currentBalance={Math.abs(debt.current_balance ?? 0)}
           currency={debt.currency}
           reconciliationType={debt.type === "credit_card" ? "current" : "fixed"}
+        />
+      )}
+
+      {debt && (
+        <NonFinancialAssetSheet
+          open={assetSheetOpen}
+          onOpenChange={setAssetSheetOpen}
+          linkedDebtId={debt.id}
+          linkedDebtName={debt.name}
+          asset={linkedAsset ?? null}
         />
       )}
     </>

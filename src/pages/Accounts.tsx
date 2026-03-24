@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, Wallet, CreditCard, TrendingUp, ShieldCheck, Eye, EyeOff,
   Calendar, Pencil, Trash2, Home, Car, User, Landmark, TrendingDown,
+  Sofa, Gem, Package,
 } from "lucide-react";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import {
 } from "@/hooks/useAccounts";
 import { useDebts } from "@/hooks/useDebts";
 import { useDebtIntelligence } from "@/hooks/useDebtIntelligence";
+import { useNonFinancialAssets, NFA_TYPE_LABELS } from "@/hooks/useNonFinancialAssets";
+import { NonFinancialAssetSheet } from "@/components/assets/NonFinancialAssetSheet";
 import { DTISummaryCards } from "@/components/debts/DTISummaryCards";
 import { DebtEditSheet } from "@/components/debts/DebtEditSheet";
 import { AccountForm } from "@/components/accounts/AccountForm";
@@ -52,6 +55,11 @@ export default function Accounts() {
   const [editDebtTarget, setEditDebtTarget] = useState<any>(null);
   const [deleteDebtTarget, setDeleteDebtTarget] = useState<any>(null);
   const [showStrategy, setShowStrategy] = useState(false);
+
+  // Non-financial assets
+  const { assets: nfAssets } = useNonFinancialAssets();
+  const [nfaSheetOpen, setNfaSheetOpen] = useState(false);
+  const [editingNfa, setEditingNfa] = useState<any>(null);
 
   const handleDeactivate = async () => {
     if (!deleteTarget) return;
@@ -189,6 +197,47 @@ export default function Accounts() {
                 </div>
               );
             })}
+
+            {/* ── ACTIVOS NO FINANCIEROS ──────────────────────── */}
+            {nfAssets.length > 0 && (
+              <div className="space-y-1.5">
+                <h2 className="text-xs font-heading font-semibold text-foreground flex items-center gap-1.5">
+                  <Home className="h-3.5 w-3.5 text-income" />
+                  Activos no financieros
+                </h2>
+                {nfAssets.map(asset => {
+                  const IconMap: Record<string, React.ElementType> = {
+                    real_estate: Home, vehicle: Car, furniture: Sofa, valuables: Gem, other: Package,
+                  };
+                  const Icon = IconMap[asset.asset_type] || Package;
+                  return (
+                    <div key={asset.id}
+                      className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-card border border-border card-interactive cursor-pointer"
+                      onClick={() => { setEditingNfa(asset); setNfaSheetOpen(true); }}
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-income/10 shrink-0">
+                        <Icon className="h-4 w-4 text-income" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{asset.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{NFA_TYPE_LABELS[asset.asset_type]}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-income tabular-nums">
+                          {mask(fmt(asset.current_value, asset.currency))}
+                        </p>
+                        {asset.acquisition_value && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Compra: {mask(fmt(asset.acquisition_value, asset.currency))}
+                          </p>
+                        )}
+                      </div>
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* ── DEUDAS Y CRÉDITOS ─────────────────────────────── */}
             {debts.length > 0 && (
@@ -374,6 +423,11 @@ export default function Accounts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <NonFinancialAssetSheet
+        open={nfaSheetOpen}
+        onOpenChange={(o) => { if (!o) { setNfaSheetOpen(false); setEditingNfa(null); } else setNfaSheetOpen(true); }}
+        asset={editingNfa}
+      />
     </div>
   );
 }

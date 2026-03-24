@@ -25,6 +25,7 @@ export interface RecurringPayment {
   notes: string | null;
   requires_manual_action: boolean;
   confirmed_at: string | null;
+  payment_day: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -16,6 +16,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/formatters";
 
 const schema = z.object({
   from_account_id: z.string().min(1, "Selecciona cuenta origen"),
@@ -53,7 +54,7 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const [selectedCurrency, setSelectedCurrency] = useState("MXN");
 
   const fmtBalance = (acc: typeof accounts[0]) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: acc.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(acc.current_balance ?? 0);
+    formatCurrency(acc.current_balance ?? 0, acc.currency);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -207,11 +208,11 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
             <div className="rounded-lg bg-muted px-3 py-2 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Sale de {fromAccount!.name}</span>
-                <span className="font-medium">{new Intl.NumberFormat("es-MX", { style: "currency", currency: fromAccount!.currency }).format(conversion.amountFrom)}</span>
+                <span className="font-medium">{formatCurrency(conversion.amountFrom, fromAccount!.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Llega a {toAccount!.name}</span>
-                <span className="font-medium text-foreground">{new Intl.NumberFormat("es-MX", { style: "currency", currency: toAccount!.currency }).format(conversion.amountTo)}</span>
+                <span className="font-medium text-foreground">{formatCurrency(conversion.amountTo, toAccount!.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Tipo de cambio automático</span>

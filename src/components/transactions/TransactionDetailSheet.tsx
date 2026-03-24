@@ -19,6 +19,7 @@ import {
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
+import { formatCurrency } from "@/lib/formatters";
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
   <div className="flex items-center gap-3 min-h-[2rem]">
@@ -84,8 +85,7 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
 
   if (!transaction) return null;
 
-  const fmt = (v: number, c: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: c, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);
+  const fmt = (v: number, c: string) => formatCurrency(v, c, { decimals: 2 });
 
   const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name ?? "Sin categoría";
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";
@@ -142,7 +142,7 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {activeAccounts.map(a => {
-                    const bal = new Intl.NumberFormat("es-MX", { style: "currency", currency: a.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(a.current_balance ?? 0);
+                    const bal = formatCurrency(a.current_balance ?? 0, a.currency);
                     return (
                       <SelectItem key={a.id} value={a.id}>
                         <span className="flex items-center justify-between w-full gap-2">

@@ -223,21 +223,33 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
             <Textarea className="resize-none text-sm h-14" {...form.register("description")} />
           </FieldRow>
 
-          {/* Cuenta vinculada — solo lectura */}
-          {linkedAccount && (
-            <FieldRow label="Cuenta vinculada">
-              <div className="flex items-center gap-2 h-8 px-2 rounded-md border border-input bg-muted/30">
-                <span className="text-sm text-muted-foreground truncate flex-1">
-                  {linkedAccount.name}
-                </span>
-                <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                  {formatCurrencyAbs(linkedAccount.current_balance, linkedAccount.currency)}
-                </span>
-              </div>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                Para cambiarla, crea una nueva meta vinculada a otra cuenta.
-              </p>
-            </FieldRow>
+          {/* Cuenta vinculada — editable */}
+          <div className="rounded-lg border border-border p-2.5 space-y-1.5 mt-1">
+            <div>
+              <span className="text-xs text-muted-foreground">Cuenta vinculada</span>
+              {linkedAccount && (
+                <p className="text-[10px] text-muted-foreground/60">
+                  Saldo actual: {formatCurrencyAbs(linkedAccount.current_balance, linkedAccount.currency)}
+                </p>
+              )}
+            </div>
+            <Select
+              value={form.watch("account_id") ?? ""}
+              onValueChange={(v) => form.setValue("account_id", v === "" ? undefined : v)}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Sin cuenta vinculada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Sin cuenta</SelectItem>
+                {availableAccounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.currency})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           )}
 
           <div className="flex gap-2 pt-4 border-t border-border mt-2">

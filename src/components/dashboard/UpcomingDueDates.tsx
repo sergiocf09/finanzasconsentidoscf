@@ -75,6 +75,11 @@ interface RecurringDueItem {
   requires_manual_action: boolean;
   confirmed_at: string | null;
   daysLeft: number;
+  account_id: string | null;
+  category_id: string | null;
+  frequency: string;
+  type: string;
+  payments_made: number;
 }
 
 export function UpcomingDueDates({
@@ -114,21 +119,26 @@ export function UpcomingDueDates({
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
-  const in7days = useMemo(() => format(addDays(today, 7), "yyyy-MM-dd"), [today]);
   const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
   const monthStart = useMemo(() => format(startOfMonth(today), "yyyy-MM-dd"), [today]);
   const monthEnd = useMemo(() => format(endOfMonth(today), "yyyy-MM-dd"), [today]);
 
-  // Query upcoming recurring payments (next 7 days)
+  // Compute max date for recurring query based on timeFilter
+  const recurringMaxDate = useMemo(() => {
+    const maxDays = getMaxDays(timeFilter, today);
+    return format(addDays(today, maxDays), "yyyy-MM-dd");
+  }, [timeFilter, today]);
+
+  // Query upcoming recurring payments (same filter as debts/goals)
   const { data: upcomingRecurring } = useQuery({
-    queryKey: ["upcoming_recurring", user?.id, todayStr],
+    queryKey: ["upcoming_recurring", user?.id, todayStr, recurringMaxDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_payments" as any)
-        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at")
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency")
         .eq("status", "active")
         .gte("next_execution_date", todayStr)
-        .lte("next_execution_date", in7days)
+        .lte("next_execution_date", recurringMaxDate)
         .order("next_execution_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as any[];
@@ -147,22 +157,64 @@ export function UpcomingDueDates({
     });
   }, [upcomingRecurring, today]);
 
-  const handleConfirmRecurring = useCallback(async (id: string) => {
-    setConfirmingRecurring(id);
+  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem) => {
+    if (!user) return;
+    setConfirmingRecurring(recurringItem.id);
     try {
+      // 1. Create the transaction for the confirmed payment
+      const { error: txErr } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        account_id: (recurringItem as any).account_id,
+        category_id: (recurringItem as any).category_id || null,
+        type: (recurringItem as any).type || "expense",
+        amount: recurringItem.amount,
+        currency: recurringItem.currency,
+        exchange_rate: 1,
+        amount_in_base: recurringItem.amount,
+        description: recurringItem.name,
+        transaction_date: recurringItem.next_execution_date,
+        is_recurring: true,
+        recurring_payment_id: recurringItem.id,
+      });
+      if (txErr) throw txErr;
+
+      // 2. Advance next_execution_date, increment payments_made, reset confirmed_at
+      const freq = (recurringItem as any).frequency || "monthly";
+      const currentDate = new Date(recurringItem.next_execution_date + "T12:00:00Z");
+      const nextDate = (() => {
+        const d = new Date(currentDate);
+        switch (freq) {
+          case "weekly": d.setDate(d.getDate() + 7); break;
+          case "biweekly": d.setDate(d.getDate() + 14); break;
+          case "monthly": d.setMonth(d.getMonth() + 1); break;
+          case "bimonthly": d.setMonth(d.getMonth() + 2); break;
+          case "quarterly": d.setMonth(d.getMonth() + 3); break;
+          case "annual": d.setFullYear(d.getFullYear() + 1); break;
+        }
+        return d.toISOString().split("T")[0];
+      })();
+
       await supabase
         .from("recurring_payments" as any)
-        .update({ confirmed_at: new Date().toISOString() } as any)
-        .eq("id", id);
+        .update({
+          next_execution_date: nextDate,
+          payments_made: ((recurringItem as any).payments_made || 0) + 1,
+          confirmed_at: null,
+        } as any)
+        .eq("id", recurringItem.id);
+
       queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
-      toast.success("Pago confirmado");
-    } catch {
-      toast.error("Error al confirmar");
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+      toast.success("Pago confirmado y registrado");
+    } catch (err: any) {
+      toast.error(err.message || "Error al confirmar");
     } finally {
       setConfirmingRecurring(null);
     }
-  }, [queryClient]);
+  }, [user, queryClient]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({
@@ -710,7 +762,7 @@ export function UpcomingDueDates({
                     </span>
                     {isManual && !isConfirmed && (
                       <button
-                        onClick={() => handleConfirmRecurring(r.id)}
+                        onClick={() => handleConfirmRecurring(r)}
                         disabled={confirmingRecurring === r.id}
                         className="flex h-7 items-center gap-1 px-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
                       >

@@ -77,6 +77,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [activeTab, setActiveTab] = useState<"income" | "expense" | "transfer">(defaultType as any);
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
+  const [recurringManual, setRecurringManual] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
   const [userSelectedCategory, setUserSelectedCategory] = useState(false);
   const [openCategoryCombo, setOpenCategoryCombo] = useState(false);
@@ -352,12 +353,14 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         start_date: format(data.transaction_date, "yyyy-MM-dd"),
         next_execution_date: format(nextDate, "yyyy-MM-dd"),
         payments_made: 1,
+        requires_manual_action: recurringManual,
       });
       queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
     }
 
     form.reset();
     setMakeRecurring(false);
+    setRecurringManual(false);
     setSuggestedCategory(null);
     setUserSelectedCategory(false);
     setSelectedDebtId("");
@@ -811,16 +814,27 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                     <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
                   </div>
                   {makeRecurring && (
-                    <FieldRow label="Frecuencia">
-                      <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FieldRow>
+                    <>
+                      <FieldRow label="Frecuencia">
+                        <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FieldRow>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs text-muted-foreground">Requiere acción manual</Label>
+                        <Switch checked={recurringManual} onCheckedChange={setRecurringManual} />
+                      </div>
+                      {recurringManual && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Aparecerá en próximos vencimientos para que lo confirmes cada periodo.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 

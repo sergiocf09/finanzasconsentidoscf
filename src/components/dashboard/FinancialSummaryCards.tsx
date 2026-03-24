@@ -79,10 +79,13 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
     return { assetsByCurrency: assets, liabilitiesByCurrency: liabilities };
   }, [activeOnly]);
 
-  // Compute totals in MXN
-  const totalAssetsMXN = Object.entries(assetsByCurrency).reduce(
+  // Compute totals in MXN (including non-financial assets)
+  const totalNFAMXN = Object.entries(totalNFAByCurrency).reduce(
     (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
   );
+  const totalAssetsMXN = Object.entries(assetsByCurrency).reduce(
+    (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
+  ) + totalNFAMXN;
   const totalLiabilitiesMXN = Object.entries(liabilitiesByCurrency).reduce(
     (sum, [currency, amount]) => sum + convertToMXN(amount, currency), 0
   );

@@ -155,7 +155,12 @@ export default function FinancialDashboard() {
         {/* ── Zone 1: Mi Panorama ── */}
         <TabsContent value="panorama" className="space-y-4 mt-0">
           <StageCard stage={stage} stageName={stageName} stageMessage={stageMessage} />
-          <NetPositionCard totalAssets={totalAssets} totalLiabilities={totalLiabilities} />
+          <NetPositionCard
+            totalAssets={totalAssets}
+            totalLiabilities={totalLiabilities}
+            filteredAssets={filteredAssets}
+            filteredLiabilities={filteredLiabilities}
+          />
           <MonthlyFlowChart
             income={totals.income}
             expense={totals.expense}

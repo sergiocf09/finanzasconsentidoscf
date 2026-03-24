@@ -144,7 +144,7 @@ export default function FinancialDashboard() {
           <BudgetBlockProgress
             blockSummaries={blockSummaries}
             totalBudgeted={totalBudgeted}
-            totalSpent={totalSpent}
+            totalSpent={realTotalSpent}
           />
           <TopCategoriesCard categories={topCategories} />
         </TabsContent>

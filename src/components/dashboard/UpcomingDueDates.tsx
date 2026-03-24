@@ -80,6 +80,7 @@ interface RecurringDueItem {
   frequency: string;
   type: string;
   payments_made: number;
+  payment_day: number | null;
 }
 
 export function UpcomingDueDates({

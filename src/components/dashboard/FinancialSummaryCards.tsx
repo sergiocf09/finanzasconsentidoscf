@@ -226,6 +226,30 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
                     )}
                   </>
                 )}
+
+                {/* Non-financial assets in the expanded assets section */}
+                {isAsset && nfAssets.filter(a => a.is_active && a.currency === currency).length > 0 && (
+                  <>
+                    <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide px-2 pt-1">
+                      Activos no financieros
+                    </p>
+                    {nfAssets.filter(a => a.is_active && a.currency === currency).map(nfa => {
+                      const NfaIconMap: Record<string, typeof Wallet> = {
+                        real_estate: Home, vehicle: Car, furniture: Sofa, valuables: Gem, other: Package,
+                      };
+                      const NfaIcon = NfaIconMap[nfa.asset_type] || Package;
+                      return (
+                        <div key={nfa.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors">
+                          <NfaIcon className="h-3.5 w-3.5 text-income shrink-0" />
+                          <span className="text-xs text-foreground flex-1 truncate">{nfa.name}</span>
+                          <span className="text-xs font-semibold text-income tabular-nums">
+                            {mask(fmt(nfa.current_value, nfa.currency))}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             );
           })}

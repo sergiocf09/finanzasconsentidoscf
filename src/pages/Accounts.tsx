@@ -418,6 +418,11 @@ export default function Accounts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <NonFinancialAssetSheet
+        open={nfaSheetOpen}
+        onOpenChange={(o) => { if (!o) { setNfaSheetOpen(false); setEditingNfa(null); } else setNfaSheetOpen(true); }}
+        asset={editingNfa}
+      />
     </div>
   );
 }

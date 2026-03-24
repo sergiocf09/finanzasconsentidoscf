@@ -264,6 +264,16 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
           reconciliationType={debt.type === "credit_card" ? "current" : "fixed"}
         />
       )}
+
+      {debt && (
+        <NonFinancialAssetSheet
+          open={assetSheetOpen}
+          onOpenChange={setAssetSheetOpen}
+          linkedDebtId={debt.id}
+          linkedDebtName={debt.name}
+          asset={linkedAsset ?? null}
+        />
+      )}
     </>
   );
 }

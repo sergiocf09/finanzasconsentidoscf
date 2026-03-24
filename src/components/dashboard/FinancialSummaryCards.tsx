@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck, CreditCard, Wallet, Building2, PiggyBank, TrendingUp,
   Home, Car, User, Landmark, HandCoins, ChevronDown, Eye, EyeOff,
+  Sofa, Gem, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";

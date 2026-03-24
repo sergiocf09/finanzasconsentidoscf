@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 
-import { format, startOfMonth, endOfMonth, addDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, addDays, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X, Repeat, Check,
@@ -245,6 +245,76 @@ export function UpcomingDueDates({
     enabled: !!user && !summaryPaidDueDates,
   });
 
+  // Query credit card spending since last cut date for each "current" debt
+  const { data: ccBalances } = useQuery({
+    queryKey: ["cc_cut_balances", user?.id, todayStr],
+    queryFn: async () => {
+      // Get all active current (credit card) debts with cut_day
+      const { data: currentDebts, error: dErr } = await supabase
+        .from("debts")
+        .select("id, account_id, cut_day, debt_category")
+        .eq("is_active", true)
+        .eq("debt_category", "current")
+        .not("cut_day", "is", null)
+        .not("account_id", "is", null);
+      if (dErr || !currentDebts) return {};
+
+      const balances: Record<string, number> = {};
+
+      for (const debt of currentDebts) {
+        if (!debt.account_id || !debt.cut_day) continue;
+
+        // Calculate last cut date: if today >= cut_day, it's this month's cut_day; otherwise last month's
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        let lastCutDate: Date;
+        const thisCut = new Date(y, m, debt.cut_day);
+        if (now >= thisCut) {
+          lastCutDate = thisCut;
+        } else {
+          lastCutDate = new Date(y, m - 1, debt.cut_day);
+        }
+        const cutDateStr = format(lastCutDate, "yyyy-MM-dd");
+
+        // Sum expenses on this account since last cut date
+        const { data: txData } = await supabase
+          .from("transactions")
+          .select("amount, type, amount_in_base")
+          .eq("account_id", debt.account_id)
+          .gte("transaction_date", cutDateStr)
+          .lte("transaction_date", todayStr);
+
+        let balance = 0;
+        (txData || []).forEach((tx: any) => {
+          if (tx.type === "expense") {
+            balance += (tx.amount_in_base || tx.amount);
+          } else if (tx.type === "income") {
+            balance -= (tx.amount_in_base || tx.amount);
+          }
+        });
+
+        // Also subtract transfers TO this account (payments made)
+        const { data: trData } = await supabase
+          .from("transfers")
+          .select("amount_to")
+          .eq("to_account_id", debt.account_id)
+          .gte("transfer_date", cutDateStr)
+          .lte("transfer_date", todayStr);
+
+        (trData || []).forEach((tr: any) => {
+          balance -= tr.amount_to;
+        });
+
+        balances[`debt-${debt.id}`] = Math.max(0, balance);
+      }
+
+      return balances;
+    },
+    enabled: !!user,
+    staleTime: 60000,
+  });
+
   // Normalize accounts from either source
   const accounts = useMemo(() => {
     if (summaryAccounts) {
@@ -402,8 +472,12 @@ export function UpcomingDueDates({
 
   const getDisplayAmount = useCallback((item: DueItem): string => {
     if (editedAmounts[item.id] !== undefined) return editedAmounts[item.id];
-    return item.amount ? String(item.amount) : "";
-  }, [editedAmounts]);
+    // For credit card debts, use calculated balance since last cut date
+    if (ccBalances && ccBalances[item.id] !== undefined) {
+      return String(Math.round(ccBalances[item.id] * 100) / 100);
+    }
+    return item.amount ? String(item.amount) : "0";
+  }, [editedAmounts, ccBalances]);
 
   const handleStartTransfer = useCallback((itemId: string, itemCurrency: string) => {
     setTransferringItemId(itemId);
@@ -420,8 +494,45 @@ export function UpcomingDueDates({
   const handleConfirmTransfer = useCallback(async (item: DueItem) => {
     if (!user) return;
     const amountStr = getDisplayAmount(item);
-    const amount = parseFloat(amountStr);
-    if (!amount || amount <= 0) {
+    const amount = parseFloat(amountStr) || 0;
+
+    // Allow $0 — skip transfer but mark as paid
+    if (amount === 0) {
+      const descLabel = item.type === "debt" ? "Pago" : "Aportación";
+      // Register a zero-amount transfer to mark it as done
+      try {
+        setIsSaving(true);
+        await supabase.from("transfers").insert({
+          user_id: user.id,
+          from_account_id: item.accountId!,
+          to_account_id: item.accountId!,
+          amount_from: 0,
+          amount_to: 0,
+          currency_from: item.currency,
+          currency_to: item.currency,
+          transfer_date: format(new Date(), "yyyy-MM-dd"),
+          description: `${descLabel}: ${item.name}`,
+          created_from: "due_dates",
+        });
+        queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+        toast.success("Vencimiento marcado como cubierto ($0)");
+        setEditedAmounts(prev => {
+          const next = { ...prev };
+          delete next[item.id];
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+          return next;
+        });
+        handleCancelTransfer();
+      } catch (err: any) {
+        toast.error(err.message || "Error");
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    if (amount < 0) {
       toast.error("Ingresa un monto válido");
       return;
     }
@@ -709,10 +820,10 @@ export function UpcomingDueDates({
                           size="sm"
                           className="h-7 gap-1 px-3 text-xs"
                           onClick={() => handleConfirmTransfer(item)}
-                          disabled={isSaving || !getDisplayAmount(item) || !sourceAccountId}
+                          disabled={isSaving || ((parseFloat(getDisplayAmount(item)) || 0) > 0 && !sourceAccountId)}
                         >
                           <ArrowRightLeft className="h-3.5 w-3.5" />
-                          Transferir
+                          {(parseFloat(getDisplayAmount(item)) || 0) === 0 ? "Marcar cubierto" : "Transferir"}
                         </Button>
                       </div>
                     </div>

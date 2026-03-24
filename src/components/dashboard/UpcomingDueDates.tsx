@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 
-import { format, startOfMonth, endOfMonth, addDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, addDays, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   CalendarClock, CreditCard, PiggyBank, AlertTriangle, ArrowRightLeft, X, Repeat, Check,

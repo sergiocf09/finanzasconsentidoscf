@@ -34,7 +34,6 @@ const goalSchema = z.object({
   currency: z.string().default("MXN"),
   initial_amount: z.coerce.number().optional().default(0),
   account_type: z.enum(["savings", "investment"]).default("savings"),
-  account_id: z.string().optional(),
 }).refine(
   (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,
   {

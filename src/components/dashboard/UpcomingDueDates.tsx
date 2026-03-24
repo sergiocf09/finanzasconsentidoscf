@@ -820,10 +820,10 @@ export function UpcomingDueDates({
                           size="sm"
                           className="h-7 gap-1 px-3 text-xs"
                           onClick={() => handleConfirmTransfer(item)}
-                          disabled={isSaving || !getDisplayAmount(item) || !sourceAccountId}
+                          disabled={isSaving || ((parseFloat(getDisplayAmount(item)) || 0) > 0 && !sourceAccountId)}
                         >
                           <ArrowRightLeft className="h-3.5 w-3.5" />
-                          Transferir
+                          {(parseFloat(getDisplayAmount(item)) || 0) === 0 ? "Marcar cubierto" : "Transferir"}
                         </Button>
                       </div>
                     </div>

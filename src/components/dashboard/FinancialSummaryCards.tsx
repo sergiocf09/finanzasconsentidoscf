@@ -35,6 +35,7 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
   const { hidden, toggle, mask } = useHideAmounts("balances");
   const { convertToMXN } = useExchangeRate();
   const queryClient = useQueryClient();
+  const { assets: nfAssets, totalNFAByCurrency } = useNonFinancialAssets();
   const [expanded, setExpanded] = useState<"assets" | "liabilities" | null>(null);
 
   const accounts = useMemo(() => {

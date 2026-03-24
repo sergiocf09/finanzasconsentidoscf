@@ -109,8 +109,8 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       monthly_contribution: data.monthly_contribution,
       currency: data.currency,
       initial_amount: data.initial_amount,
-      account_id: linkExisting ? data.account_id : undefined,
-      create_account: !linkExisting,
+      account_id: undefined,
+      create_account: true,
       account_type: data.account_type,
     });
     form.reset();

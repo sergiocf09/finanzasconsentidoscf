@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { Wallet, CreditCard, Scale, LayoutDashboard, Home } from "lucide-react";
+import { Wallet, CreditCard, Scale, LayoutDashboard } from "lucide-react";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 
 interface NetPositionCardProps {

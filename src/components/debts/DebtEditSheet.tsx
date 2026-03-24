@@ -47,6 +47,7 @@ interface DebtEditSheetProps {
 export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }: DebtEditSheetProps) {
   const { updateDebt } = useDebts();
   const { accounts } = useAccounts();
+  const { assets: nfAssets } = useNonFinancialAssets();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -54,6 +55,9 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
     a.is_active &&
     ['credit_card', 'mortgage', 'auto_loan', 'personal_loan', 'caucion_bursatil', 'payable'].includes(a.type)
   );
+
+  const linkedAsset = nfAssets.find(a => a.linked_debt_id === debt?.id);
+  const isLongTerm = debt?.type !== "credit_card";
 
   const [name, setName] = useState("");
   const [type, setType] = useState("credit_card");
@@ -67,6 +71,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
   const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
   const [reconcileOpen, setReconcileOpen] = useState(false);
+  const [assetSheetOpen, setAssetSheetOpen] = useState(false);
 
   useEffect(() => {
     if (debt && open) {

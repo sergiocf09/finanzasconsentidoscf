@@ -20,10 +20,8 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useSavingsGoals, GoalType } from "@/hooks/useSavingsGoals";
-import { useAccounts, isAssetType } from "@/hooks/useAccounts";
 
 const goalSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre para tu meta"),

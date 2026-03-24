@@ -353,6 +353,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
         start_date: format(data.transaction_date, "yyyy-MM-dd"),
         next_execution_date: format(nextDate, "yyyy-MM-dd"),
         payments_made: 1,
+        requires_manual_action: recurringManual,
       });
       queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
     }

@@ -234,14 +234,14 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
               )}
             </div>
             <Select
-              value={form.watch("account_id") ?? ""}
-              onValueChange={(v) => form.setValue("account_id", v === "" ? undefined : v)}
+              value={form.watch("account_id") ?? "__none__"}
+              onValueChange={(v) => form.setValue("account_id", v === "__none__" ? undefined : v)}
             >
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder="Sin cuenta vinculada" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sin cuenta</SelectItem>
+                <SelectItem value="__none__">Sin cuenta</SelectItem>
                 {availableAccounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
                     {acc.name} ({acc.currency})

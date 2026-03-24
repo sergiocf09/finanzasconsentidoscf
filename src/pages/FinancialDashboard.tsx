@@ -35,7 +35,7 @@ export default function FinancialDashboard() {
   const currentEnd = endOfMonth(now);
   const { totals, transactions } = useTransactions({ startDate: currentStart, endDate: currentEnd });
   const { totalBudgeted, totalSpent: budgetedSpent, budgetsNearLimit } = useBudgets();
-  const { assetsByCurrency, liabilitiesByCurrency } = useAccounts();
+  const { accounts, assetsByCurrency, liabilitiesByCurrency } = useAccounts();
   const { assets: nfAssets } = useNonFinancialAssets();
   const {
     isLoading,
@@ -51,12 +51,32 @@ export default function FinancialDashboard() {
 
   const { convertToMXN } = useExchangeRate();
 
-  const totalNFAMXN = nfAssets
-    .filter(a => a.is_active && (a as any).include_in_summary !== false)
+  // All active NFA
+  const totalNFAMXNAll = nfAssets
+    .filter(a => a.is_active)
     .reduce((sum, a) => sum + convertToMXN(a.current_value, a.currency), 0);
 
-  const totalAssets = Object.entries(assetsByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0) + totalNFAMXN;
+  // Filtered NFA (respecting include_in_summary)
+  const totalNFAMXNFiltered = nfAssets
+    .filter(a => a.is_active && a.include_in_summary !== false)
+    .reduce((sum, a) => sum + convertToMXN(a.current_value, a.currency), 0);
+
+  // All active financial accounts
+  const totalFinAssets = Object.entries(assetsByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0);
   const totalLiabilities = Object.entries(liabilitiesByCurrency).reduce((s, [currency, v]) => s + convertToMXN(v, currency), 0);
+
+  // Total with ALL active (default)
+  const totalAssets = totalFinAssets + totalNFAMXNAll;
+
+  // Filtered totals (matching home page include_in_summary)
+  const activeAccounts = accounts.filter(a => a.is_active);
+  const filteredFinAssets = activeAccounts
+    .filter(a => a.include_in_summary !== false && isAssetType(a.type))
+    .reduce((s, a) => s + convertToMXN(a.current_balance ?? 0, a.currency), 0);
+  const filteredLiabilities = activeAccounts
+    .filter(a => a.include_in_summary !== false && isLiability(a.type))
+    .reduce((s, a) => s + convertToMXN(Math.abs(a.current_balance ?? 0), a.currency), 0);
+  const filteredAssets = filteredFinAssets + totalNFAMXNFiltered;
 
   const topCategories = useMemo(() => {
     const total = currentBlocks.total;

@@ -76,6 +76,11 @@ export default function Construction() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{goal.name}</p>
             <p className="text-[10px] text-muted-foreground">{config.phrase}</p>
+            {!goal.account_id && (
+              <span className="text-[9px] text-muted-foreground/60 italic">
+                Sin cuenta vinculada
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             <Button

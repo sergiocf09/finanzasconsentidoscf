@@ -93,5 +93,19 @@ export function useNonFinancialAssets() {
     },
   });
 
-  return { assets, isLoading, totalNFAByCurrency, createAsset, updateAsset, deleteAsset };
+  const toggleIncludeInSummary = useMutation({
+    mutationFn: async ({ id, current }: { id: string; current: boolean }) => {
+      const { error } = await supabase
+        .from("non_financial_assets" as any)
+        .update({ include_in_summary: !current, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["non_financial_assets"] });
+    },
+  });
+
+  return { assets, isLoading, totalNFAByCurrency, createAsset, updateAsset, deleteAsset, toggleIncludeInSummary };
 }

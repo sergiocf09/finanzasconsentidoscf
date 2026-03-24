@@ -57,7 +57,7 @@ export default function Accounts() {
   const [showStrategy, setShowStrategy] = useState(false);
 
   // Non-financial assets
-  const { assets: nfAssets } = useNonFinancialAssets();
+  const { assets: nfAssets, toggleIncludeInSummary } = useNonFinancialAssets();
   const [nfaSheetOpen, setNfaSheetOpen] = useState(false);
   const [editingNfa, setEditingNfa] = useState<any>(null);
 
@@ -146,7 +146,7 @@ export default function Accounts() {
             <div className="space-y-2">
               {Object.entries(assetsByCurrency).map(([currency, total]) => {
                 const nfaForCurr = nfAssets
-                  .filter(a => a.is_active && (a as any).include_in_summary !== false && a.currency === currency)
+                  .filter(a => a.is_active && a.currency === currency)
                   .reduce((s, a) => s + a.current_value, 0);
                 return (
                   <div
@@ -238,6 +238,25 @@ export default function Accounts() {
                         )}
                       </div>
                       <Pencil className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                      <button
+                        className="shrink-0 p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                        title={(asset as any).include_in_summary !== false
+                          ? "Excluir del resumen en Dashboard"
+                          : "Incluir en resumen del Dashboard"
+                        }
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await toggleIncludeInSummary.mutateAsync({
+                            id: asset.id,
+                            current: (asset as any).include_in_summary !== false
+                          });
+                        }}
+                      >
+                        {(asset as any).include_in_summary !== false
+                          ? <Eye className="h-3.5 w-3.5" />
+                          : <EyeOff className="h-3.5 w-3.5" />
+                        }
+                      </button>
                     </div>
                   );
                 })}

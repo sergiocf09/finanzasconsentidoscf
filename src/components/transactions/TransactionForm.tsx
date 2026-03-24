@@ -360,6 +360,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
     form.reset();
     setMakeRecurring(false);
+    setRecurringManual(false);
     setSuggestedCategory(null);
     setUserSelectedCategory(false);
     setSelectedDebtId("");

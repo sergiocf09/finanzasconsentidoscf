@@ -5,7 +5,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
-import { SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
 import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
@@ -14,9 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, RefreshCw, Loader2 } from "lucide-react";
 
 const goalConfig: Record<string, { emoji: string; phrase: string }> = {
   emergency: { emoji: "🛡️", phrase: "Tu red de seguridad" },
@@ -72,13 +74,23 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
 
+  // Reconciliation state
+  const [showReconcile, setShowReconcile] = useState(false);
+  const [newBalance, setNewBalance] = useState("");
+  const [reconNote, setReconNote] = useState("");
+
   const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
   const { transactions } = useTransactions({ startDate, endDate, enabled: open && !!goal?.account_id });
   const { transfers } = useTransfers(goal?.account_id ?? undefined, { startDate, endDate, enabled: open && !!goal?.account_id });
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+  const { reconcileGoalBalance } = useSavingsGoals();
 
   if (!goal) return null;
+
+  const linkedAccount = goal.account_id
+    ? accounts.find((a) => a.id === goal.account_id)
+    : null;
 
   const config = goalConfig[goal.goal_type] || goalConfig.custom;
   const pct = goal.target_amount > 0
@@ -144,6 +156,29 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
     }
   };
 
+  const handleReconcileOpen = () => {
+    setNewBalance(linkedAccount ? String(linkedAccount.current_balance ?? 0) : "");
+    setReconNote("");
+    setShowReconcile(true);
+  };
+
+  const handleReconcileSubmit = async () => {
+    if (!goal.account_id || !linkedAccount) return;
+    const parsed = parseFloat(newBalance);
+    if (isNaN(parsed) || parsed < 0) return;
+
+    await reconcileGoalBalance.mutateAsync({
+      goalId: goal.id,
+      accountId: goal.account_id,
+      newBalance: parsed,
+      note: reconNote || undefined,
+    });
+    setShowReconcile(false);
+  };
+
+  const currentBalance = linkedAccount?.current_balance ?? goal.current_amount;
+  const reconDelta = parseFloat(newBalance || "0") - (linkedAccount?.current_balance ?? 0);
+
   const renderItem = (item: typeof allItems[0]) => {
     const amt = item.amount;
     return (
@@ -190,9 +225,16 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
             <div className="space-y-2">
               <p className="text-[11px] text-muted-foreground">{config.phrase}</p>
 
+              {/* Balance info */}
+              {linkedAccount && (
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <span>Saldo inicial: {formatCurrencyAbs(linkedAccount.initial_balance ?? 0, linkedAccount.currency)}</span>
+                </div>
+              )}
+
               <div>
                 <span className="text-2xl font-bold font-heading text-[hsl(var(--block-build))]">
-                  {formatCurrencyAbs(goal.current_amount)}
+                  {formatCurrencyAbs(currentBalance)}
                 </span>
                 <span className="text-sm text-muted-foreground ml-1.5">
                   de {formatCurrencyAbs(goal.target_amount)}
@@ -210,6 +252,105 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
                   style={{ "--progress-foreground": "hsl(var(--block-build))" } as React.CSSProperties}
                 />
               </div>
+
+              {/* Update balance button */}
+              {linkedAccount && !showReconcile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs gap-1.5"
+                  onClick={handleReconcileOpen}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Actualizar saldo real
+                </Button>
+              )}
+
+              {/* Reconciliation form */}
+              {showReconcile && linkedAccount && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2.5">
+                  <div className="flex items-start gap-2">
+                    <RefreshCw className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-foreground">Actualizar saldo real</p>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
+                        Ingresa el saldo actual de esta cuenta. Puede incluir rendimientos, 
+                        aportaciones no registradas u otros ajustes.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Saldo registrado</span>
+                      <span className="font-medium tabular-nums">
+                        {formatCurrencyAbs(linkedAccount.current_balance ?? 0, linkedAccount.currency)}
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-muted-foreground">Saldo real</label>
+                      <Input
+                        className="h-8 text-sm text-right mt-0.5"
+                        type="number"
+                        step="0.01"
+                        value={newBalance}
+                        onChange={(e) => setNewBalance(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+
+                    {reconDelta !== 0 && !isNaN(reconDelta) && (
+                      <div className={cn(
+                        "rounded-md px-2.5 py-1.5 text-xs",
+                        reconDelta > 0 ? "bg-income/10 text-income" : "bg-expense/10 text-expense"
+                      )}>
+                        <span className="font-semibold">
+                          {reconDelta > 0 ? "+" : ""}{formatCurrencyAbs(Math.abs(reconDelta), linkedAccount.currency)}
+                        </span>
+                        <span className="text-muted-foreground ml-1">
+                          {reconDelta > 0
+                            ? "— rendimientos o aportaciones no registradas"
+                            : "— retiro o ajuste a la baja"}
+                        </span>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs text-muted-foreground">Nota (opcional)</label>
+                      <Textarea
+                        className="resize-none text-sm h-12 mt-0.5"
+                        placeholder="Ej: Rendimientos del trimestre"
+                        value={reconNote}
+                        onChange={(e) => setReconNote(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setShowReconcile(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex-1"
+                      disabled={reconcileGoalBalance.isPending || isNaN(parseFloat(newBalance)) || parseFloat(newBalance) < 0}
+                      onClick={handleReconcileSubmit}
+                    >
+                      {reconcileGoalBalance.isPending ? (
+                        <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Guardando...</>
+                      ) : "Confirmar"}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Projection */}
               {projection.projectedLabel && (

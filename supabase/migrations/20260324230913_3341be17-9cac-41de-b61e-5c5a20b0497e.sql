@@ -1,0 +1,2 @@
+UPDATE public.savings_goals SET current_amount = 6431 WHERE account_id = '733ab46d-2a7a-4c95-b6fb-a6e23e38c64a';
+UPDATE public.savings_goals SET current_amount = 6431 WHERE account_id = '1e99acec-8413-4037-bc49-ec1ebf4ee0c3';

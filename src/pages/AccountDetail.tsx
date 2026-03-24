@@ -55,6 +55,8 @@ export default function AccountDetail() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
   const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
   const { transactions } = useTransactions({ startDate, endDate });

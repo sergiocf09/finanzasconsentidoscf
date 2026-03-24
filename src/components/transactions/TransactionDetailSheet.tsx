@@ -19,6 +19,7 @@ import {
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
+import { formatCurrency } from "@/lib/formatters";
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
   <div className="flex items-center gap-3 min-h-[2rem]">

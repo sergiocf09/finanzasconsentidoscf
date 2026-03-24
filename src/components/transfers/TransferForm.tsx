@@ -16,6 +16,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useTransfers } from "@/hooks/useTransfers";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/formatters";
 
 const schema = z.object({
   from_account_id: z.string().min(1, "Selecciona cuenta origen"),

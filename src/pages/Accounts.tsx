@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Plus, Wallet, CreditCard, TrendingUp, ShieldCheck, Eye, EyeOff,
   Calendar, Pencil, Trash2, Home, Car, User, Landmark, TrendingDown,
+  Sofa, Gem, Package,
 } from "lucide-react";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Button } from "@/components/ui/button";

@@ -265,7 +265,7 @@ export default function Transactions() {
         {/* Custom date pickers below */}
         {period === "custom" && (
           <div className="flex gap-2">
-            <Popover>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -276,12 +276,12 @@ export default function Transactions() {
                 <Calendar
                   mode="single"
                   selected={customStartDate}
-                  onSelect={(d) => d && setCustomStartDate(d)}
+                  onSelect={(d) => { if (d) { setCustomStartDate(d); setStartDateOpen(false); } }}
                   className="p-3 pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
-            <Popover>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -292,7 +292,7 @@ export default function Transactions() {
                 <Calendar
                   mode="single"
                   selected={customEndDate}
-                  onSelect={(d) => d && setCustomEndDate(d)}
+                  onSelect={(d) => { if (d) { setCustomEndDate(d); setEndDateOpen(false); } }}
                   className="p-3 pointer-events-auto"
                 />
               </PopoverContent>

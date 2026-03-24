@@ -164,7 +164,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 />
               </PopoverContent>
             </Popover>
-            <Popover>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs justify-start">
                   <CalendarDays className="h-3 w-3 mr-1" />
@@ -175,7 +175,7 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 <Calendar
                   mode="single"
                   selected={customEnd}
-                  onSelect={(d) => d && setCustomEnd(d)}
+                  onSelect={(d) => { if (d) { setCustomEnd(d); setEndDateOpen(false); } }}
                   className="p-3 pointer-events-auto"
                 />
               </PopoverContent>

@@ -77,6 +77,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [activeTab, setActiveTab] = useState<"income" | "expense" | "transfer">(defaultType as any);
   const [makeRecurring, setMakeRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("monthly");
+  const [recurringManual, setRecurringManual] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<Category | null>(null);
   const [userSelectedCategory, setUserSelectedCategory] = useState(false);
   const [openCategoryCombo, setOpenCategoryCombo] = useState(false);

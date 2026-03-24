@@ -75,6 +75,11 @@ interface RecurringDueItem {
   requires_manual_action: boolean;
   confirmed_at: string | null;
   daysLeft: number;
+  account_id: string | null;
+  category_id: string | null;
+  frequency: string;
+  type: string;
+  payments_made: number;
 }
 
 export function UpcomingDueDates({

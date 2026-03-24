@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
     .from("recurring_payments")
     .select("*")
     .eq("status", "active")
+    .eq("requires_manual_action", false)
     .lte("next_execution_date", today);
 
   if (error) {

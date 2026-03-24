@@ -814,16 +814,27 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                     <Switch checked={makeRecurring} onCheckedChange={setMakeRecurring} />
                   </div>
                   {makeRecurring && (
-                    <FieldRow label="Frecuencia">
-                      <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FieldRow>
+                    <>
+                      <FieldRow label="Frecuencia">
+                        <Select value={recurringFrequency} onValueChange={setRecurringFrequency}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FieldRow>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs text-muted-foreground">Requiere acción manual</Label>
+                        <Switch checked={recurringManual} onCheckedChange={setRecurringManual} />
+                      </div>
+                      {recurringManual && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Aparecerá en próximos vencimientos para que lo confirmes cada periodo.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 

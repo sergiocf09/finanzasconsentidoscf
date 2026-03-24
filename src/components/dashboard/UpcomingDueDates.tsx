@@ -757,7 +757,7 @@ export function UpcomingDueDates({
                     </span>
                     {isManual && !isConfirmed && (
                       <button
-                        onClick={() => handleConfirmRecurring(r.id)}
+                        onClick={() => handleConfirmRecurring(r)}
                         disabled={confirmingRecurring === r.id}
                         className="flex h-7 items-center gap-1 px-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
                       >

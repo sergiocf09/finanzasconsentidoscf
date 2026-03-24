@@ -200,6 +200,35 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
               <Input className="h-8 text-sm text-right" type="number" min="1" max="31" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" />
             </FieldRow>
 
+            {isLongTerm && (
+              <div className="pt-2 border-t border-border space-y-1.5">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold">
+                  Activo vinculado
+                </p>
+                {linkedAsset ? (
+                  <div className="flex items-center justify-between rounded-lg bg-income/5 border border-income/20 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{linkedAsset.name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Valor actual: {formatCurrency(linkedAsset.current_value, linkedAsset.currency)}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                      onClick={() => setAssetSheetOpen(true)}
+                      title="Actualizar valor del activo">
+                      <Pencil className="h-3.5 w-3.5 text-primary" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" className="w-full h-8 text-xs gap-1.5 text-income border-income/30 hover:bg-income/5"
+                    onClick={() => setAssetSheetOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Registrar activo que financió esta deuda
+                  </Button>
+                )}
+              </div>
+            )}
+
             <div className="pt-2">
               <Button
                 type="button"

@@ -66,7 +66,7 @@ export default function Construction() {
       <div
         key={goal.id}
         className="rounded-xl bg-card border border-border p-3 space-y-2.5 card-interactive cursor-pointer"
-        onClick={() => goal.account_id && navigate(`/accounts/${goal.account_id}`)}
+        onClick={() => setDetailTarget(goal)}
       >
         {/* Header */}
         <div className="flex items-start gap-2">

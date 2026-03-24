@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useSavingsGoals, SavingsGoal } from "@/hooks/useSavingsGoals";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isAssetType } from "@/hooks/useAccounts";
 import { formatCurrencyAbs } from "@/lib/formatters";
 
 const editSchema = z.object({

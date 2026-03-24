@@ -29,11 +29,11 @@ const editSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
   goal_type: z.enum(["emergency", "home", "car", "travel", "education", "business", "retirement", "custom"]),
   target_amount: z.coerce.number().min(0).optional().default(0),
+  current_amount: z.coerce.number().min(0).optional().default(0),
   description: z.string().optional(),
   target_date: z.date().optional().nullable(),
   contribution_day: z.coerce.number().min(1).max(31).optional().nullable(),
   monthly_contribution: z.coerce.number().optional().default(0),
-  currency: z.string().default("MXN"),
   account_id: z.string().optional(),
 }).refine(
   (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,
@@ -90,11 +90,11 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       name: "",
       goal_type: "custom",
       target_amount: 0,
+      current_amount: 0,
       description: "",
       target_date: null,
       contribution_day: undefined,
       monthly_contribution: 0,
-      currency: "MXN",
       account_id: undefined,
     },
   });
@@ -105,11 +105,11 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
         name: goal.name,
         goal_type: goal.goal_type as EditValues["goal_type"],
         target_amount: goal.target_amount || 0,
+        current_amount: goal.current_amount || 0,
         description: goal.description || "",
         target_date: goal.target_date ? new Date(goal.target_date + "T12:00:00") : null,
         contribution_day: goal.contribution_day ?? undefined,
         monthly_contribution: goal.monthly_contribution || 0,
-        currency: (goal as any).currency ?? "MXN",
         account_id: goal.account_id ?? undefined,
       });
     }
@@ -122,11 +122,11 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
       name: data.name,
       goal_type: data.goal_type,
       target_amount: data.target_amount || 0,
+      current_amount: data.current_amount || 0,
       description: data.description || null,
       target_date: data.target_date ? format(data.target_date, "yyyy-MM-dd") : null,
       contribution_day: data.contribution_day ?? null,
       monthly_contribution: data.monthly_contribution || 0,
-      currency: data.currency,
       account_id: data.account_id ?? null,
     } as any);
     onOpenChange(false);
@@ -158,22 +158,16 @@ export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) 
             </Select>
           </FieldRow>
 
-          <FieldRow label="Moneda">
-            <Select value={form.watch("currency")} onValueChange={(v) => form.setValue("currency", v)}>
-              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MXN">MXN</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldRow>
-
           <FieldRow label="Monto objetivo" hint="Opcional si defines fecha">
             <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("target_amount")} />
           </FieldRow>
           {form.formState.errors.target_amount && (
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.target_amount.message}</p>
           )}
+
+          <FieldRow label="Saldo actual" hint="Monto acumulado">
+            <Input className="h-8 text-sm text-right" type="number" step="0.01" {...form.register("current_amount")} />
+          </FieldRow>
 
           <FieldRow label="Fecha objetivo" hint="Opcional si defines monto">
             <div className="flex items-center gap-1">

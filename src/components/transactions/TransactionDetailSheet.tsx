@@ -85,8 +85,7 @@ export function TransactionDetailSheet({ transaction, open, onOpenChange }: Tran
 
   if (!transaction) return null;
 
-  const fmt = (v: number, c: string) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: c, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);
+  const fmt = (v: number, c: string) => formatCurrency(v, c, { decimals: 2 });
 
   const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name ?? "Sin categoría";
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name ?? "—";

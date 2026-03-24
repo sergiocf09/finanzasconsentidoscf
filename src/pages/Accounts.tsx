@@ -57,7 +57,7 @@ export default function Accounts() {
   const [showStrategy, setShowStrategy] = useState(false);
 
   // Non-financial assets
-  const { assets: nfAssets, toggleIncludeInSummary } = useNonFinancialAssets();
+  const { assets: nfAssets } = useNonFinancialAssets();
   const [nfaSheetOpen, setNfaSheetOpen] = useState(false);
   const [editingNfa, setEditingNfa] = useState<any>(null);
 

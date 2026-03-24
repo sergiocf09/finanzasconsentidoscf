@@ -243,13 +243,38 @@ export function FinancialSummaryCards({ accountsSummary }: FinancialSummaryCards
                         real_estate: Home, vehicle: Car, furniture: Sofa, valuables: Gem, other: Package,
                       };
                       const NfaIcon = NfaIconMap[nfa.asset_type] || Package;
+                      const nfaIncluded = (nfa as any).include_in_summary !== false;
                       return (
                         <div key={nfa.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors">
                           <NfaIcon className="h-3.5 w-3.5 text-income shrink-0" />
-                          <span className="text-xs text-foreground flex-1 truncate">{nfa.name}</span>
-                          <span className="text-xs font-semibold text-income tabular-nums">
+                          <span className={cn("text-xs flex-1 truncate", !nfaIncluded && "text-muted-foreground")}>{nfa.name}
+                            {!nfaIncluded && <span className="ml-1 text-[10px] text-muted-foreground/60">· no suma</span>}
+                          </span>
+                          <span className={cn(
+                            "text-xs font-semibold tabular-nums",
+                            nfaIncluded ? "text-income" : "text-muted-foreground/50"
+                          )}>
                             {mask(fmt(nfa.current_value, nfa.currency))}
                           </span>
+                          <button
+                            className={cn(
+                              "ml-1 p-1 rounded-md transition-colors shrink-0",
+                              nfaIncluded
+                                ? "text-muted-foreground/40 hover:text-muted-foreground"
+                                : "text-muted-foreground/60 hover:text-foreground"
+                            )}
+                            title={nfaIncluded ? "Excluir del total" : "Incluir en el total"}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await supabase
+                                .from("non_financial_assets" as any)
+                                .update({ include_in_summary: !nfaIncluded })
+                                .eq("id", nfa.id);
+                              queryClient.invalidateQueries({ queryKey: ["non_financial_assets"] });
+                            }}
+                          >
+                            {nfaIncluded ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                          </button>
                         </div>
                       );
                     })}

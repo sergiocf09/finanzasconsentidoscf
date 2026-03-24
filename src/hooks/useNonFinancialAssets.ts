@@ -13,6 +13,7 @@ export interface NonFinancialAsset {
   currency: string;
   linked_debt_id?: string;
   is_active: boolean;
+  include_in_summary: boolean;
   created_at: string;
   updated_at: string;
 }

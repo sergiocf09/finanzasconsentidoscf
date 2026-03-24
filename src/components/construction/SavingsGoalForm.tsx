@@ -82,6 +82,7 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
   const { createGoal } = useSavingsGoals();
   const { accounts } = useAccounts();
   const [linkExisting, setLinkExisting] = useState(false);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const availableAccounts = accounts.filter(
     (a) => a.is_active && isAssetType(a.type) && ["savings", "investment"].includes(a.type)

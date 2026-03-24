@@ -223,6 +223,52 @@ export function useTransactionsPaginated(options?: {
   const sortAsc = options?.sortAsc ?? false;
   const categories = options?.categories ?? [];
 
+  // When searching, use a dedicated query that searches ALL transactions in the period at DB level
+  const searchResultsQuery = useQuery({
+    queryKey: [
+      'transactions_search',
+      user?.id,
+      format(startDate, 'yyyy-MM-dd'),
+      format(endDate, 'yyyy-MM-dd'),
+      typeFilter,
+      sortAsc,
+      searchQuery,
+    ],
+    queryFn: async () => {
+      // Build category IDs that match the search query
+      const matchingCategoryIds = categories
+        .filter(c => c.name.toLowerCase().includes(searchQuery))
+        .map(c => c.id);
+
+      // Query with ilike on description and notes
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .gte('transaction_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('transaction_date', format(endDate, 'yyyy-MM-dd'))
+        .order('transaction_date', { ascending: sortAsc })
+        .order('created_at', { ascending: sortAsc });
+
+      if (typeFilter === 'income') query = query.eq('type', 'income');
+      else if (typeFilter === 'expense') query = query.eq('type', 'expense');
+
+      // Use OR filter: description, notes, or matching category_id
+      const orFilters = [
+        `description.ilike.%${searchQuery}%`,
+        `notes.ilike.%${searchQuery}%`,
+      ];
+      if (matchingCategoryIds.length > 0) {
+        orFilters.push(`category_id.in.(${matchingCategoryIds.join(',')})`);
+      }
+      query = query.or(orFilters.join(','));
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Transaction[];
+    },
+    enabled: !!user && searchQuery.length > 0,
+  });
+
   const infiniteQuery = useInfiniteQuery({
     queryKey: [
       'transactions_paginated',
@@ -231,7 +277,6 @@ export function useTransactionsPaginated(options?: {
       format(endDate, 'yyyy-MM-dd'),
       typeFilter,
       sortAsc,
-      // searchQuery excluded — filtering is client-side to support category name search
     ],
     queryFn: async ({ pageParam }) => {
       let query = supabase
@@ -263,30 +308,21 @@ export function useTransactionsPaginated(options?: {
       if (lastPage.length < PAGE_SIZE) return undefined;
       return allPages.length * PAGE_SIZE;
     },
-    enabled: !!user,
+    enabled: !!user && searchQuery.length === 0,
   });
 
-  // Flatten all pages into a single array
-  const allTransactions = infiniteQuery.data?.pages.flat() ?? [];
-
-  // Client-side search filter including category names
-  const filtered = searchQuery
-    ? allTransactions.filter(tx => {
-        const q = searchQuery;
-        const descMatch = (tx.description || "").toLowerCase().includes(q);
-        const notesMatch = (tx.notes || "").toLowerCase().includes(q);
-        const categoryName = categories.find(c => c.id === tx.category_id)?.name || "";
-        const categoryMatch = categoryName.toLowerCase().includes(q);
-        return descMatch || notesMatch || categoryMatch;
-      })
-    : allTransactions;
+  // When searching: use search results. Otherwise: use paginated results.
+  const isSearching = searchQuery.length > 0;
+  const transactions = isSearching
+    ? (searchResultsQuery.data ?? [])
+    : (infiniteQuery.data?.pages.flat() ?? []);
 
   return {
-    transactions: filtered,
-    isLoading: infiniteQuery.isLoading,
-    isFetchingNextPage: infiniteQuery.isFetchingNextPage,
-    hasNextPage: infiniteQuery.hasNextPage,
+    transactions,
+    isLoading: isSearching ? searchResultsQuery.isLoading : infiniteQuery.isLoading,
+    isFetchingNextPage: isSearching ? false : infiniteQuery.isFetchingNextPage,
+    hasNextPage: isSearching ? false : infiniteQuery.hasNextPage,
     fetchNextPage: infiniteQuery.fetchNextPage,
-    error: infiniteQuery.error,
+    error: isSearching ? searchResultsQuery.error : infiniteQuery.error,
   };
 }

@@ -255,6 +255,7 @@ export default function Construction() {
 
       <SavingsGoalForm open={formOpen} onOpenChange={setFormOpen} />
       <GoalEditSheet goal={editTarget} open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)} />
+      <GoalDetailSheet goal={detailTarget} open={!!detailTarget} onOpenChange={(o) => !o && setDetailTarget(null)} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -54,7 +54,7 @@ export function TransferForm({ open, onOpenChange }: TransferFormProps) {
   const [selectedCurrency, setSelectedCurrency] = useState("MXN");
 
   const fmtBalance = (acc: typeof accounts[0]) =>
-    new Intl.NumberFormat("es-MX", { style: "currency", currency: acc.currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(acc.current_balance ?? 0);
+    formatCurrency(acc.current_balance ?? 0, acc.currency);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),

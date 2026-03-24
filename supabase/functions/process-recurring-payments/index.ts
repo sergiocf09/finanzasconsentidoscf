@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
 
-function getNextDate(current: string, frequency: string): string {
+function getNextDate(current: string, frequency: string, paymentDay?: number | null): string {
   const d = new Date(current + "T12:00:00Z");
   switch (frequency) {
     case "weekly": d.setDate(d.getDate() + 7); break;
@@ -14,6 +14,11 @@ function getNextDate(current: string, frequency: string): string {
     case "bimonthly": d.setMonth(d.getMonth() + 2); break;
     case "quarterly": d.setMonth(d.getMonth() + 3); break;
     case "annual": d.setFullYear(d.getFullYear() + 1); break;
+  }
+  // Adjust to payment_day if set
+  if (paymentDay && paymentDay >= 1 && paymentDay <= 31) {
+    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(paymentDay, maxDay));
   }
   return d.toISOString().split("T")[0];
 }

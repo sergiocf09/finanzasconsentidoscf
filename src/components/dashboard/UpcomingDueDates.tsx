@@ -472,8 +472,12 @@ export function UpcomingDueDates({
 
   const getDisplayAmount = useCallback((item: DueItem): string => {
     if (editedAmounts[item.id] !== undefined) return editedAmounts[item.id];
-    return item.amount ? String(item.amount) : "";
-  }, [editedAmounts]);
+    // For credit card debts, use calculated balance since last cut date
+    if (ccBalances && ccBalances[item.id] !== undefined) {
+      return String(Math.round(ccBalances[item.id] * 100) / 100);
+    }
+    return item.amount ? String(item.amount) : "0";
+  }, [editedAmounts, ccBalances]);
 
   const handleStartTransfer = useCallback((itemId: string, itemCurrency: string) => {
     setTransferringItemId(itemId);

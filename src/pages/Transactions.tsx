@@ -93,6 +93,8 @@ export default function Transactions() {
   const [period, setPeriod] = useState<PeriodKey>("current");
   const [customStartDate, setCustomStartDate] = useState<Date>(startOfMonth(new Date()));
   const [customEndDate, setCustomEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   
 
   const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);

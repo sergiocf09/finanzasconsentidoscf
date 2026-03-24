@@ -867,20 +867,9 @@ export function UpcomingDueDates({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {r.daysLeft === 0 ? "Hoy" : r.daysLeft === 1 ? "Mañana" : `En ${r.daysLeft} días`}
-                      </p>
-                      {isManual && !isConfirmed ? (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-expense/15 text-expense border-expense/30">
-                          Pendiente
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted text-muted-foreground border-border">
-                          {isConfirmed ? "Confirmado" : "Automático"}
-                        </Badge>
-                      )}
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {r.daysLeft === 0 ? "Hoy" : r.daysLeft === 1 ? "Mañana" : `En ${r.daysLeft} días`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-sm font-bold text-foreground tabular-nums">

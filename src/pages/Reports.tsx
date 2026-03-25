@@ -483,6 +483,37 @@ export default function Reports() {
           </p>
         )}
       </div>
+
+      {/* Hidden PDF template for html2canvas */}
+      <PdfReportTemplate
+        data={{
+          periodTitle,
+          periodLabel,
+          generatedAt: `Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`,
+          totals,
+          blockSummaries: blockSummariesList,
+          topCategories,
+          activeAssets: accounts.filter(a => a.is_active && isAssetType(a.type)),
+          activeLiabs: accounts.filter(a => a.is_active && isLiability(a.type)),
+          nfAssets: nfAssets.filter(a => a.is_active),
+          convertToMXN,
+          activeGoals: goals.filter(g => g.is_active),
+          transactions: transactions.map(tx => ({
+            id: tx.id,
+            transaction_date: tx.transaction_date,
+            type: tx.type,
+            description: tx.description,
+            category_id: tx.category_id,
+            account_id: tx.account_id,
+            amount: tx.amount,
+            amount_in_base: (tx as any).amount_in_base ?? null,
+            currency: tx.currency,
+          })),
+          categoryMap,
+          accountMap,
+        }}
+        containerRef={pdfContainerRef}
+      />
     </div>
   );
 }

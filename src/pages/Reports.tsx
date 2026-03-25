@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { FileText, Table, Download, Loader2, CalendarDays, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +13,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useAccounts, isAssetType, isLiability } from "@/hooks/useAccounts";
 import { useSavingsGoals } from "@/hooks/useSavingsGoals";
+import { useNonFinancialAssets } from "@/hooks/useNonFinancialAssets";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { PdfReportTemplate } from "@/components/reports/PdfReportTemplate";
+import type { PdfReportData } from "@/components/reports/PdfReportData";
 import { formatCurrency } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth, subMonths, isSameMonth } from "date-fns";
 import { es } from "date-fns/locale";

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { FileText, Table, Download, Loader2, CalendarDays, Check } from "lucide-react";
+import { FileText, Table, Download, Loader2, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,

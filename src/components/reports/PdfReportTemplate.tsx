@@ -14,13 +14,14 @@ export function PdfReportTemplate({ data, containerRef }: PdfReportTemplateProps
     <div
       ref={containerRef}
       style={{
-        position: "absolute",
+        position: "fixed",
         left: -9999,
         top: 0,
-        visibility: "hidden",
         width: 794,
         background: "#ffffff",
-        fontFamily: "inherit",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        zIndex: -1,
+        overflow: "hidden",
       }}
     >
       <div id="pdf-page-1" style={{ pageBreakAfter: "always" }}>

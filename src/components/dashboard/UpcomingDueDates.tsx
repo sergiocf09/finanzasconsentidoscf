@@ -443,14 +443,19 @@ export function UpcomingDueDates({
     return set;
   }, [summaryPaidDueDates, paidTransfers]);
 
-  const visibleItems = useMemo(() =>
-    items.filter(item => {
+  const visibleItems = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    return items.filter(item => {
+      // Only hide items whose next date is in the current month (already paid this month)
+      const isCurrentMonth = item.nextDate.getMonth() === currentMonth && item.nextDate.getFullYear() === currentYear;
+      if (!isCurrentMonth) return true;
       const descLabel = item.type === "debt" ? "Pago" : "Aportación";
       const key = `${descLabel}: ${item.name}`;
       return !paidKeys.has(key);
-    }),
-    [items, paidKeys]
-  );
+    });
+  }, [items, paidKeys]);
 
   const hasAnyDueItems = useMemo(() => {
     if (recurringItems.length > 0) return true;

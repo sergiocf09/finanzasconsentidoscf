@@ -43,11 +43,20 @@ const filterLabels: Record<TimeFilter, string> = {
 };
 
 function getNextOccurrence(day: number, today: Date): Date {
+  const safeDay = Math.max(1, Math.min(31, Math.round(day)));
   const y = today.getFullYear();
   const m = today.getMonth();
-  const thisMonth = new Date(y, m, day);
+
+  const daysInThisMonth = new Date(y, m + 1, 0).getDate();
+  const clampedDay = Math.min(safeDay, daysInThisMonth);
+  const thisMonth = new Date(y, m, clampedDay);
+  thisMonth.setHours(0, 0, 0, 0);
+
   if (thisMonth >= today) return thisMonth;
-  return new Date(y, m + 1, day);
+
+  const daysInNextMonth = new Date(y, m + 2, 0).getDate();
+  const clampedDayNext = Math.min(safeDay, daysInNextMonth);
+  return new Date(y, m + 1, clampedDayNext);
 }
 
 function getMaxDays(filter: TimeFilter, today: Date): number {
@@ -94,7 +103,7 @@ export function UpcomingDueDates({
   const { rates: fxRates } = useExchangeRate();
 
   // Only fetch from DB when no summary data provided
-  const hasSummary = !!summaryDebts;
+  const hasSummary = Array.isArray(summaryDebts);
   const { debts: hookDebts } = useDebts({ enabled: !hasSummary });
   const { goals: hookGoals } = useSavingsGoals({ enabled: !hasSummary });
   const { accounts: hookAccounts } = useAccounts({ enabled: !summaryAccounts });
@@ -437,8 +446,11 @@ export function UpcomingDueDates({
   const paidKeys = useMemo(() => {
     const set = new Set<string>();
     const source = summaryPaidDueDates ?? paidTransfers ?? [];
-    source.forEach(t => {
-      if (t.description) set.add(t.description);
+    source.forEach((t: any) => {
+      if (t.description) {
+        set.add(t.description);
+        if (t.to_account_id) set.add(`${t.description}::${t.to_account_id}`);
+      }
     });
     return set;
   }, [summaryPaidDueDates, paidTransfers]);
@@ -448,12 +460,14 @@ export function UpcomingDueDates({
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     return items.filter(item => {
-      // Only hide items whose next date is in the current month (already paid this month)
       const isCurrentMonth = item.nextDate.getMonth() === currentMonth && item.nextDate.getFullYear() === currentYear;
       if (!isCurrentMonth) return true;
       const descLabel = item.type === "debt" ? "Pago" : "Aportación";
       const key = `${descLabel}: ${item.name}`;
-      return !paidKeys.has(key);
+      const keyWithAccount = item.accountId ? `${key}::${item.accountId}` : null;
+      if (keyWithAccount && paidKeys.has(keyWithAccount)) return false;
+      if (!keyWithAccount && paidKeys.has(key)) return false;
+      return true;
     });
   }, [items, paidKeys]);
 

@@ -81,6 +81,9 @@ export default function Reports() {
   const { categories } = useCategories();
   const { accounts } = useAccounts();
   const { goals } = useSavingsGoals();
+  const { assets: nfAssets } = useNonFinancialAssets();
+  const { convertToMXN } = useExchangeRate();
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (accounts.length > 0 && !accountsInitialized) {

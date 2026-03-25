@@ -179,44 +179,500 @@ export default function Reports() {
     setSelectedAccountIds(new Set());
   };
 
-  // ─── PDF Export ───
+  // ─── PDF Export (jsPDF vectorial + autoTable) ───
   const handleExportPDF = async () => {
     setGeneratingPdf(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
       const jsPDFModule = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
       const jsPDF = jsPDFModule.default;
+      const doc = new jsPDF({ unit: "mm", format: "letter" });
 
-      // Wait for template to be fully rendered
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const PAGE_W = doc.internal.pageSize.getWidth();
+      const PAGE_H = doc.internal.pageSize.getHeight();
+      const M = 16; // margin
+      const CW = PAGE_W - M * 2; // content width
 
-      const doc = new jsPDF({
-        unit: "px",
-        format: "a4",
-        hotfixes: ["px_scaling"],
+      // Color palette
+      const INK: [number,number,number]       = [22, 22, 22];
+      const INK_MID: [number,number,number]   = [90, 90, 90];
+      const INK_LIGHT: [number,number,number] = [170, 170, 170];
+      const INK_GHOST: [number,number,number] = [235, 235, 235];
+      const COVER_BG: [number,number,number]  = [28, 44, 32];
+      const COVER_TXT: [number,number,number] = [210, 228, 212];
+      const SAGE: [number,number,number]      = [58, 90, 64];
+      const GOLD: [number,number,number]      = [175, 148, 80];
+      const GREEN: [number,number,number]     = [34, 120, 70];
+      const GREEN_BG: [number,number,number]  = [228, 245, 233];
+      const RED: [number,number,number]       = [175, 48, 48];
+      const RED_BG: [number,number,number]    = [248, 232, 232];
+      const BLUE: [number,number,number]      = [75, 88, 200];
+      const BLUE_BG: [number,number,number]   = [232, 235, 252];
+      const STAB: [number,number,number]      = [58, 90, 64];
+      const STAB_L: [number,number,number]    = [140, 175, 145];
+      const LIFE: [number,number,number]      = [75, 88, 200];
+      const LIFE_L: [number,number,number]    = [160, 168, 225];
+      const BUILD: [number,number,number]     = [175, 148, 80];
+      const BUILD_L: [number,number,number]   = [215, 195, 140];
+
+      const fmtP = (n: number) =>
+        new Intl.NumberFormat("es-MX", {
+          style: "currency", currency: "MXN",
+          minimumFractionDigits: 0, maximumFractionDigits: 0,
+        }).format(Math.round(n));
+
+      const sectionTitle = (text: string, yPos: number) => {
+        doc.setTextColor(...INK_MID);
+        doc.setFontSize(7); doc.setFont("helvetica", "bold");
+        doc.text(text, M, yPos);
+        const ly = yPos + 2;
+        doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.2);
+        doc.line(M, ly, PAGE_W - M, ly);
+        return ly + 4;
+      };
+
+      // ════════════════════════════════════════════
+      // PAGE 1 — Cover + KPIs + Blocks + Top cats
+      // ════════════════════════════════════════════
+
+      // Cover band
+      doc.setFillColor(...COVER_BG);
+      doc.rect(0, 0, PAGE_W, 42, "F");
+      doc.setTextColor(...COVER_TXT);
+      doc.setFontSize(10); doc.setFont("helvetica", "bold");
+      doc.text("Finanzas con Sentido™", PAGE_W / 2, 11, { align: "center" });
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18); doc.setFont("helvetica", "bold");
+      doc.text(periodTitle, PAGE_W / 2, 21, { align: "center" });
+      doc.setTextColor(...COVER_TXT);
+      doc.setFontSize(7.5); doc.setFont("helvetica", "italic");
+      doc.text("Tu fotografía financiera", PAGE_W / 2, 27, { align: "center" });
+      doc.setFontSize(7); doc.setFont("helvetica", "normal");
+      doc.text(periodLabel, PAGE_W / 2, 32, { align: "center" });
+      doc.setTextColor(165, 190, 168);
+      doc.setFontSize(6);
+      doc.text(
+        `Generado el ${format(new Date(), "d MMM yyyy, HH:mm", { locale: es })}`,
+        PAGE_W / 2, 37, { align: "center" }
+      );
+
+      let y = 50;
+
+      // KPI cards
+      const balance = totals.income - totals.expense;
+      const cardW = (CW - 6) / 3;
+      const cardH = 20;
+      const kpis = [
+        { label: "INGRESOS ▲", value: fmtP(totals.income), bg: GREEN_BG, ac: GREEN },
+        { label: "GASTOS ▼", value: fmtP(totals.expense), bg: RED_BG, ac: RED },
+        { label: "BALANCE NETO", value: fmtP(balance),
+          bg: balance >= 0 ? BLUE_BG : RED_BG,
+          ac: balance >= 0 ? BLUE : RED },
+      ];
+      kpis.forEach((k, i) => {
+        const x = M + i * (cardW + 3);
+        doc.setFillColor(...k.bg);
+        doc.roundedRect(x, y, cardW, cardH, 2, 2, "F");
+        doc.setDrawColor(...k.ac); doc.setLineWidth(1.5);
+        doc.line(x, y + 1, x, y + cardH - 1);
+        doc.setLineWidth(0.2);
+        doc.setTextColor(...k.ac);
+        doc.setFontSize(5.5); doc.setFont("helvetica", "bold");
+        doc.text(k.label, x + 4, y + 6);
+        doc.setTextColor(...INK);
+        doc.setFontSize(13); doc.setFont("helvetica", "bold");
+        doc.text(k.value, x + 4, y + 14);
+      });
+      // Balance percentage
+      if (totals.income > 0) {
+        const bPct = ((balance / totals.income) * 100).toFixed(1);
+        const bx = M + 2 * (cardW + 3);
+        doc.setTextColor(...(balance >= 0 ? BLUE : RED));
+        doc.setFontSize(6); doc.setFont("helvetica", "normal");
+        doc.text(`${bPct}% del ingreso`, bx + 4, y + 18);
+      }
+      y += cardH + 10;
+
+      // Block distribution
+      y = sectionTitle("DISTRIBUCIÓN DEL GASTO", y);
+      const blockColors: [number,number,number][] = [STAB, LIFE, BUILD];
+      const blockColorsL: [number,number,number][] = [STAB_L, LIFE_L, BUILD_L];
+      const BAR_W = CW * 0.72;
+
+      blockSummariesList.forEach((b, i) => {
+        doc.setTextColor(...blockColors[i]);
+        doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
+        doc.text(b.label, M, y);
+        doc.text(`${b.percent.toFixed(1)}%`, PAGE_W - M - 30, y, { align: "right" });
+        doc.setTextColor(...INK);
+        doc.setFontSize(8); doc.setFont("helvetica", "normal");
+        doc.text(fmtP(b.amount), PAGE_W - M, y, { align: "right" });
+        y += 3;
+        doc.setFillColor(...INK_GHOST);
+        doc.roundedRect(M, y, BAR_W, 3, 1.5, 1.5, "F");
+        const sw = Math.min(Math.max(b.percent / 100, 0), 1) * BAR_W;
+        if (sw > 0) {
+          doc.setFillColor(...blockColorsL[i]);
+          doc.roundedRect(M, y, sw, 3, 1.5, 1.5, "F");
+        }
+        y += 3 + 6;
+      });
+      y += 2;
+
+      // Top 5 categories
+      y = sectionTitle("TOP CATEGORÍAS DE GASTO", y);
+      const BAR_CAT = CW * 0.36;
+      const maxPct = topCategories.length > 0 ? topCategories[0].pct : 1;
+
+      topCategories.forEach((c, i) => {
+        const rx = M;
+        doc.setTextColor(i === 0 ? GOLD[0] : INK_LIGHT[0], i === 0 ? GOLD[1] : INK_LIGHT[1], i === 0 ? GOLD[2] : INK_LIGHT[2]);
+        doc.setFontSize(7); doc.setFont("helvetica", "bold");
+        doc.text(`#${i + 1}`, rx, y);
+
+        doc.setTextColor(...INK);
+        doc.setFontSize(8); doc.setFont("helvetica", "bold");
+        const nameMaxW = 42;
+        const nameText = doc.getTextWidth(c.name) > nameMaxW
+          ? c.name.substring(0, 20) + "…" : c.name;
+        doc.text(nameText, rx + 7, y);
+
+        // Bar
+        const barX = rx + 52;
+        doc.setFillColor(...INK_GHOST);
+        doc.roundedRect(barX, y - 2, BAR_CAT, 2.5, 1, 1, "F");
+        const normW = maxPct > 0 ? (c.pct / maxPct) * BAR_CAT : 0;
+        if (normW > 0) {
+          doc.setFillColor(215, 190, 130);
+          doc.roundedRect(barX, y - 2, normW, 2.5, 1, 1, "F");
+        }
+
+        doc.setTextColor(...INK_MID);
+        doc.setFontSize(7); doc.setFont("helvetica", "normal");
+        doc.text(`${c.pct.toFixed(1)}%`, barX + BAR_CAT + 3, y);
+
+        doc.setTextColor(...INK);
+        doc.setFontSize(8); doc.setFont("helvetica", "bold");
+        doc.text(fmtP(c.amount), PAGE_W - M, y, { align: "right" });
+
+        y += 7;
       });
 
-      const pageIds = ["pdf-page-1", "pdf-page-2", "pdf-page-3"];
+      // ════════════════════════════════════════════
+      // PAGE 2 — Patrimonial snapshot
+      // ════════════════════════════════════════════
+      doc.addPage();
 
-      for (let i = 0; i < pageIds.length; i++) {
-        const el = document.getElementById(pageIds[i]);
-        if (!el) continue;
+      // Header band
+      doc.setFillColor(...COVER_BG);
+      doc.rect(0, 0, PAGE_W, 12, "F");
+      doc.setTextColor(...COVER_TXT);
+      doc.setFontSize(8); doc.setFont("helvetica", "bold");
+      doc.text(`FOTOGRAFÍA PATRIMONIAL — ${periodTitle}`, M, 8);
 
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          width: 794,
-          windowWidth: 794,
+      y = 20;
+
+      const allActive = accounts.filter(a => a.is_active);
+      const pdfAssets = allActive.filter(a => isAssetType(a.type));
+      const pdfLiabs = allActive.filter(a => isLiability(a.type));
+      const activeNfa = nfAssets.filter(a => a.is_active);
+
+      const colW = (CW - 10) / 2;
+      const colL = M;
+      const colR = M + colW + 10;
+
+      // ── Left column: Assets ──
+      doc.setTextColor(...SAGE);
+      doc.setFontSize(7.5); doc.setFont("helvetica", "bold");
+      doc.text("LO QUE TENGO", colL, y);
+
+      // ── Right column: Liabilities ──
+      doc.setTextColor(...RED);
+      doc.text("LO QUE DEBO", colR, y);
+      y += 5;
+
+      let yL = y;
+      let yR = y;
+
+      // Assets - financial
+      doc.setTextColor(...INK_LIGHT);
+      doc.setFontSize(6); doc.setFont("helvetica", "normal");
+      doc.text("Cuentas financieras", colL, yL);
+      yL += 4;
+
+      let totalFinAct = 0;
+      pdfAssets.forEach(a => {
+        const bal = a.current_balance ?? 0;
+        totalFinAct += convertToMXN(bal, a.currency);
+        doc.setTextColor(...INK);
+        doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+        doc.text(a.name, colL, yL);
+        // dotted line
+        const nw = doc.getTextWidth(a.name);
+        doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.15);
+        doc.setLineDashPattern([0.4, 1.2], 0);
+        doc.line(colL + nw + 1, yL - 0.5, colL + colW - 22, yL - 0.5);
+        doc.setLineDashPattern([], 0);
+        // amount
+        doc.setTextColor(...GREEN);
+        doc.setFont("helvetica", "bold");
+        const suffix = a.currency !== "MXN" ? ` ${a.currency}` : "";
+        doc.text(fmtP(bal) + suffix, colL + colW, yL, { align: "right" });
+        yL += 4.5;
+      });
+
+      // Total financial
+      doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.2);
+      doc.line(colL, yL, colL + colW, yL);
+      yL += 3;
+      doc.setTextColor(...SAGE);
+      doc.setFontSize(7); doc.setFont("helvetica", "bold");
+      doc.text("Total cuentas", colL, yL);
+      doc.setTextColor(...GREEN);
+      doc.setFontSize(8);
+      doc.text(fmtP(totalFinAct), colL + colW, yL, { align: "right" });
+      yL += 5;
+
+      // NFA
+      let totalNFA = 0;
+      if (activeNfa.length > 0) {
+        doc.setTextColor(...INK_LIGHT);
+        doc.setFontSize(6); doc.setFont("helvetica", "normal");
+        doc.text("Activos no financieros", colL, yL);
+        yL += 4;
+        activeNfa.forEach(a => {
+          const val = convertToMXN(a.current_value, a.currency);
+          totalNFA += val;
+          doc.setTextColor(...INK);
+          doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+          doc.text(a.name, colL, yL);
+          const nw = doc.getTextWidth(a.name);
+          doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.15);
+          doc.setLineDashPattern([0.4, 1.2], 0);
+          doc.line(colL + nw + 1, yL - 0.5, colL + colW - 22, yL - 0.5);
+          doc.setLineDashPattern([], 0);
+          doc.setTextColor(...SAGE);
+          doc.setFont("helvetica", "bold");
+          const sfx = a.currency !== "MXN" ? ` ${a.currency}` : "";
+          doc.text(fmtP(a.current_value) + sfx, colL + colW, yL, { align: "right" });
+          yL += 4.5;
         });
+        doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.2);
+        doc.line(colL, yL, colL + colW, yL);
+        yL += 3;
+        doc.setTextColor(...SAGE);
+        doc.setFontSize(7); doc.setFont("helvetica", "bold");
+        doc.text("Total no financiero", colL, yL);
+        doc.text(fmtP(totalNFA), colL + colW, yL, { align: "right" });
+        yL += 5;
+      }
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.92);
-        const pdfW = doc.internal.pageSize.getWidth();
-        const pdfH = (canvas.height * pdfW) / canvas.width;
+      // Total assets double line
+      const totalActivos = totalFinAct + totalNFA;
+      doc.setDrawColor(...SAGE); doc.setLineWidth(0.4);
+      doc.line(colL, yL, colL + colW, yL); yL += 1.2;
+      doc.line(colL, yL, colL + colW, yL); yL += 4;
+      doc.setTextColor(...SAGE);
+      doc.setFontSize(8); doc.setFont("helvetica", "bold");
+      doc.text("TOTAL ACTIVOS", colL, yL);
+      doc.setFontSize(10);
+      doc.text(fmtP(totalActivos), colL + colW, yL, { align: "right" });
 
-        if (i > 0) doc.addPage();
-        doc.addImage(imgData, "JPEG", 0, 0, pdfW, pdfH);
+      // Liabilities (right column)
+      let totalPasivos = 0;
+      pdfLiabs.forEach(a => {
+        const bal = Math.abs(a.current_balance ?? 0);
+        totalPasivos += convertToMXN(bal, a.currency);
+        doc.setTextColor(...INK);
+        doc.setFontSize(7.5); doc.setFont("helvetica", "normal");
+        doc.text(a.name, colR, yR);
+        const nw = doc.getTextWidth(a.name);
+        doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.15);
+        doc.setLineDashPattern([0.4, 1.2], 0);
+        doc.line(colR + nw + 1, yR - 0.5, colR + colW - 22, yR - 0.5);
+        doc.setLineDashPattern([], 0);
+        doc.setTextColor(...RED);
+        doc.setFont("helvetica", "bold");
+        doc.text(fmtP(bal), colR + colW, yR, { align: "right" });
+        yR += 4.5;
+      });
+      doc.setDrawColor(...INK_GHOST); doc.setLineWidth(0.2);
+      doc.line(colR, yR, colR + colW, yR);
+      yR += 3;
+      doc.setTextColor(...RED);
+      doc.setFontSize(8); doc.setFont("helvetica", "bold");
+      doc.text("TOTAL PASIVOS", colR, yR);
+      doc.setFontSize(10);
+      doc.text(fmtP(totalPasivos), colR + colW, yR, { align: "right" });
+
+      // Net worth banner
+      y = Math.max(yL, yR) + 10;
+      const neto = totalActivos - totalPasivos;
+      const netoPos = neto >= 0;
+      doc.setFillColor(...(netoPos ? GREEN_BG : RED_BG));
+      doc.rect(0, y, PAGE_W, 18, "F");
+      doc.setDrawColor(...(netoPos ? SAGE : RED)); doc.setLineWidth(0.6);
+      doc.line(0, y, PAGE_W, y);
+      doc.setTextColor(...(netoPos ? SAGE : RED));
+      doc.setFontSize(8); doc.setFont("helvetica", "bold");
+      doc.text("PATRIMONIO NETO", M, y + 7);
+      doc.setTextColor(...INK_LIGHT);
+      doc.setFontSize(6); doc.setFont("helvetica", "normal");
+      doc.text("(Activos totales − Pasivos)", M, y + 11);
+      doc.setTextColor(...(netoPos ? SAGE : RED));
+      doc.setFontSize(16); doc.setFont("helvetica", "bold");
+      doc.text(fmtP(neto), PAGE_W - M, y + 11, { align: "right" });
+      y += 24;
+
+      // Construction goals
+      const activeGoals = goals.filter(g => g.is_active);
+      if (activeGoals.length > 0) {
+        if (y > PAGE_H - 40) { doc.addPage(); y = 18; }
+        y = sectionTitle("CONSTRUCCIÓN PATRIMONIAL", y);
+        const BAR_G = CW * 0.75;
+        activeGoals.slice(0, 4).forEach(g => {
+          const pct = g.target_amount > 0
+            ? Math.min(g.current_amount / g.target_amount, 1) : 0;
+          doc.setTextColor(...INK);
+          doc.setFontSize(8.5); doc.setFont("helvetica", "bold");
+          doc.text(g.name, M, y);
+          doc.setTextColor(...INK_MID);
+          doc.setFontSize(7); doc.setFont("helvetica", "normal");
+          doc.text(
+            `${fmtP(g.current_amount)} / ${fmtP(g.target_amount)}`,
+            PAGE_W - M, y, { align: "right" }
+          );
+          y += 3.5;
+          doc.setFillColor(...INK_GHOST);
+          doc.roundedRect(M, y, BAR_G, 3, 1.5, 1.5, "F");
+          if (pct > 0) {
+            doc.setFillColor(...BUILD_L);
+            doc.roundedRect(M, y, pct * BAR_G, 3, 1.5, 1.5, "F");
+          }
+          doc.setTextColor(...BUILD);
+          doc.setFontSize(7); doc.setFont("helvetica", "bold");
+          doc.text(`${(pct * 100).toFixed(0)}%`, PAGE_W - M, y + 2.5, { align: "right" });
+          y += 3 + 2.5;
+          if (g.monthly_contribution > 0) {
+            const rem = g.target_amount - g.current_amount;
+            const months = rem > 0 ? Math.ceil(rem / g.monthly_contribution) : 0;
+            if (months > 0) {
+              doc.setTextColor(...INK_MID);
+              doc.setFontSize(6); doc.setFont("helvetica", "italic");
+              doc.text(
+                `Aportando ${fmtP(g.monthly_contribution)}/mes → ${months} meses para completar`,
+                M, y
+              );
+              y += 3.5;
+            }
+          }
+          y += 5;
+        });
+      }
+
+      // ════════════════════════════════════════════
+      // PAGE 3 — Transactions
+      // ════════════════════════════════════════════
+      doc.addPage();
+
+      // Header band
+      doc.setFillColor(...COVER_BG);
+      doc.rect(0, 0, PAGE_W, 12, "F");
+      doc.setTextColor(...COVER_TXT);
+      doc.setFontSize(8); doc.setFont("helvetica", "bold");
+      doc.text(`MOVIMIENTOS DEL PERIODO — ${periodTitle}`, M, 8);
+
+      y = 20;
+
+      // Income table
+      y = sectionTitle("INGRESOS DEL PERIODO", y);
+      const incomeTxs = transactions
+        .filter(t => t.type === "income")
+        .sort((a, b) => (b.amount_in_base ?? b.amount) - (a.amount_in_base ?? a.amount));
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Fecha", "Descripción", "Cuenta", "Monto"]],
+        body: incomeTxs.length > 0
+          ? incomeTxs.map(tx => [
+              tx.transaction_date,
+              tx.description || categoryMap[tx.category_id ?? ""] || "—",
+              accountMap[tx.account_id] || "",
+              fmtP(tx.amount_in_base ?? tx.amount),
+            ])
+          : [["", "Sin ingresos en este periodo", "", ""]],
+        margin: { left: M, right: M },
+        styles: { fontSize: 7, textColor: INK, cellPadding: 2 },
+        headStyles: {
+          fillColor: SAGE,
+          textColor: [255, 255, 255] as [number, number, number],
+          fontSize: 7, fontStyle: "bold",
+        },
+        alternateRowStyles: { fillColor: [238, 246, 240] as [number, number, number] },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          2: { cellWidth: 28 },
+          3: { cellWidth: 26, halign: "right" },
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+
+      // Top expenses
+      if (y > PAGE_H - 40) { doc.addPage(); y = 18; }
+      y = sectionTitle("TOP GASTOS DEL PERIODO", y);
+      const expenseTxs = transactions
+        .filter(t => t.type === "expense")
+        .sort((a, b) => (b.amount_in_base ?? b.amount) - (a.amount_in_base ?? a.amount))
+        .slice(0, 20);
+
+      const COL_TBL_W = (CW - 4) / 2;
+      const leftExp = expenseTxs.slice(0, 10);
+      const rightExp = expenseTxs.slice(10, 20);
+
+      const expTableOpts = (rows: typeof leftExp, startIdx: number, mL: number) => ({
+        startY: y,
+        head: [["#", "Descripción", "Monto"]],
+        body: rows.map((tx, i) => [
+          String(startIdx + i + 1),
+          tx.description || categoryMap[tx.category_id ?? ""] || "—",
+          fmtP(tx.amount_in_base ?? tx.amount),
+        ]),
+        margin: { left: mL, right: PAGE_W - mL - COL_TBL_W },
+        styles: { fontSize: 7, textColor: INK, cellPadding: 1.5 },
+        headStyles: {
+          fillColor: [148, 38, 38] as [number, number, number],
+          textColor: [255, 255, 255] as [number, number, number],
+          fontSize: 7, fontStyle: "bold" as const,
+        },
+        alternateRowStyles: { fillColor: [250, 238, 238] as [number, number, number] },
+        columnStyles: {
+          0: { cellWidth: 7 },
+          2: { cellWidth: 20, halign: "right" as const },
+        },
+        tableWidth: COL_TBL_W,
+      });
+
+      if (leftExp.length > 0)
+        autoTable(doc, expTableOpts(leftExp, 0, M));
+      if (rightExp.length > 0)
+        autoTable(doc, expTableOpts(rightExp, 10, M + COL_TBL_W + 4));
+
+      // Footer on all pages
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let pg = 1; pg <= totalPages; pg++) {
+        doc.setPage(pg);
+        const fy = PAGE_H - 8;
+        doc.setDrawColor(...SAGE); doc.setLineWidth(0.25);
+        doc.line(M, fy - 3, PAGE_W - M, fy - 3);
+        doc.setTextColor(...SAGE);
+        doc.setFontSize(6); doc.setFont("helvetica", "italic");
+        doc.text("Tu dinero con calma. Tu vida con sentido.", M, fy);
+        doc.setTextColor(...INK_LIGHT);
+        doc.setFontSize(5.5); doc.setFont("helvetica", "normal");
+        doc.text(`Página ${pg} de ${totalPages}`, PAGE_W / 2, fy, { align: "center" });
+        doc.setTextColor(...GOLD);
+        doc.setFontSize(5.5);
+        doc.text("finanzasconsentidoscf.com", PAGE_W - M, fy, { align: "right" });
       }
 
       doc.save(`finanzas-${format(startDate, "yyyy-MM")}.pdf`);

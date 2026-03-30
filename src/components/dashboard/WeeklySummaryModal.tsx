@@ -66,6 +66,10 @@ export function WeeklySummaryModal({ open, onClose, displayName }: WeeklySummary
 
           {/* Métricas */}
           <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-income/5 border border-income/20 p-3 text-center space-y-1">
+              <p className="text-[10px] text-muted-foreground">Entró</p>
+              <p className="text-base font-bold text-income tabular-nums">{formatCurrency(prevIncome)}</p>
+            </div>
             <div className="rounded-xl bg-expense/5 border border-expense/20 p-3 text-center space-y-1">
               <p className="text-[10px] text-muted-foreground">Gasté</p>
               <p className="text-base font-bold text-expense tabular-nums">{formatCurrency(prevExpense)}</p>
@@ -76,10 +80,6 @@ export function WeeklySummaryModal({ open, onClose, displayName }: WeeklySummary
                   {expenseDiff < 0 ? "▼" : "▲"} {Math.abs(expenseDiff).toFixed(0)}% vs ant.
                 </p>
               )}
-            </div>
-            <div className="rounded-xl bg-income/5 border border-income/20 p-3 text-center space-y-1">
-              <p className="text-[10px] text-muted-foreground">Entró</p>
-              <p className="text-base font-bold text-income tabular-nums">{formatCurrency(prevIncome)}</p>
             </div>
             <div className={cn("rounded-xl border p-3 text-center space-y-1",
               prevBalance >= 0 ? "bg-primary/5 border-primary/20" : "bg-expense/5 border-expense/20")}>

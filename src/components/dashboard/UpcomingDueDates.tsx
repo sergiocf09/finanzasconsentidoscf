@@ -144,9 +144,9 @@ export function UpcomingDueDates({
 
   // Query upcoming recurring payments (same filter as debts/goals)
   const { data: upcomingRecurring } = useQuery({
-    queryKey: ["upcoming_recurring", user?.id, todayStr, recurringMaxDate],
+    queryKey: ["upcoming_recurring", user?.id, monthStart, recurringMaxDate],
     queryFn: async () => {
-      // Include overdue items from current month so they stay visible until confirmed
+      // Include ALL active recurring payments (manual + automatic) in the date range
       const { data, error } = await supabase
         .from("recurring_payments" as any)
         .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency, payment_day, payments_made")

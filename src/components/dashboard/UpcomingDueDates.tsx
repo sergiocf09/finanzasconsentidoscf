@@ -666,7 +666,9 @@ export function UpcomingDueDates({
       ) : (
         <div className="space-y-1.5">
           {visibleItems.map(item => {
-            const isUrgent = item.daysLeft <= 3;
+            const isOverdue = item.daysLeft < 0;
+            const isUrgent = item.daysLeft >= 0 && item.daysLeft <= 3;
+            const isHighlight = isOverdue || isUrgent;
             const Icon = item.type === "debt" ? CreditCard : PiggyBank;
             const isTransferring = transferringItemId === item.id;
 
@@ -675,27 +677,42 @@ export function UpcomingDueDates({
                 key={item.id}
                 className={cn(
                   "rounded-xl border p-3 transition-colors",
-                  isUrgent
-                    ? "border-expense/30 bg-expense/5"
-                    : "border-border bg-card"
+                  isOverdue
+                    ? "border-destructive/40 bg-destructive/5"
+                    : isUrgent
+                      ? "border-expense/30 bg-expense/5"
+                      : "border-border bg-card"
                 )}
               >
               <div className="flex items-center gap-2.5">
                   <div className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isUrgent ? "bg-expense/10" : "bg-primary/10"
+                    isOverdue ? "bg-destructive/10" : isUrgent ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Icon className={cn("h-5 w-5", isUrgent ? "text-expense" : "text-primary")} />
+                    <Icon className={cn("h-5 w-5", isHighlight ? "text-expense" : "text-primary")} />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                      {isOverdue && (
+                        <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                          Vencido
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
+                      {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {
+                        isOverdue
+                          ? `Hace ${Math.abs(item.daysLeft)} día${Math.abs(item.daysLeft) !== 1 ? 's' : ''}`
+                          : item.daysLeft === 0 ? "Hoy"
+                          : item.daysLeft === 1 ? "Mañana"
+                          : `En ${item.daysLeft} días`
+                      }
                     </p>
                   </div>
 
-                  {isUrgent && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
+                  {isHighlight && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
 
                   {focusedItemId === item.id ? (
                     <Input

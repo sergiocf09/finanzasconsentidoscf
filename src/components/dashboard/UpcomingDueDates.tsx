@@ -361,10 +361,10 @@ export function UpcomingDueDates({
     const result: DueItem[] = [];
 
     if (summaryDebts) {
-      // Use RPC data
       summaryDebts.forEach(d => {
         const next = getNextOccurrence(d.due_day, today);
         const diff = Math.ceil((next.getTime() - today.getTime()) / 86400000);
+        // Show if within future range OR overdue (negative daysLeft = not yet paid)
         if (diff <= maxDays) {
           result.push({
             id: `debt-${d.id}`,

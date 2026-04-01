@@ -954,8 +954,8 @@ export function UpcomingDueDates({
                       Registrar cargo
                     </button>
                   </div>
-                )
-                </div>
+                )}
+
 
                 {/* Account picker for confirmation (manual & automatic) */}
                 {isExpanded && (

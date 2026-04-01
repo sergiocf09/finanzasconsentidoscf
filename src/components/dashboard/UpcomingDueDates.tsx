@@ -726,7 +726,7 @@ export function UpcomingDueDates({
                       autoFocus
                       className={cn(
                         "h-7 w-24 text-xs text-right tabular-nums shrink-0 px-1.5",
-                        isUrgent ? "border-expense/30" : "border-border"
+                        isHighlight ? "border-expense/30" : "border-border"
                       )}
                     />
                   ) : (

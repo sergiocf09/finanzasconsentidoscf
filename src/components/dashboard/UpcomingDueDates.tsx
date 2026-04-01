@@ -884,7 +884,8 @@ export function UpcomingDueDates({
           {recurringItems.map(r => {
             const isManual = r.requires_manual_action;
             const isConfirmed = !!r.confirmed_at;
-            const isUrgent = r.daysLeft <= 2;
+            const isRecurringOverdue = r.daysLeft < 0;
+            const isUrgent = r.daysLeft >= 0 && r.daysLeft <= 2;
             const isExpanded = confirmingRecurring === r.id;
             const defaultAcct = accounts.find(a => a.id === r.account_id);
             return (
@@ -892,22 +893,37 @@ export function UpcomingDueDates({
                 key={r.id}
                 className={cn(
                   "rounded-xl border p-3 transition-colors",
-                  isManual && !isConfirmed && isUrgent
-                    ? "border-expense/30 bg-expense/5"
-                    : "border-border bg-card"
+                  isRecurringOverdue && isManual && !isConfirmed
+                    ? "border-destructive/40 bg-destructive/5"
+                    : isManual && !isConfirmed && isUrgent
+                      ? "border-expense/30 bg-expense/5"
+                      : "border-border bg-card"
                 )}
               >
                 <div className="flex items-center gap-2.5">
                   <div className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isManual && !isConfirmed ? "bg-expense/10" : "bg-primary/10"
+                    isRecurringOverdue ? "bg-destructive/10" : isManual && !isConfirmed ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Repeat className={cn("h-5 w-5", isManual && !isConfirmed ? "text-expense" : "text-primary")} />
+                    <Repeat className={cn("h-5 w-5", isRecurringOverdue || (isManual && !isConfirmed) ? "text-expense" : "text-primary")} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
+                      {isRecurringOverdue && isManual && !isConfirmed && (
+                        <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                          Vencido
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {r.daysLeft === 0 ? "Hoy" : r.daysLeft === 1 ? "Mañana" : `En ${r.daysLeft} días`}
+                      {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {
+                        isRecurringOverdue
+                          ? `Hace ${Math.abs(r.daysLeft)} día${Math.abs(r.daysLeft) !== 1 ? 's' : ''}`
+                          : r.daysLeft === 0 ? "Hoy"
+                          : r.daysLeft === 1 ? "Mañana"
+                          : `En ${r.daysLeft} días`
+                      }
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

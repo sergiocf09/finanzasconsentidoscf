@@ -42,6 +42,11 @@ const filterLabels: Record<TimeFilter, string> = {
   "next_month": "Próx. mes",
 };
 
+/**
+ * Returns this month's occurrence date regardless of whether it has passed.
+ * This ensures overdue items remain visible until the user confirms payment.
+ * Items with daysLeft < 0 are shown as "Vencido".
+ */
 function getNextOccurrence(day: number, today: Date): Date {
   const safeDay = Math.max(1, Math.min(31, Math.round(day)));
   const y = today.getFullYear();
@@ -52,11 +57,8 @@ function getNextOccurrence(day: number, today: Date): Date {
   const thisMonth = new Date(y, m, clampedDay);
   thisMonth.setHours(0, 0, 0, 0);
 
-  if (thisMonth >= today) return thisMonth;
-
-  const daysInNextMonth = new Date(y, m + 2, 0).getDate();
-  const clampedDayNext = Math.min(safeDay, daysInNextMonth);
-  return new Date(y, m + 1, clampedDayNext);
+  // Always return this month's date — overdue items stay visible
+  return thisMonth;
 }
 
 function getMaxDays(filter: TimeFilter, today: Date): number {

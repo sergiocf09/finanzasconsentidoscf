@@ -905,7 +905,7 @@ export function UpcomingDueDates({
                   )}>
                     <Repeat className={cn("h-5 w-5", isRecurringOverdue || isUrgent ? "text-expense" : "text-primary")} />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex-1 min-w-0">
                     {/* Row 1: Name + amount */}
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
@@ -913,43 +913,48 @@ export function UpcomingDueDates({
                         {formatCurrencyAbs(r.amount, r.currency)}
                       </span>
                     </div>
-                    {/* Row 2: Badges + date */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Row 2: Date + badge aligned right */}
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        {isRecurringOverdue && (
+                          <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                            Vencido
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {
+                            isRecurringOverdue
+                              ? `Hace ${Math.abs(r.daysLeft)} día${Math.abs(r.daysLeft) !== 1 ? 's' : ''}`
+                              : r.daysLeft === 0 ? "Hoy"
+                              : r.daysLeft === 1 ? "Mañana"
+                              : `En ${r.daysLeft} días`
+                          }
+                        </span>
+                      </div>
                       {!isManual && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary shrink-0">
                           <Check className="h-2.5 w-2.5" />
                           Automático
                         </span>
                       )}
-                      {isRecurringOverdue && (
-                        <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
-                          Vencido
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {
-                          isRecurringOverdue
-                            ? `Hace ${Math.abs(r.daysLeft)} día${Math.abs(r.daysLeft) !== 1 ? 's' : ''}`
-                            : r.daysLeft === 0 ? "Hoy"
-                            : r.daysLeft === 1 ? "Mañana"
-                            : `En ${r.daysLeft} días`
-                        }
-                      </span>
                     </div>
-                    {/* Row 3: Action button */}
-                    {!isExpanded && (
-                      <button
-                        onClick={() => {
-                          setConfirmingRecurring(r.id);
-                          setRecurringSourceAccountId(r.account_id || "");
-                        }}
-                        className="flex h-7 items-center gap-1 px-2.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors w-fit"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        Registrar cargo
-                      </button>
-                    )}
                   </div>
+                </div>
+                {/* Action button — centered full width */}
+                {!isExpanded && (
+                  <div className="flex justify-center mt-2">
+                    <button
+                      onClick={() => {
+                        setConfirmingRecurring(r.id);
+                        setRecurringSourceAccountId(r.account_id || "");
+                      }}
+                      className="flex h-7 items-center gap-1 px-3 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Registrar cargo
+                    </button>
+                  </div>
+                )
                 </div>
 
                 {/* Account picker for confirmation (manual & automatic) */}

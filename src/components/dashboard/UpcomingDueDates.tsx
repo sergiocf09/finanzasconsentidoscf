@@ -735,7 +735,7 @@ export function UpcomingDueDates({
                       className={cn(
                         "h-7 min-w-[5.5rem] rounded-md border px-1.5 text-xs text-right tabular-nums shrink-0 transition-colors",
                         "hover:border-primary/40 hover:bg-muted/50",
-                        isUrgent ? "border-expense/30" : "border-border"
+                        isHighlight ? "border-expense/30" : "border-border"
                       )}
                     >
                       {(() => {

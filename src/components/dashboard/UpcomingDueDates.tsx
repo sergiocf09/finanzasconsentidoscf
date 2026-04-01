@@ -42,6 +42,11 @@ const filterLabels: Record<TimeFilter, string> = {
   "next_month": "Próx. mes",
 };
 
+/**
+ * Returns this month's occurrence date regardless of whether it has passed.
+ * This ensures overdue items remain visible until the user confirms payment.
+ * Items with daysLeft < 0 are shown as "Vencido".
+ */
 function getNextOccurrence(day: number, today: Date): Date {
   const safeDay = Math.max(1, Math.min(31, Math.round(day)));
   const y = today.getFullYear();
@@ -52,11 +57,8 @@ function getNextOccurrence(day: number, today: Date): Date {
   const thisMonth = new Date(y, m, clampedDay);
   thisMonth.setHours(0, 0, 0, 0);
 
-  if (thisMonth >= today) return thisMonth;
-
-  const daysInNextMonth = new Date(y, m + 2, 0).getDate();
-  const clampedDayNext = Math.min(safeDay, daysInNextMonth);
-  return new Date(y, m + 1, clampedDayNext);
+  // Always return this month's date — overdue items stay visible
+  return thisMonth;
 }
 
 function getMaxDays(filter: TimeFilter, today: Date): number {
@@ -144,11 +146,12 @@ export function UpcomingDueDates({
   const { data: upcomingRecurring } = useQuery({
     queryKey: ["upcoming_recurring", user?.id, todayStr, recurringMaxDate],
     queryFn: async () => {
+      // Include overdue items from current month so they stay visible until confirmed
       const { data, error } = await supabase
         .from("recurring_payments" as any)
-        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency, payment_day")
+        .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency, payment_day, payments_made")
         .eq("status", "active")
-        .gte("next_execution_date", todayStr)
+        .gte("next_execution_date", monthStart)
         .lte("next_execution_date", recurringMaxDate)
         .order("next_execution_date", { ascending: true });
       if (error) throw error;
@@ -358,10 +361,10 @@ export function UpcomingDueDates({
     const result: DueItem[] = [];
 
     if (summaryDebts) {
-      // Use RPC data
       summaryDebts.forEach(d => {
         const next = getNextOccurrence(d.due_day, today);
         const diff = Math.ceil((next.getTime() - today.getTime()) / 86400000);
+        // Show if within future range OR overdue (negative daysLeft = not yet paid)
         if (diff <= maxDays) {
           result.push({
             id: `debt-${d.id}`,
@@ -663,7 +666,9 @@ export function UpcomingDueDates({
       ) : (
         <div className="space-y-1.5">
           {visibleItems.map(item => {
-            const isUrgent = item.daysLeft <= 3;
+            const isOverdue = item.daysLeft < 0;
+            const isUrgent = item.daysLeft >= 0 && item.daysLeft <= 3;
+            const isHighlight = isOverdue || isUrgent;
             const Icon = item.type === "debt" ? CreditCard : PiggyBank;
             const isTransferring = transferringItemId === item.id;
 
@@ -672,27 +677,42 @@ export function UpcomingDueDates({
                 key={item.id}
                 className={cn(
                   "rounded-xl border p-3 transition-colors",
-                  isUrgent
-                    ? "border-expense/30 bg-expense/5"
-                    : "border-border bg-card"
+                  isOverdue
+                    ? "border-destructive/40 bg-destructive/5"
+                    : isUrgent
+                      ? "border-expense/30 bg-expense/5"
+                      : "border-border bg-card"
                 )}
               >
               <div className="flex items-center gap-2.5">
                   <div className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isUrgent ? "bg-expense/10" : "bg-primary/10"
+                    isOverdue ? "bg-destructive/10" : isUrgent ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Icon className={cn("h-5 w-5", isUrgent ? "text-expense" : "text-primary")} />
+                    <Icon className={cn("h-5 w-5", isHighlight ? "text-expense" : "text-primary")} />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                      {isOverdue && (
+                        <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                          Vencido
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {item.daysLeft === 0 ? "Hoy" : item.daysLeft === 1 ? "Mañana" : `En ${item.daysLeft} días`}
+                      {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {
+                        isOverdue
+                          ? `Hace ${Math.abs(item.daysLeft)} día${Math.abs(item.daysLeft) !== 1 ? 's' : ''}`
+                          : item.daysLeft === 0 ? "Hoy"
+                          : item.daysLeft === 1 ? "Mañana"
+                          : `En ${item.daysLeft} días`
+                      }
                     </p>
                   </div>
 
-                  {isUrgent && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
+                  {isHighlight && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
 
                   {focusedItemId === item.id ? (
                     <Input
@@ -706,7 +726,7 @@ export function UpcomingDueDates({
                       autoFocus
                       className={cn(
                         "h-7 w-24 text-xs text-right tabular-nums shrink-0 px-1.5",
-                        isUrgent ? "border-expense/30" : "border-border"
+                        isHighlight ? "border-expense/30" : "border-border"
                       )}
                     />
                   ) : (
@@ -715,7 +735,7 @@ export function UpcomingDueDates({
                       className={cn(
                         "h-7 min-w-[5.5rem] rounded-md border px-1.5 text-xs text-right tabular-nums shrink-0 transition-colors",
                         "hover:border-primary/40 hover:bg-muted/50",
-                        isUrgent ? "border-expense/30" : "border-border"
+                        isHighlight ? "border-expense/30" : "border-border"
                       )}
                     >
                       {(() => {
@@ -864,7 +884,8 @@ export function UpcomingDueDates({
           {recurringItems.map(r => {
             const isManual = r.requires_manual_action;
             const isConfirmed = !!r.confirmed_at;
-            const isUrgent = r.daysLeft <= 2;
+            const isRecurringOverdue = r.daysLeft < 0;
+            const isUrgent = r.daysLeft >= 0 && r.daysLeft <= 2;
             const isExpanded = confirmingRecurring === r.id;
             const defaultAcct = accounts.find(a => a.id === r.account_id);
             return (
@@ -872,22 +893,37 @@ export function UpcomingDueDates({
                 key={r.id}
                 className={cn(
                   "rounded-xl border p-3 transition-colors",
-                  isManual && !isConfirmed && isUrgent
-                    ? "border-expense/30 bg-expense/5"
-                    : "border-border bg-card"
+                  isRecurringOverdue && isManual && !isConfirmed
+                    ? "border-destructive/40 bg-destructive/5"
+                    : isManual && !isConfirmed && isUrgent
+                      ? "border-expense/30 bg-expense/5"
+                      : "border-border bg-card"
                 )}
               >
                 <div className="flex items-center gap-2.5">
                   <div className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isManual && !isConfirmed ? "bg-expense/10" : "bg-primary/10"
+                    isRecurringOverdue ? "bg-destructive/10" : isManual && !isConfirmed ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Repeat className={cn("h-5 w-5", isManual && !isConfirmed ? "text-expense" : "text-primary")} />
+                    <Repeat className={cn("h-5 w-5", isRecurringOverdue || (isManual && !isConfirmed) ? "text-expense" : "text-primary")} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
+                      {isRecurringOverdue && isManual && !isConfirmed && (
+                        <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                          Vencido
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {r.daysLeft === 0 ? "Hoy" : r.daysLeft === 1 ? "Mañana" : `En ${r.daysLeft} días`}
+                      {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {
+                        isRecurringOverdue
+                          ? `Hace ${Math.abs(r.daysLeft)} día${Math.abs(r.daysLeft) !== 1 ? 's' : ''}`
+                          : r.daysLeft === 0 ? "Hoy"
+                          : r.daysLeft === 1 ? "Mañana"
+                          : `En ${r.daysLeft} días`
+                      }
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

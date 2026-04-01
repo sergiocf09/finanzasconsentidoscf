@@ -144,9 +144,9 @@ export function UpcomingDueDates({
 
   // Query upcoming recurring payments (same filter as debts/goals)
   const { data: upcomingRecurring } = useQuery({
-    queryKey: ["upcoming_recurring", user?.id, todayStr, recurringMaxDate],
+    queryKey: ["upcoming_recurring", user?.id, monthStart, recurringMaxDate],
     queryFn: async () => {
-      // Include overdue items from current month so they stay visible until confirmed
+      // Include ALL active recurring payments (manual + automatic) in the date range
       const { data, error } = await supabase
         .from("recurring_payments" as any)
         .select("id, name, amount, currency, next_execution_date, type, requires_manual_action, confirmed_at, account_id, category_id, frequency, payment_day, payments_made")
@@ -879,23 +879,21 @@ export function UpcomingDueDates({
         <div className="space-y-1.5 mt-3">
           <div className="flex items-center gap-1.5 mb-1">
             <Repeat className="h-3.5 w-3.5 text-primary" />
-            <h3 className="text-xs font-heading font-semibold text-foreground">Pagos recurrentes próximos</h3>
+            <h3 className="text-xs font-heading font-semibold text-foreground">Cargos recurrentes próximos</h3>
           </div>
           {recurringItems.map(r => {
             const isManual = r.requires_manual_action;
-            const isConfirmed = !!r.confirmed_at;
             const isRecurringOverdue = r.daysLeft < 0;
             const isUrgent = r.daysLeft >= 0 && r.daysLeft <= 2;
             const isExpanded = confirmingRecurring === r.id;
-            const defaultAcct = accounts.find(a => a.id === r.account_id);
             return (
               <div
                 key={r.id}
                 className={cn(
                   "rounded-xl border p-3 transition-colors",
-                  isRecurringOverdue && isManual && !isConfirmed
+                  isRecurringOverdue
                     ? "border-destructive/40 bg-destructive/5"
-                    : isManual && !isConfirmed && isUrgent
+                    : isUrgent
                       ? "border-expense/30 bg-expense/5"
                       : "border-border bg-card"
                 )}
@@ -903,14 +901,19 @@ export function UpcomingDueDates({
                 <div className="flex items-center gap-2.5">
                   <div className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    isRecurringOverdue ? "bg-destructive/10" : isManual && !isConfirmed ? "bg-expense/10" : "bg-primary/10"
+                    isRecurringOverdue ? "bg-destructive/10" : isUrgent ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Repeat className={cn("h-5 w-5", isRecurringOverdue || (isManual && !isConfirmed) ? "text-expense" : "text-primary")} />
+                    <Repeat className={cn("h-5 w-5", isRecurringOverdue || isUrgent ? "text-expense" : "text-primary")} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
-                      {isRecurringOverdue && isManual && !isConfirmed && (
+                      {!isManual && (
+                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                          Automático
+                        </span>
+                      )}
+                      {isRecurringOverdue && (
                         <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
                           Vencido
                         </span>
@@ -930,7 +933,7 @@ export function UpcomingDueDates({
                     <span className="text-sm font-bold text-foreground tabular-nums">
                       {formatCurrencyAbs(r.amount, r.currency)}
                     </span>
-                    {isManual && !isConfirmed && !isExpanded && (
+                    {!isExpanded && (
                       <button
                         onClick={() => {
                           setConfirmingRecurring(r.id);
@@ -939,21 +942,23 @@ export function UpcomingDueDates({
                         className="flex h-7 items-center gap-1 px-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
                       >
                         <Check className="h-3.5 w-3.5" />
-                        Ejecutar
+                        Registrar cargo
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Account picker for manual confirmation */}
-                {isManual && !isConfirmed && isExpanded && (
+                {/* Account picker for confirmation (manual & automatic) */}
+                {isExpanded && (
                   <div className="space-y-2 mt-2 pt-2 border-t border-border">
                     <p className="text-xs text-muted-foreground">
-                      Selecciona la cuenta desde donde se realizó este pago:
+                      {isManual
+                        ? "Confirma la cuenta donde se aplicó este cargo:"
+                        : "Este cargo es automático. Confirma que ya se realizó:"}
                     </p>
                     <Select value={recurringSourceAccountId} onValueChange={setRecurringSourceAccountId}>
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Cuenta de origen" />
+                        <SelectValue placeholder="Cuenta afectada" />
                       </SelectTrigger>
                       <SelectContent>
                         {accounts
@@ -991,7 +996,7 @@ export function UpcomingDueDates({
                         disabled={!recurringSourceAccountId}
                       >
                         <Check className="h-3.5 w-3.5" />
-                        Confirmar pago
+                        Confirmar cargo
                       </Button>
                     </div>
                   </div>

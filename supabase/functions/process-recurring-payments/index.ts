@@ -1,9 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2/cors";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
-};
 
 function getNextDate(current: string, frequency: string, paymentDay?: number | null): string {
   const d = new Date(current + "T12:00:00Z");
@@ -28,11 +25,16 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate cron secret to prevent unauthorized invocations
+  // Allow invocation via cron secret header OR via standard Authorization (for pg_cron + pg_net)
   const cronSecret = req.headers.get("x-cron-secret");
   const expectedSecret = Deno.env.get("CRON_SECRET");
+  const authHeader = req.headers.get("authorization") || "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
-  if (!expectedSecret || cronSecret !== expectedSecret) {
+  const validCron = expectedSecret && cronSecret === expectedSecret;
+  const validAuth = anonKey && authHeader === `Bearer ${anonKey}`;
+
+  if (!validCron && !validAuth) {
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
       { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -34,12 +34,12 @@ interface DueItem {
   accountId: string | null;
 }
 
-type TimeFilter = "15" | "30" | "next_month";
+type TimeFilter = "7" | "15" | "30";
 
 const filterLabels: Record<TimeFilter, string> = {
+  "7": "7 días",
   "15": "15 días",
   "30": "30 días",
-  "next_month": "Próx. mes",
 };
 
 /**

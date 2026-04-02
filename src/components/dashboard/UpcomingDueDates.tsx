@@ -704,10 +704,10 @@ export function UpcomingDueDates({
                     <p className="text-xs text-muted-foreground">
                       {format(item.nextDate, "d 'de' MMMM", { locale: es })} · {
                         isOverdue
-                          ? `Hace ${Math.abs(item.daysLeft)} día${Math.abs(item.daysLeft) !== 1 ? 's' : ''}`
+                          ? `Hace ${Math.abs(item.daysLeft)}D`
                           : item.daysLeft === 0 ? "Hoy"
                           : item.daysLeft === 1 ? "Mañana"
-                          : `En ${item.daysLeft} días`
+                          : `En ${item.daysLeft}D`
                       }
                     </p>
                   </div>

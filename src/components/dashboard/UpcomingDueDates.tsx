@@ -34,12 +34,12 @@ interface DueItem {
   accountId: string | null;
 }
 
-type TimeFilter = "15" | "30" | "next_month";
+type TimeFilter = "7" | "15" | "30";
 
 const filterLabels: Record<TimeFilter, string> = {
+  "7": "7 días",
   "15": "15 días",
   "30": "30 días",
-  "next_month": "Próx. mes",
 };
 
 /**
@@ -61,11 +61,10 @@ function getNextOccurrence(day: number, today: Date): Date {
   return thisMonth;
 }
 
-function getMaxDays(filter: TimeFilter, today: Date): number {
+function getMaxDays(filter: TimeFilter, _today: Date): number {
+  if (filter === "7") return 7;
   if (filter === "15") return 15;
-  if (filter === "30") return 30;
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-  return Math.ceil((nextMonth.getTime() - today.getTime()) / 86400000);
+  return 30;
 }
 
 type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];
@@ -111,7 +110,7 @@ export function UpcomingDueDates({
   const { accounts: hookAccounts } = useAccounts({ enabled: !summaryAccounts });
   const { mask } = useHideAmounts("balances");
 
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("7");
   const STORAGE_KEY = useMemo(() => {
     const month = format(new Date(), "yyyy-MM");
     return `due-amounts-${user?.id}-${month}`;

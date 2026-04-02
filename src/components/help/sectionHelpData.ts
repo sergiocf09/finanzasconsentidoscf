@@ -97,7 +97,7 @@ export const helpData: Record<string, SectionHelpContent> = {
   },
   recurringPayments: {
     title: "Pagos Recurrentes",
-    whatIsThis: "Tus gastos fijos que se repiten: suscripciones, servicios, colegiaturas. Te recuerda cuándo toca pagar.",
+    whatIsThis: "Tus gastos fijos que se repiten: suscripciones, servicios, colegiaturas. Te recuerda cuándo toca pagar. Los marcados como 'Automático' son cargos que llegan directo a tu cuenta; los 'Manual' requieren que tú envíes el pago.",
     actions: [
       "Registrar pagos que se repiten automáticamente",
       "Ver el calendario de próximos pagos",

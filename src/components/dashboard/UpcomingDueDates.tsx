@@ -61,11 +61,10 @@ function getNextOccurrence(day: number, today: Date): Date {
   return thisMonth;
 }
 
-function getMaxDays(filter: TimeFilter, today: Date): number {
+function getMaxDays(filter: TimeFilter, _today: Date): number {
+  if (filter === "7") return 7;
   if (filter === "15") return 15;
-  if (filter === "30") return 30;
-  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-  return Math.ceil((nextMonth.getTime() - today.getTime()) / 86400000);
+  return 30;
 }
 
 type AccountSummaryItem = NonNullable<DashboardSummary["accounts_summary"]>[number];

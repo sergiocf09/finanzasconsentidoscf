@@ -110,7 +110,7 @@ export function UpcomingDueDates({
   const { accounts: hookAccounts } = useAccounts({ enabled: !summaryAccounts });
   const { mask } = useHideAmounts("balances");
 
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("15");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("7");
   const STORAGE_KEY = useMemo(() => {
     const month = format(new Date(), "yyyy-MM");
     return `due-amounts-${user?.id}-${month}`;

@@ -885,6 +885,7 @@ export function UpcomingDueDates({
             const isManual = r.requires_manual_action;
             const isRecurringOverdue = r.daysLeft < 0;
             const isUrgent = r.daysLeft >= 0 && r.daysLeft <= 2;
+            const isHighlightR = isRecurringOverdue || isUrgent;
             const isExpanded = confirmingRecurring === r.id;
             return (
               <div
@@ -898,63 +899,64 @@ export function UpcomingDueDates({
                       : "border-border bg-card"
                 )}
               >
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-center gap-2.5">
                   <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg shrink-0 mt-0.5",
+                    "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
                     isRecurringOverdue ? "bg-destructive/10" : isUrgent ? "bg-expense/10" : "bg-primary/10"
                   )}>
-                    <Repeat className={cn("h-5 w-5", isRecurringOverdue || isUrgent ? "text-expense" : "text-primary")} />
+                    <Repeat className={cn("h-5 w-5", isHighlightR ? "text-expense" : "text-primary")} />
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    {/* Row 1: Name + amount */}
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-foreground truncate">{r.name}</p>
-                      <span className="text-sm font-bold text-foreground tabular-nums shrink-0">
-                        {formatCurrencyAbs(r.amount, r.currency)}
-                      </span>
-                    </div>
-                    {/* Row 2: Date + badge aligned right */}
-                    <div className="flex items-center justify-between gap-1.5">
-                      <div className="flex items-center gap-1.5">
-                        {isRecurringOverdue && (
-                          <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
-                            Vencido
-                          </span>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {
-                            isRecurringOverdue
-                              ? `Hace ${Math.abs(r.daysLeft)} día${Math.abs(r.daysLeft) !== 1 ? 's' : ''}`
-                              : r.daysLeft === 0 ? "Hoy"
-                              : r.daysLeft === 1 ? "Mañana"
-                              : `En ${r.daysLeft} días`
-                          }
-                        </span>
-                      </div>
-                      {!isManual && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary shrink-0">
-                          <Check className="h-2.5 w-2.5" />
-                          Automático
+                      {isRecurringOverdue && (
+                        <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                          Vencido
                         </span>
                       )}
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(r.next_execution_date + "T00:00:00"), "d 'de' MMMM", { locale: es })} · {
+                        isRecurringOverdue
+                          ? `Hace ${Math.abs(r.daysLeft)}D`
+                          : r.daysLeft === 0 ? "Hoy"
+                          : r.daysLeft === 1 ? "Mañana"
+                          : `En ${r.daysLeft}D`
+                      }
+                    </p>
                   </div>
-                </div>
-                {/* Action button — centered full width */}
-                {!isExpanded && (
-                  <div className="flex justify-center mt-2">
+
+                  {isHighlightR && <AlertTriangle className="h-3 w-3 text-expense shrink-0" />}
+
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="text-sm font-bold text-foreground tabular-nums">
+                      {formatCurrencyAbs(r.amount, r.currency)}
+                    </span>
+                    <span className={cn(
+                      "text-[10px] font-medium",
+                      isManual ? "text-muted-foreground" : "text-primary"
+                    )}>
+                      {isManual ? "Manual" : "Automático"}
+                    </span>
+                  </div>
+
+                  {!isExpanded && (
                     <button
                       onClick={() => {
                         setConfirmingRecurring(r.id);
                         setRecurringSourceAccountId(r.account_id || "");
                       }}
-                      className="flex h-7 items-center gap-1 px-3 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-md transition-colors shrink-0",
+                        "bg-primary/10 hover:bg-primary/20 text-primary"
+                      )}
+                      title="Registrar cargo"
                     >
-                      <Check className="h-3.5 w-3.5" />
-                      Registrar cargo
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
 
 
                 {/* Account picker for confirmation (manual & automatic) */}

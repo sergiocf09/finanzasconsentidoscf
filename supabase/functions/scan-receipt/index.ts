@@ -12,7 +12,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    // Auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -37,49 +36,50 @@ serve(async (req) => {
 
     const body = await req.json();
 
-    const ALLOWED_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    const ALLOWED_MEDIA_TYPES = new Set([
+      "image/jpeg", "image/png", "image/webp", "image/gif",
+    ]);
     const MAX_IMAGE_COUNT = 10;
-    const MAX_BASE64_LENGTH = 7_000_000; // ~5 MB per image
+    const MAX_BASE64_LENGTH = 7_000_000;
 
-    // Support both single image (legacy) and multiple images
     const images: { base64: string; mediaType: string }[] = [];
-    
+
     if (body.images && Array.isArray(body.images)) {
       if (body.images.length > MAX_IMAGE_COUNT) {
-        return new Response(JSON.stringify({ error: "Máximo 10 imágenes por solicitud." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Máximo 10 imágenes por solicitud." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       for (const img of body.images) {
         if (img.base64 && img.mediaType) {
           if (!ALLOWED_MEDIA_TYPES.has(img.mediaType)) {
-            return new Response(JSON.stringify({ error: "Tipo de imagen no soportado." }), {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return new Response(
+              JSON.stringify({ error: "Tipo de imagen no soportado." }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
           }
           if (img.base64.length > MAX_BASE64_LENGTH) {
-            return new Response(JSON.stringify({ error: "Imagen demasiado grande (máx ~5 MB)." }), {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return new Response(
+              JSON.stringify({ error: "Imagen demasiado grande (máx ~5 MB)." }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
           }
           images.push({ base64: img.base64, mediaType: img.mediaType });
         }
       }
     } else if (body.imageBase64 && body.mediaType) {
       if (!ALLOWED_MEDIA_TYPES.has(body.mediaType)) {
-        return new Response(JSON.stringify({ error: "Tipo de imagen no soportado." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Tipo de imagen no soportado." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       if (body.imageBase64.length > MAX_BASE64_LENGTH) {
-        return new Response(JSON.stringify({ error: "Imagen demasiado grande (máx ~5 MB)." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Imagen demasiado grande (máx ~5 MB)." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       images.push({ base64: body.imageBase64, mediaType: body.mediaType });
     }
@@ -98,12 +98,13 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // ─── PROMPT: recibo único ─────────────────────────────────────────
     const promptSingle = `Analiza este recibo o comprobante de pago.
 
-REGLAS CRÍTICAS:
-1. MONTO: El símbolo $ va pegado al número sin espacio. "$947.60" = 947.60. NUNCA omitas el primer dígito después del $. Extrae el TOTAL del recibo.
-2. FECHA: La fecha de emisión del recibo en formato YYYY-MM-DD.
-3. ESTABLECIMIENTO: El nombre del negocio tal como aparece.
+REGLAS:
+1. MONTO: extrae el TOTAL. El símbolo $ va pegado al número. "$947.60" = 947.60. NUNCA omitas dígitos.
+2. FECHA: formato YYYY-MM-DD. Conserva el año exacto del documento.
+3. ESTABLECIMIENTO: nombre tal como aparece.
 
 Responde ÚNICAMENTE con JSON válido sin backticks:
 {
@@ -116,12 +117,14 @@ Responde ÚNICAMENTE con JSON válido sin backticks:
   "description": "descripción máximo 50 caracteres"
 }`;
 
-    const promptMultipleReceipts = `Analiza estas ${images.length} imágenes. Cada una es un recibo o comprobante de pago INDEPENDIENTE.
+    // ─── PROMPT: múltiples recibos independientes ─────────────────────
+    const promptMultipleReceipts = `Analiza estas ${images.length} imágenes. Cada una es un recibo INDEPENDIENTE.
 
-REGLAS CRÍTICAS:
-1. MONTOS: El símbolo $ va pegado al número. "$338" = 338, "$2794.98" = 2794.98. NUNCA omitas dígitos después del $.
-2. Extrae el TOTAL de cada recibo, no subtotales.
-3. Un recibo = una transacción en el array.
+REGLAS:
+1. MONTOS: "$338" = 338. "$2794.98" = 2794.98. NUNCA omitas dígitos.
+2. Extrae el TOTAL de cada recibo.
+3. FECHA: año exacto del documento, formato YYYY-MM-DD.
+4. Un recibo = una transacción.
 
 Responde ÚNICAMENTE con JSON válido sin backticks:
 {
@@ -139,48 +142,52 @@ Responde ÚNICAMENTE con JSON válido sin backticks:
   ]
 }`;
 
-    const promptStatement = `Analiza ${images.length > 1 ? "estas imágenes que son páginas del mismo" : "este"} estado de cuenta bancario mexicano y extrae CADA transacción individual.
+    // ─── PROMPT: estado de cuenta bancario ───────────────────────────
+    const imgLabel = images.length > 1
+      ? "estas imágenes que son páginas del mismo"
+      : "este";
 
-REGLAS CRÍTICAS — LEE CON ATENCIÓN:
+    const multiPageNote = images.length > 1
+      ? "Las imágenes son páginas del MISMO estado. Combina TODOS los movimientos en un array ordenado por fecha ascendente."
+      : "";
 
-1. FECHAS — REGLA MÁS IMPORTANTE:
-   - Conserva el año EXACTO como aparece en el documento.
-   - Si el estado dice "09-mar-2026", la fecha es 2026-03-09. NO es 2020, NO es 2025.
-   - Si el año del documento es 2026, TODAS las fechas son 2026.
-   - Formato obligatorio: YYYY-MM-DD.
-   - Si una fecha dice solo día y mes sin año, usa el año del encabezado del estado de cuenta.
-   - Meses en español: ene=01, feb=02, mar=03, abr=04, may=05, jun=06,
-     jul=07, ago=08, sep=09, oct=10, nov=11, dic=12.
+    const promptStatement = `Analiza ${imgLabel} estado de cuenta bancario mexicano. Extrae CADA transacción.
 
-2. MONTOS:
-   - El símbolo $ va pegado al número. "$947.60" = 947.60. "$1,214.65" = 1214.65.
-   - NUNCA omitas dígitos. Si ves "$8661" el monto es 8661, no 661.
-   - Las comas son separadores de miles, no decimales. "$26,732.88" = 26732.88.
-   - El monto siempre va como número positivo en el JSON.
+REGLA 1 — FECHAS (CRÍTICO):
+- El año que aparece en el documento ES el año correcto. No lo cambies.
+- "09-mar-2026" = 2026-03-09. "06-abr-2026" = 2026-04-06.
+- NUNCA uses 2020. Si el documento dice 2026, todas las fechas son 2026.
+- Meses: ene=01 feb=02 mar=03 abr=04 may=05 jun=06 jul=07 ago=08 sep=09 oct=10 nov=11 dic=12
+- Si un renglón no muestra año, usa el año del encabezado del estado.
+- Formato de salida obligatorio: YYYY-MM-DD
 
-3. TIPO DE TRANSACCIÓN:
-   - "expense": cargos, compras, consumos — columna con signo + en estados Scotiabank.
-   - "income": pagos, abonos, devoluciones — descripción dice "PAGO EN LINEA", "ABONO",
-     "DEVOLUCION" o tiene signo - en la columna de monto.
+REGLA 2 — MONTOS:
+- Comas = separadores de miles. "$1,618.63" = 1618.63. "$26,732.88" = 26732.88.
+- NUNCA omitas dígitos. "$8661" = 8661, no 661.
+- Siempre número positivo en el JSON.
 
-4. QUÉ INCLUIR:
-   - Solo renglones con fecha Y monto legibles.
-   - Incluye transacciones de TODAS las tarjetas del estado (titular y adicionales).
-   - Si hay varias secciones (tarjeta titular, tarjeta adicional), extrae TODAS.
+REGLA 3 — TIPO:
+- "expense": cargos y compras (signo + en columna Monto de Scotiabank).
+- "income": pagos y abonos. Descripciones: "PAGO EN LINEA", "SU PAGO EN LINEA GRACIAS",
+  "ABONO", "DEVOLUCION" (signo - en columna Monto de Scotiabank).
 
-5. QUÉ IGNORAR:
-   - Totales, subtotales, saldos anteriores, límites de crédito.
-   - Encabezados de columna ("Fecha de cargo", "Descripción", "Monto").
-   - Texto publicitario, logos, números de página, avisos legales.
-   - IVA desglosado por separado (si ya está incluido en el cargo principal).
+REGLA 4 — QUÉ INCLUIR:
+- Transacciones de TODAS las tarjetas: titular Y adicionales.
+- Si hay secciones "Tarjeta titular XXXX" y "Tarjeta adicional XXXX", extrae ambas.
+- Solo renglones con fecha Y monto legibles.
+- Hasta 100 transacciones.
 
-6. DESCRIPCIONES:
-   - Copia el nombre del establecimiento exactamente como aparece.
-   - Máximo 60 caracteres. No traduzcas ni abrevies.
+REGLA 5 — QUÉ IGNORAR:
+- "Total cargos", "Total abonos", saldos, límites de crédito.
+- Encabezados: "Fecha de cargo", "Descripción del movimiento", "Monto".
+- Publicidad: "Scotia Rewards", "ScotiaMóvil", avisos legales, números de página.
 
-7. LÍMITE: Incluye hasta 100 transacciones si las hay. No cortes el listado.
+REGLA 6 — DESCRIPCIONES:
+- Copia el nombre exactamente como aparece. Máximo 60 caracteres.
 
-Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin comentarios:
+${multiPageNote}
+
+Responde ÚNICAMENTE con JSON válido. Sin texto. Sin backticks:
 {
   "mode": "statement",
   "transactions": [
@@ -188,28 +195,25 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks, sin c
       "amount": número positivo,
       "currency": "MXN",
       "date": "YYYY-MM-DD",
-      "merchant": "nombre exacto del establecimiento",
+      "merchant": "nombre exacto",
       "type": "expense" o "income",
       "category_hint": "restaurante" o "supermercado" o "gasolina" o "farmacia" o "transporte" o "entretenimiento" o "ropa" o "servicios" o "salud" o "educacion" o "transferencia" o "seguro" o "otro",
       "description": "descripción máximo 60 caracteres"
     }
   ]
-}
-${images.length > 1 ? "Las imágenes son páginas consecutivas del MISMO estado de cuenta. Combina TODOS los movimientos de TODAS las páginas en un solo array ordenado por fecha ascendente." : ""}
-Sé exhaustivo: extrae cada renglón de transacción que tenga fecha y monto. No omitas ninguna.`;
+}`;
 
-    // Choose prompt based on mode and image count
+    // ─── Selección de prompt ──────────────────────────────────────────
     let prompt: string;
     if (mode === "statement") {
       prompt = promptStatement;
     } else if (images.length > 1) {
-      // Multiple images in single/receipt mode = independent receipts
       prompt = promptMultipleReceipts;
     } else {
       prompt = promptSingle;
     }
 
-    // Build content array with all images + prompt
+    // ─── Llamada a Gemini con temperature 0 ──────────────────────────
     const contentParts: any[] = [];
     for (const img of images) {
       contentParts.push({
@@ -229,12 +233,8 @@ Sé exhaustivo: extrae cada renglón de transacción que tenga fecha y monto. No
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "user",
-              content: contentParts,
-            },
-          ],
+          temperature: 0,
+          messages: [{ role: "user", content: contentParts }],
         }),
       }
     );
@@ -248,7 +248,7 @@ Sé exhaustivo: extrae cada renglón de transacción que tenga fecha y monto. No
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Agrega fondos en la configuración del workspace." }),
+          JSON.stringify({ error: "Créditos insuficientes." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -258,25 +258,19 @@ Sé exhaustivo: extrae cada renglón de transacción que tenga fecha y monto. No
     }
 
     const aiResult = await response.json();
-    const rawText =
-      aiResult.choices?.[0]?.message?.content || "{}";
+    const rawText = aiResult.choices?.[0]?.message?.content || "{}";
     const clean = rawText.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err: any) {
     console.error("scan-receipt error:", err.message);
     return new Response(
-      JSON.stringify({
-        error:
-          "No se pudo leer la imagen. Intenta con mejor iluminación.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: "No se pudo leer la imagen. Intenta con mejor iluminación." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

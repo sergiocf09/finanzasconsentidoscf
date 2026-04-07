@@ -100,33 +100,44 @@ export function ReceiptScanner() {
   );
 
   const imageToBase64 = (
-    file: File
+    file: File,
+    highRes: boolean = false
   ): Promise<{ base64: string; mediaType: string }> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        const MAX = 800;
+
+        const MAX = highRes ? 1600 : 800;
+        const MAX_BASE64 = highRes ? 800_000 : 300_000;
+        const QUALITY_FIRST = highRes ? 0.82 : 0.5;
+        const QUALITY_FALLBACK = highRes ? 0.65 : 0.3;
+
         let w = img.width;
         let h = img.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
           else { w = Math.round(w * MAX / h); h = MAX; }
         }
+
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, w, h);
-        let quality = 0.5;
-        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+        let dataUrl = canvas.toDataURL("image/jpeg", QUALITY_FIRST);
         let base64 = dataUrl.split(",")[1];
-        if (base64.length > 300_000) {
-          dataUrl = canvas.toDataURL("image/jpeg", 0.3);
+        if (base64.length > MAX_BASE64) {
+          dataUrl = canvas.toDataURL("image/jpeg", QUALITY_FALLBACK);
           base64 = dataUrl.split(",")[1];
         }
-        console.log(`[ReceiptScanner] Compressed image: ${Math.round(base64.length / 1024)}KB`);
+
+        console.log(
+          `[ReceiptScanner] Image compressed: ${Math.round(base64.length / 1024)}KB` +
+          ` (${w}x${h}, highRes=${highRes})`
+        );
         resolve({ base64, mediaType: "image/jpeg" });
       };
       img.onerror = () => {
@@ -220,7 +231,7 @@ export function ReceiptScanner() {
         const compressedImages = [];
         for (let i = 0; i < files.length; i++) {
           setScanProgress({ current: i + 1, total: files.length });
-          compressedImages.push(await imageToBase64(files[i]));
+          compressedImages.push(await imageToBase64(files[i], true));
         }
 
         const body = files.length === 1

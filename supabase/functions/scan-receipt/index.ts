@@ -102,7 +102,15 @@ serve(async (req) => {
     const promptSingle = `Analiza este recibo o comprobante de pago.
 
 REGLAS:
-1. MONTO: extrae el TOTAL. El símbolo $ va pegado al número. "$947.60" = 947.60. NUNCA omitas dígitos.
+1. MONTO: Extrae el TOTAL. Aplica esta regla para separadores:
+   - Lee el número de derecha a izquierda.
+   - Si los últimos 2 dígitos están separados por punto → el punto es decimal,
+     la coma es miles. Ejemplo: "$1,618.63" → 1618.63
+   - Si los últimos 2 dígitos están separados por coma → la coma es decimal,
+     el punto es miles. Ejemplo: "$1.618,63" → 1618.63
+   - Si no hay separador con exactamente 2 dígitos al final → es número entero.
+     Ejemplo: "$1,618" → 1618, "$26,732" → 26732
+   - Devuelve siempre el número como float con punto decimal. Nunca texto.
 2. FECHA: formato YYYY-MM-DD. Conserva el año exacto del documento.
 3. ESTABLECIMIENTO: nombre tal como aparece.
 
@@ -121,7 +129,15 @@ Responde ÚNICAMENTE con JSON válido sin backticks:
     const promptMultipleReceipts = `Analiza estas ${images.length} imágenes. Cada una es un recibo INDEPENDIENTE.
 
 REGLAS:
-1. MONTOS: "$338" = 338. "$2794.98" = 2794.98. NUNCA omitas dígitos.
+1. MONTOS — LECTURA DE SEPARADORES:
+   Lee cada monto de derecha a izquierda para identificar decimales:
+   - Si el último separador (. o ,) está seguido de exactamente 2 dígitos
+     al final del número → ese separador es el decimal. El otro es de miles.
+     Ejemplo formato MX: "$1,618.63" → 1618.63
+     Ejemplo formato EU: "$1.618,63" → 1618.63
+   - Si no hay separador con 2 dígitos al final → número entero.
+     Ejemplo: "$26,732" → 26732   "$1,618" → 1618
+   - NUNCA omitas dígitos. Devuelve siempre float con punto decimal.
 2. Extrae el TOTAL de cada recibo.
 3. FECHA: año exacto del documento, formato YYYY-MM-DD.
 4. Un recibo = una transacción.
@@ -161,9 +177,18 @@ REGLA 1 — FECHAS (CRÍTICO):
 - Si un renglón no muestra año, usa el año del encabezado del estado.
 - Formato de salida obligatorio: YYYY-MM-DD
 
-REGLA 2 — MONTOS:
-- Comas = separadores de miles. "$1,618.63" = 1618.63. "$26,732.88" = 26732.88.
-- NUNCA omitas dígitos. "$8661" = 8661, no 661.
+REGLA 2 — MONTOS (LECTURA DE SEPARADORES):
+Lee cada monto de derecha a izquierda para identificar decimales:
+- Si el último separador (. o ,) está seguido de exactamente 2 dígitos
+  al final del número → ese separador es el decimal.
+  El otro separador es de miles y se ignora.
+  Ejemplo formato MX:  "$1,618.63"  → 1618.63
+  Ejemplo formato EU:  "$1.618,63"  → 1618.63
+- Si no hay separador con 2 dígitos al final → número entero sin decimales.
+  Ejemplo: "$26,732" → 26732   "$1,618" → 1618
+- El signo $ puede estar o no. Extrae solo el número.
+- NUNCA omitas dígitos del número entero. "$8,661.00" → 8661.
+- Devuelve siempre float con punto decimal como separador. Nunca texto.
 - Siempre número positivo en el JSON.
 
 REGLA 3 — TIPO:

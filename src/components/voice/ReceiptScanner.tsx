@@ -183,7 +183,7 @@ export function ReceiptScanner() {
         if (result.error) throw new Error(result.error);
 
         setSingleData({
-          amount: result.amount ? String(result.amount) : "",
+          amount: result.amount ? String(normalizeAmount(result.amount)) : "",
           currency: result.currency || "MXN",
           date: result.date || format(new Date(), "yyyy-MM-dd"),
           merchant: result.merchant || "",
@@ -269,10 +269,34 @@ export function ReceiptScanner() {
     }
   };
 
+  // Normaliza un monto que puede venir como número o string con
+  // separadores ambiguos. Devuelve entero redondeado (sin decimales).
+  const normalizeAmount = (raw: number | string | null | undefined): number => {
+    if (raw === null || raw === undefined) return 0;
+    if (typeof raw === "number") return Math.round(raw);
+    const str = String(raw).trim();
+    const lastDotIdx = str.lastIndexOf(".");
+    const lastCommaIdx = str.lastIndexOf(",");
+    const lastSepIdx = Math.max(lastDotIdx, lastCommaIdx);
+    let normalized = str;
+    if (lastSepIdx > 0 && lastSepIdx === str.length - 3) {
+      const decimalSep = str[lastSepIdx];
+      const thousandSep = decimalSep === "." ? "," : ".";
+      normalized = str
+        .replace(new RegExp("\\" + thousandSep, "g"), "")
+        .replace(decimalSep, ".");
+    } else {
+      normalized = str.replace(/[.,]/g, "");
+    }
+    normalized = normalized.replace(/[$\s]/g, "");
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : Math.round(parsed);
+  };
+
   const mapTransactions = (rawTxs: any[]): ScannedTransaction[] => {
     return rawTxs.map((t: any, i: number) => ({
       id: `scan-${i}`,
-      amount: t.amount || 0,
+      amount: normalizeAmount(t.amount),
       currency: t.currency || "MXN",
       date: t.date || format(new Date(), "yyyy-MM-dd"),
       merchant: t.merchant || "",

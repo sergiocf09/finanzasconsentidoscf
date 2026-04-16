@@ -482,6 +482,27 @@ export function VoiceButton() {
                       <span className="text-muted-foreground shrink-0">Monto:</span>
                       <span className="font-medium text-right">{editAmount ? `${fmt(parseFloat(editAmount), editCurrency)} ${editCurrency}` : <span className="text-destructive">Sin monto</span>}</span>
                     </div>
+                    {/* Currency chips in confirmation view */}
+                    <div className="flex justify-between py-0.5 border-b border-border gap-2 items-center">
+                      <span className="text-muted-foreground shrink-0">Moneda:</span>
+                      <div className="flex gap-1">
+                        {["MXN", "USD", "EUR"].map(cur => (
+                          <button
+                            key={cur}
+                            type="button"
+                            onClick={() => setEditCurrency(cur)}
+                            className={cn(
+                              "px-2 py-0.5 rounded text-[10px] font-semibold transition-colors",
+                              editCurrency === cur
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground hover:bg-accent"
+                            )}
+                          >
+                            {cur}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="flex justify-between py-0.5 border-b border-border gap-2">
                       <span className="text-muted-foreground shrink-0">{editType === "transfer" ? "Origen:" : "Cuenta:"}</span>
                       <span className="font-medium truncate text-right min-w-0">
@@ -508,34 +529,54 @@ export function VoiceButton() {
                     </div>
                   </div>
 
-                  {/* ─── CROSS-CURRENCY INDICATOR ──── */}
+                  {/* ─── CURRENCY CONVERSION INDICATOR ──── */}
                   {(() => {
                     const acc = editAccountId ? activeAccounts.find(a => a.id === editAccountId) : null;
-                    if (!acc || editCurrency === acc.currency || !editAmount) return null;
+                    if (!acc || !editAmount) return null;
                     const amount = parseFloat(editAmount);
-                    const usdRate = fxRates["USD"] || 0;
-                    if (usdRate <= 0) return null;
+                    if (isNaN(amount) || amount <= 0) return null;
 
-                    let convertedAmount = 0;
-                    let label = "";
-
-                    if (editCurrency === "USD" && acc.currency === "MXN") {
-                      convertedAmount = amount * usdRate;
-                      label = `$${amount.toFixed(2)} USD → $${convertedAmount.toFixed(2)} MXN · TC: $${usdRate.toFixed(2)}`;
-                    } else if (editCurrency === "MXN" && acc.currency === "USD") {
-                      convertedAmount = amount / usdRate;
-                      label = `$${amount.toFixed(2)} MXN → $${convertedAmount.toFixed(4)} USD · TC: $${usdRate.toFixed(2)}`;
-                    } else {
-                      return null;
+                    // Cross-currency case
+                    if (editCurrency !== acc.currency) {
+                      const usdRate = fxRates["USD"] || 0;
+                      if (usdRate <= 0) return null;
+                      let convertedAmount = 0;
+                      let label = "";
+                      if (editCurrency === "USD" && acc.currency === "MXN") {
+                        convertedAmount = amount * usdRate;
+                        label = `$${amount.toFixed(2)} USD → $${convertedAmount.toFixed(2)} MXN · TC: $${usdRate.toFixed(2)}`;
+                      } else if (editCurrency === "MXN" && acc.currency === "USD") {
+                        convertedAmount = amount / usdRate;
+                        label = `$${amount.toFixed(2)} MXN → $${convertedAmount.toFixed(4)} USD · TC: $${usdRate.toFixed(2)}`;
+                      } else {
+                        return null;
+                      }
+                      return (
+                        <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5">
+                          <p className="text-[11px] text-foreground text-center">
+                            <span className="font-semibold">{label}</span>
+                          </p>
+                        </div>
+                      );
                     }
 
-                    return (
-                      <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5">
-                        <p className="text-[11px] text-foreground text-center">
-                          <span className="font-semibold">{label}</span>
-                        </p>
-                      </div>
-                    );
+                    // Same currency but not MXN → show MXN equivalent
+                    if (acc.currency !== "MXN") {
+                      const rateForCurrency = fxRates[acc.currency] || 0;
+                      if (rateForCurrency <= 0) return null;
+                      const mxnEquiv = amount * rateForCurrency;
+                      return (
+                        <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5">
+                          <p className="text-[11px] text-foreground text-center">
+                            <span className="font-semibold">
+                              ${amount.toFixed(2)} {acc.currency} ≈ ${mxnEquiv.toFixed(2)} MXN · TC: ${rateForCurrency.toFixed(2)}
+                            </span>
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return null;
                   })()}
 
                   {/* ─── TRANSFER CONVERSION PREVIEW ──── */}

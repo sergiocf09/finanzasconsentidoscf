@@ -761,6 +761,34 @@ export function VoiceButton() {
                     <label className="text-xs font-medium text-muted-foreground">Monto</label>
                     <Input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="text-lg font-bold" />
                   </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Moneda</label>
+                    <Select value={editCurrency} onValueChange={setEditCurrency}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MXN">MXN — Peso Mexicano</SelectItem>
+                        <SelectItem value="USD">USD — Dólar</SelectItem>
+                        <SelectItem value="EUR">EUR — Euro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Same-currency non-MXN conversion preview in edit mode */}
+                  {(() => {
+                    const acc = editAccountId ? activeAccounts.find(a => a.id === editAccountId) : null;
+                    if (!acc || !editAmount) return null;
+                    const amount = parseFloat(editAmount);
+                    if (isNaN(amount) || amount <= 0) return null;
+                    if (editCurrency === acc.currency && acc.currency !== "MXN") {
+                      const r = fxRates[acc.currency] || 0;
+                      if (r <= 0) return null;
+                      return (
+                        <div className="rounded-lg bg-primary/5 border border-primary/20 p-2 text-[11px] text-center font-semibold text-foreground">
+                          ${amount.toFixed(2)} {acc.currency} ≈ ${(amount * r).toFixed(2)} MXN · TC: ${r.toFixed(2)}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   {/* Transfer conversion in edit mode */}
                   {transferConversion && (
                     <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground space-y-0.5">

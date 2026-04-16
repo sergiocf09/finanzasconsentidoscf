@@ -246,6 +246,14 @@ export function VoiceButton() {
             exchangeRate = usdRate;
             notes = `Registrado: $${amount.toFixed(2)} USD · TC: $${usdRate.toFixed(2)} · Equivalente: $${finalAmount.toFixed(2)} MXN`;
           }
+        } else if (editCurrency === acc.currency && acc.currency !== "MXN") {
+          // Same currency but not MXN → calculate MXN equivalent
+          const rateForCurrency = fxRates[acc.currency] || 0;
+          if (rateForCurrency > 0) {
+            amountInBase = amount * rateForCurrency;
+            exchangeRate = rateForCurrency;
+            notes = `$${amount.toFixed(2)} ${acc.currency} · TC: $${rateForCurrency.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`;
+          }
         }
 
         await supabase.from("transactions").insert({

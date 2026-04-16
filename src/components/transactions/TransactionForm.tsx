@@ -100,7 +100,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories, categories: allCategories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
-  const { rate: fxRate } = useExchangeRate();
+  const { rate: fxRate, rates: fxRates } = useExchangeRate();
   const { createPayment: createRecurring } = useRecurringPayments();
   const { debts, addPayment: addDebtPayment } = useDebts({ enabled: open });
 
@@ -310,6 +310,14 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       finalCurrency = account.currency;
       const eqMxn = amountInBase ?? finalAmount;
       notes = `Originalmente $${data.amount.toFixed(2)} ${data.currency} · TC: $${fxRate.toFixed(2)} · Equivalente: $${eqMxn.toFixed(2)} MXN`;
+    } else if (!crossCurrency && account && account.currency !== "MXN") {
+      // Same currency but not MXN → calculate MXN equivalent for budgets/reports
+      const rateForCurrency = fxRates[account.currency] || fxRate;
+      if (rateForCurrency > 0) {
+        amountInBase = data.amount * rateForCurrency;
+        exchangeRate = rateForCurrency;
+        notes = `$${data.amount.toFixed(2)} ${account.currency} · TC: $${rateForCurrency.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`;
+      }
     }
 
     await createTransaction.mutateAsync({

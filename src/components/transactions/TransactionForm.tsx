@@ -94,6 +94,9 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [selectedDebtId, setSelectedDebtId] = useState("");
   const [debtPaymentAmount, setDebtPaymentAmount] = useState("");
 
+  // Opción A: deuda destino cuando se elige categoría "Créditos y Deudas" en un Gasto
+  const [debtTargetId, setDebtTargetId] = useState("");
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { createTransaction } = useTransactions();

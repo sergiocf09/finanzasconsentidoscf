@@ -236,6 +236,38 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedAccountId, isTransferToDebtAccount]);
 
+  // ====================================================================
+  // OPCIÓN A: Detección "Gasto con categoría Créditos y Deudas"
+  // → Ofrecer convertir en Transferencia hacia la deuda destino
+  // ====================================================================
+  const watchedCategoryId = form.watch("category_id");
+  const selectedCategory = allCategories.find(c => c.id === watchedCategoryId);
+
+  // Es la categoría "Créditos y Deudas" del sistema (match por nombre)
+  const isCreditsCategory = !!selectedCategory && selectedCategory.is_system === true &&
+    /cr[eé]dito.*deuda/i.test(selectedCategory.name);
+
+  // Sólo cuando es Gasto + categoría Créditos y Deudas + cuenta origen elegida
+  const showDebtTargetSelector = activeTab === "expense" && isCreditsCategory && !!watchedAccountId;
+
+  // Deudas de largo plazo CON cuenta vinculada (para poder hacer transferencia)
+  const transferableDebts = allLongTermDebts.filter(d => !!d.account_id && d.account_id !== watchedAccountId);
+
+  // ID de la deuda destino elegida (reusa state existente selectedDebtId pero con otra semántica aquí)
+  const [debtTargetId, setDebtTargetId] = useState("");
+
+  // Reset cuando cambia categoría / cuenta / se cierra
+  useEffect(() => {
+    if (!showDebtTargetSelector) setDebtTargetId("");
+  }, [showDebtTargetSelector, watchedAccountId]);
+
+  useEffect(() => {
+    if (!open) setDebtTargetId("");
+  }, [open]);
+
+  const debtTarget = transferableDebts.find(d => d.id === debtTargetId);
+  const debtTargetAccount = debtTarget ? accounts.find(a => a.id === debtTarget.account_id) : null;
+
   // Transfer validation
   const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);
 

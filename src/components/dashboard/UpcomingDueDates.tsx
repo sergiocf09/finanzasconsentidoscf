@@ -260,6 +260,8 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Pago confirmado y registrado");
       setRecurringSourceAccountId("");
@@ -268,7 +270,7 @@ export function UpcomingDueDates({
     } finally {
       setConfirmingRecurring(null);
     }
-  }, [user, queryClient]);
+  }, [user, queryClient, accounts, fxRates]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({

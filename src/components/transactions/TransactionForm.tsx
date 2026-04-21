@@ -259,6 +259,25 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
           }
         }
 
+        // B.4: Auto-cierre de vencimiento si la cuenta destino tiene una deuda activa con due_day próximo (≤30 días)
+        const linkedDebt = debts.find(d => d.account_id === toAccountId && d.is_active);
+        let createdFrom = "manual";
+        let finalDescription = data.description || undefined;
+        if (linkedDebt && linkedDebt.due_day) {
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = today.getMonth();
+          const dim = new Date(y, m + 1, 0).getDate();
+          const dueDate = new Date(y, m, Math.min(linkedDebt.due_day, dim));
+          dueDate.setHours(0, 0, 0, 0);
+          today.setHours(0, 0, 0, 0);
+          const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / 86400000);
+          if (daysDiff <= 30) {
+            createdFrom = "due_dates";
+            finalDescription = `Pago: ${linkedDebt.name}`;
+          }
+        }
+
         await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: data.account_id,
@@ -269,8 +288,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
           currency_to: toAcc.currency,
           fx_rate: fxRateUsed,
           transfer_date: format(data.transaction_date, "yyyy-MM-dd"),
-          description: data.description || undefined,
-          created_from: "manual",
+          description: finalDescription,
+          created_from: createdFrom,
         });
 
         queryClient.invalidateQueries({ queryKey: ["transfers"] });

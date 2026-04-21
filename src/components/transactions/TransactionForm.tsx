@@ -90,10 +90,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [toAccountId, setToAccountId] = useState("");
   const [transferSaving, setTransferSaving] = useState(false);
 
-  // Debt payment state for transfers to debt accounts
-  const [selectedDebtId, setSelectedDebtId] = useState("");
-  const [debtPaymentAmount, setDebtPaymentAmount] = useState("");
-
   // Opción A: deuda destino cuando se elige categoría "Créditos y Deudas" en un Gasto
   const [debtTargetId, setDebtTargetId] = useState("");
 
@@ -105,7 +101,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const { checkAlerts } = useBudgetAlerts();
   const { rate: fxRate, rates: fxRates } = useExchangeRate();
   const { createPayment: createRecurring } = useRecurringPayments();
-  const { debts, addPayment: addDebtPayment } = useDebts({ enabled: open });
+  const { debts } = useDebts({ enabled: open });
 
   const activeAccounts = accounts.filter(a => a.is_active);
 
@@ -130,9 +126,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       setMakeRecurring(false);
       setSuggestedCategory(null);
       setUserSelectedCategory(false);
-      setSelectedDebtId("");
-      setDebtPaymentAmount("");
       setToAccountId("");
+      setDebtTargetId("");
     }
   }, [open, defaultType]);
 
@@ -216,28 +211,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     Math.abs(d.current_balance) > 0 &&
     (LONG_TERM_TYPES.includes(d.type) || d.debt_category === "fixed");
 
-  // Debt directly linked to the selected liability account (highest priority for prefill)
-  const debtForSelectedAccount = debts.find(d =>
-    d.account_id === watchedAccountId && isLongTermDebt(d)
-  );
-
   // All long-term debts available for capital payment selection
   const allLongTermDebts = debts.filter(isLongTermDebt);
-
-  // Is the selected account a liability type?
-  const isLiabilityAccount = selectedAccount && ['credit_card', 'personal_loan', 'mortgage', 'auto_loan', 'payable', 'caucion_bursatil'].includes(selectedAccount.type);
-  const isTransferToDebtAccount = activeTab === "expense" && isLiabilityAccount;
-  // Always show ALL long-term debts when paying to a liability account.
-  // The directly linked one (if any) will be auto-pre-selected; others remain available.
-  const availableFixedDebts = isTransferToDebtAccount ? allLongTermDebts : [];
-
-  // Auto pre-select the directly linked long-term debt when account changes
-  useEffect(() => {
-    if (isTransferToDebtAccount && debtForSelectedAccount && !selectedDebtId) {
-      setSelectedDebtId(debtForSelectedAccount.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedAccountId, isTransferToDebtAccount]);
 
   // ====================================================================
   // OPCIÓN A: Detección "Gasto con categoría Créditos y Deudas"

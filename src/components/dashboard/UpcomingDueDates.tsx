@@ -271,7 +271,7 @@ export function UpcomingDueDates({
     } finally {
       setConfirmingRecurring(null);
     }
-  }, [user, queryClient, accounts, fxRates]);
+  }, [user, queryClient, summaryAccounts, hookAccounts, fxRates]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({

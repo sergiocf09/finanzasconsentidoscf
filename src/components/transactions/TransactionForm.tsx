@@ -228,6 +228,14 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   // The directly linked one (if any) will be auto-pre-selected; others remain available.
   const availableFixedDebts = isTransferToDebtAccount ? allLongTermDebts : [];
 
+  // Auto pre-select the directly linked long-term debt when account changes
+  useEffect(() => {
+    if (isTransferToDebtAccount && debtForSelectedAccount && !selectedDebtId) {
+      setSelectedDebtId(debtForSelectedAccount.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedAccountId, isTransferToDebtAccount]);
+
   // Transfer validation
   const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);
 

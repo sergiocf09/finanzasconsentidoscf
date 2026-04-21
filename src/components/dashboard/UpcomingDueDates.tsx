@@ -179,22 +179,53 @@ export function UpcomingDueDates({
     }
     setConfirmingRecurring(recurringItem.id);
     try {
-      // 1. Create the transaction for the confirmed payment
-      const { error: txErr } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        account_id: accountToUse,
-        category_id: recurringItem.category_id || null,
-        type: recurringItem.type || "expense",
-        amount: recurringItem.amount,
-        currency: recurringItem.currency,
-        exchange_rate: 1,
-        amount_in_base: recurringItem.amount,
-        description: recurringItem.name,
-        transaction_date: recurringItem.next_execution_date,
-        is_recurring: true,
-        recurring_payment_id: recurringItem.id,
-      });
-      if (txErr) throw txErr;
+      // Determine if destination is a liability account → must go through transfers
+      const allAccs = summaryAccounts ?? hookAccounts ?? [];
+      const sourceAcc = allAccs.find((a: any) => a.id === accountToUse);
+      const liabilityTypes = ["credit_card", "personal_loan", "mortgage", "auto_loan", "payable"];
+      const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
+
+      // Calculate amount_in_base using FX rate (B.1)
+      const usdRateForCurrency = recurringItem.currency === "MXN" ? 1 : (fxRates[recurringItem.currency] || 1);
+      const amountInBase = recurringItem.amount * usdRateForCurrency;
+      const exchangeRate = usdRateForCurrency;
+
+      if (isLiability) {
+        // B.10: Recurring charge consumed by a credit card → register as expense on the liability account
+        // (the card balance increases via the standard transaction trigger because liability accounts have negative balances)
+        const { error: txErr } = await supabase.from("transactions").insert({
+          user_id: user.id,
+          account_id: accountToUse,
+          category_id: recurringItem.category_id || null,
+          type: recurringItem.type || "expense",
+          amount: recurringItem.amount,
+          currency: recurringItem.currency,
+          exchange_rate: exchangeRate,
+          amount_in_base: amountInBase,
+          description: recurringItem.name,
+          transaction_date: recurringItem.next_execution_date,
+          is_recurring: true,
+          recurring_payment_id: recurringItem.id,
+        });
+        if (txErr) throw txErr;
+      } else {
+        // Regular expense from asset account
+        const { error: txErr } = await supabase.from("transactions").insert({
+          user_id: user.id,
+          account_id: accountToUse,
+          category_id: recurringItem.category_id || null,
+          type: recurringItem.type || "expense",
+          amount: recurringItem.amount,
+          currency: recurringItem.currency,
+          exchange_rate: exchangeRate,
+          amount_in_base: amountInBase,
+          description: recurringItem.name,
+          transaction_date: recurringItem.next_execution_date,
+          is_recurring: true,
+          recurring_payment_id: recurringItem.id,
+        });
+        if (txErr) throw txErr;
+      }
 
       // 2. Advance next_execution_date, increment payments_made, reset confirmed_at
       const freq = recurringItem.frequency || "monthly";
@@ -230,6 +261,8 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Pago confirmado y registrado");
       setRecurringSourceAccountId("");
@@ -238,7 +271,7 @@ export function UpcomingDueDates({
     } finally {
       setConfirmingRecurring(null);
     }
-  }, [user, queryClient]);
+  }, [user, queryClient, summaryAccounts, hookAccounts, fxRates]);
 
   // Only query paid transfers if no summary data
   const { data: paidTransfers } = useQuery({

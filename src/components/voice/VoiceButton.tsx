@@ -25,6 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
+import { useDebts } from "@/hooks/useDebts";
 import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { format } from "date-fns";
@@ -38,6 +39,7 @@ export function VoiceButton() {
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { checkAlerts } = useBudgetAlerts();
+  const { debts } = useDebts({ enabled: true });
   const { createPayment: createRecurring } = useRecurringPayments();
   const { rates: fxRates } = useExchangeRate();
   const [isOpen, setIsOpen] = useState(false);
@@ -212,6 +214,25 @@ export function VoiceButton() {
           else if (from.currency === "MXN" && to.currency === "USD") amountFrom = amount * usdRate;
         }
 
+        // B.5: Auto-cierre de vencimiento si la cuenta destino tiene una deuda activa con due_day próximo (≤30 días)
+        const linkedDebt = debts.find(d => d.account_id === editToAccountId && d.is_active);
+        let createdFrom = "voice";
+        let finalDescription = editDescription || cleanTranscript || committedText;
+        if (linkedDebt && linkedDebt.due_day) {
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = today.getMonth();
+          const dim = new Date(y, m + 1, 0).getDate();
+          const dueDate = new Date(y, m, Math.min(linkedDebt.due_day, dim));
+          dueDate.setHours(0, 0, 0, 0);
+          today.setHours(0, 0, 0, 0);
+          const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / 86400000);
+          if (daysDiff <= 30) {
+            createdFrom = "due_dates";
+            finalDescription = `Pago: ${linkedDebt.name}`;
+          }
+        }
+
         await supabase.from("transfers").insert({
           user_id: user.id,
           from_account_id: editAccountId,
@@ -222,8 +243,8 @@ export function VoiceButton() {
           currency_to: to.currency,
           fx_rate: fxRateUsed,
           transfer_date: editDate,
-          description: editDescription || cleanTranscript || committedText,
-          created_from: "voice",
+          description: finalDescription,
+          created_from: createdFrom,
         });
         queryClient.invalidateQueries({ queryKey: ["transfers"] });
       } else {

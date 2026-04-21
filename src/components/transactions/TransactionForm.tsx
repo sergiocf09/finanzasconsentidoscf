@@ -274,6 +274,73 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);
 
   const onSubmit = async (data: TransactionFormValues) => {
+    // ============================================================
+    // OPCIÓN A: Gasto con categoría "Créditos y Deudas" + deuda destino elegida
+    // → Convertir automáticamente a TRANSFERENCIA hacia la cuenta de la deuda.
+    // El trigger sync_debt_from_transfer registra el abono y el budget se actualiza.
+    // ============================================================
+    if (
+      activeTab === "expense" &&
+      isCreditsCategory &&
+      debtTargetId &&
+      debtTargetAccount &&
+      user
+    ) {
+      setTransferSaving(true);
+      try {
+        const fromAcc = activeAccounts.find(a => a.id === data.account_id);
+        const toAcc = debtTargetAccount;
+        if (!fromAcc) return;
+
+        const isCross = fromAcc.currency !== toAcc.currency;
+        let amountFrom = data.amount;
+        let amountTo = data.amount;
+        let fxRateUsed: number | null = null;
+
+        if (isCross && fxRate > 0) {
+          fxRateUsed = fxRate;
+          const userCurrency = data.currency;
+          if (userCurrency === fromAcc.currency) {
+            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = data.amount * fxRate;
+            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = data.amount / fxRate;
+          } else if (userCurrency === toAcc.currency) {
+            amountTo = data.amount;
+            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountFrom = data.amount / fxRate;
+            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountFrom = data.amount * fxRate;
+          }
+        }
+
+        await supabase.from("transfers").insert({
+          user_id: user.id,
+          from_account_id: data.account_id,
+          to_account_id: toAcc.id,
+          amount_from: Math.round(amountFrom * 100) / 100,
+          currency_from: fromAcc.currency,
+          amount_to: Math.round(amountTo * 100) / 100,
+          currency_to: toAcc.currency,
+          fx_rate: fxRateUsed,
+          transfer_date: format(data.transaction_date, "yyyy-MM-dd"),
+          description: data.description || `Pago: ${debtTarget!.name}`,
+          created_from: "manual",
+        });
+
+        queryClient.invalidateQueries({ queryKey: ["transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["debts"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+        queryClient.invalidateQueries({ queryKey: ["budgets"] });
+
+        form.reset();
+        setDebtTargetId("");
+        setSelectedDebtId("");
+        setDebtPaymentAmount("");
+        onOpenChange(false);
+      } finally {
+        setTransferSaving(false);
+      }
+      return;
+    }
+
     // Transfer flow — direct insert to transfers table
     if (activeTab === "transfer") {
       if (!user || !toAccountId || toAccountId === data.account_id) return;

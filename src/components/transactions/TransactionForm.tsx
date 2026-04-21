@@ -256,8 +256,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   // Deudas de largo plazo CON cuenta vinculada (para poder hacer transferencia)
   const transferableDebts = allLongTermDebts.filter(d => !!d.account_id && d.account_id !== watchedAccountId);
 
-  // ID de la deuda destino elegida (reusa state existente selectedDebtId pero con otra semántica aquí)
-  const [debtTargetId, setDebtTargetId] = useState("");
+  // (debtTargetId state already declared near other useState hooks at top of component)
 
   // Reset cuando cambia categoría / cuenta / se cierra
   useEffect(() => {

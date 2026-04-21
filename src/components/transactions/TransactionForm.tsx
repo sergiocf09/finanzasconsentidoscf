@@ -206,25 +206,27 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     };
   }, [activeTab, watchedAccountId, toAccountId, watchedAmount, watchedCurrency, fxRate, activeAccounts]);
 
-  // Detect if the selected account is a debt account with fixed debts
-  const fixedDebtsForAccount = debts.filter(d =>
-    d.account_id === watchedAccountId &&
-    (d.debt_category === "fixed") &&
+  // Long-term debt detection: by type (mortgage/loan) OR by debt_category='fixed' (CC with installments)
+  const LONG_TERM_TYPES = ['mortgage', 'personal_loan', 'auto_loan', 'caucion_bursatil'];
+  const isLongTermDebt = (d: typeof debts[0]) =>
     d.is_active &&
-    Math.abs(d.current_balance) > 0
+    Math.abs(d.current_balance) > 0 &&
+    (LONG_TERM_TYPES.includes(d.type) || d.debt_category === "fixed");
+
+  // Debt directly linked to the selected liability account (highest priority for prefill)
+  const debtForSelectedAccount = debts.find(d =>
+    d.account_id === watchedAccountId && isLongTermDebt(d)
   );
 
-  // Also check all fixed debts if no direct link
-  const allFixedDebts = debts.filter(d =>
-    d.debt_category === "fixed" &&
-    d.is_active &&
-    Math.abs(d.current_balance) > 0
-  );
+  // All long-term debts available for capital payment selection
+  const allLongTermDebts = debts.filter(isLongTermDebt);
 
   // Is the selected account a liability type?
-  const isLiabilityAccount = selectedAccount && ['credit_card', 'personal_loan', 'mortgage', 'auto_loan', 'payable'].includes(selectedAccount.type);
+  const isLiabilityAccount = selectedAccount && ['credit_card', 'personal_loan', 'mortgage', 'auto_loan', 'payable', 'caucion_bursatil'].includes(selectedAccount.type);
   const isTransferToDebtAccount = activeTab === "expense" && isLiabilityAccount;
-  const availableFixedDebts = fixedDebtsForAccount.length > 0 ? fixedDebtsForAccount : (isTransferToDebtAccount ? allFixedDebts : []);
+  // Always show ALL long-term debts when paying to a liability account.
+  // The directly linked one (if any) will be auto-pre-selected; others remain available.
+  const availableFixedDebts = isTransferToDebtAccount ? allLongTermDebts : [];
 
   // Transfer validation
   const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);

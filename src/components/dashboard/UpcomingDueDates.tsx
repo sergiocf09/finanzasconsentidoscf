@@ -184,8 +184,6 @@ export function UpcomingDueDates({
       const sourceAcc = allAccs.find((a: any) => a.id === accountToUse);
       const liabilityTypes = ["credit_card", "personal_loan", "mortgage", "auto_loan", "payable"];
       const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
-      const liabilityTypes = ["credit_card", "personal_loan", "mortgage", "auto_loan", "payable"];
-      const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
 
       // Calculate amount_in_base using FX rate (B.1)
       const usdRateForCurrency = recurringItem.currency === "MXN" ? 1 : (fxRates[recurringItem.currency] || 1);

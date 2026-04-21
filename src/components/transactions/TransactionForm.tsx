@@ -795,8 +795,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                                 onSelect={() => {
                                   form.setValue("account_id", acc.id);
                                   setOpenAccountCombo(false);
-                                  setSelectedDebtId("");
-                                  setDebtPaymentAmount("");
                                 }}
                               >
                                 <Check className={cn("mr-2 h-3.5 w-3.5", watchedAccountId === acc.id ? "opacity-100" : "opacity-0")} />
@@ -852,51 +850,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                     )}
                   </div>
                 )}
-
-
-                {isTransferToDebtAccount && availableFixedDebts.length > 0 && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-3 space-y-2">
-                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                      ¿Parte de este pago cubre una deuda a plazo?
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="flex-1 h-8 text-sm rounded-md border border-input bg-background px-2"
-                        value={selectedDebtId}
-                        onChange={(e) => setSelectedDebtId(e.target.value)}
-                      >
-                        <option value="">Solo pago de consumos del mes</option>
-                        {availableFixedDebts.map(d => (
-                          <option key={d.id} value={d.id}>
-                            {d.name} — saldo: {formatCurrency(Math.abs(d.current_balance), d.currency)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {selectedDebtId && (
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground w-32 shrink-0">
-                          Abono a deuda a plazo
-                        </Label>
-                        <Input
-                          type="number"
-                          className="h-8 text-sm text-right flex-1"
-                          placeholder="0.00"
-                          step="0.01"
-                          value={debtPaymentAmount}
-                          onChange={(e) => setDebtPaymentAmount(e.target.value)}
-                        />
-                      </div>
-                    )}
-                    {selectedDebtId && debtPaymentAmount && Number(debtPaymentAmount) > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Consumos del mes: {formatCurrency(watchedAmount - Number(debtPaymentAmount), watchedCurrency)} ·
-                        Abono a deuda: {formatCurrency(Number(debtPaymentAmount), watchedCurrency)}
-                      </p>
-                    )}
-                  </div>
-                )}
-
                 {/* Cross-currency info */}
                 {isCrossCurrency && (
                   <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">

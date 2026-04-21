@@ -94,6 +94,9 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const [selectedDebtId, setSelectedDebtId] = useState("");
   const [debtPaymentAmount, setDebtPaymentAmount] = useState("");
 
+  // Opción A: deuda destino cuando se elige categoría "Créditos y Deudas" en un Gasto
+  const [debtTargetId, setDebtTargetId] = useState("");
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { createTransaction } = useTransactions();
@@ -236,10 +239,108 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedAccountId, isTransferToDebtAccount]);
 
+  // ====================================================================
+  // OPCIÓN A: Detección "Gasto con categoría Créditos y Deudas"
+  // → Ofrecer convertir en Transferencia hacia la deuda destino
+  // ====================================================================
+  const watchedCategoryId = form.watch("category_id");
+  const selectedCategory = allCategories.find(c => c.id === watchedCategoryId);
+
+  // Es la categoría "Créditos y Deudas" del sistema (match por nombre)
+  const isCreditsCategory = !!selectedCategory && selectedCategory.is_system === true &&
+    /cr[eé]dito.*deuda/i.test(selectedCategory.name);
+
+  // Sólo cuando es Gasto + categoría Créditos y Deudas + cuenta origen elegida
+  const showDebtTargetSelector = activeTab === "expense" && isCreditsCategory && !!watchedAccountId;
+
+  // Deudas de largo plazo CON cuenta vinculada (para poder hacer transferencia)
+  const transferableDebts = allLongTermDebts.filter(d => !!d.account_id && d.account_id !== watchedAccountId);
+
+  // (debtTargetId state already declared near other useState hooks at top of component)
+
+  // Reset cuando cambia categoría / cuenta / se cierra
+  useEffect(() => {
+    if (!showDebtTargetSelector) setDebtTargetId("");
+  }, [showDebtTargetSelector, watchedAccountId]);
+
+  useEffect(() => {
+    if (!open) setDebtTargetId("");
+  }, [open]);
+
+  const debtTarget = transferableDebts.find(d => d.id === debtTargetId);
+  const debtTargetAccount = debtTarget ? accounts.find(a => a.id === debtTarget.account_id) : null;
+
   // Transfer validation
   const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);
 
   const onSubmit = async (data: TransactionFormValues) => {
+    // ============================================================
+    // OPCIÓN A: Gasto con categoría "Créditos y Deudas" + deuda destino elegida
+    // → Convertir automáticamente a TRANSFERENCIA hacia la cuenta de la deuda.
+    // El trigger sync_debt_from_transfer registra el abono y el budget se actualiza.
+    // ============================================================
+    if (
+      activeTab === "expense" &&
+      isCreditsCategory &&
+      debtTargetId &&
+      debtTargetAccount &&
+      user
+    ) {
+      setTransferSaving(true);
+      try {
+        const fromAcc = activeAccounts.find(a => a.id === data.account_id);
+        const toAcc = debtTargetAccount;
+        if (!fromAcc) return;
+
+        const isCross = fromAcc.currency !== toAcc.currency;
+        let amountFrom = data.amount;
+        let amountTo = data.amount;
+        let fxRateUsed: number | null = null;
+
+        if (isCross && fxRate > 0) {
+          fxRateUsed = fxRate;
+          const userCurrency = data.currency;
+          if (userCurrency === fromAcc.currency) {
+            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = data.amount * fxRate;
+            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = data.amount / fxRate;
+          } else if (userCurrency === toAcc.currency) {
+            amountTo = data.amount;
+            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountFrom = data.amount / fxRate;
+            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountFrom = data.amount * fxRate;
+          }
+        }
+
+        await supabase.from("transfers").insert({
+          user_id: user.id,
+          from_account_id: data.account_id,
+          to_account_id: toAcc.id,
+          amount_from: Math.round(amountFrom * 100) / 100,
+          currency_from: fromAcc.currency,
+          amount_to: Math.round(amountTo * 100) / 100,
+          currency_to: toAcc.currency,
+          fx_rate: fxRateUsed,
+          transfer_date: format(data.transaction_date, "yyyy-MM-dd"),
+          description: data.description || `Pago: ${debtTarget!.name}`,
+          created_from: "manual",
+        });
+
+        queryClient.invalidateQueries({ queryKey: ["transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["accounts"] });
+        queryClient.invalidateQueries({ queryKey: ["debts"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+        queryClient.invalidateQueries({ queryKey: ["budgets"] });
+
+        form.reset();
+        setDebtTargetId("");
+        setSelectedDebtId("");
+        setDebtPaymentAmount("");
+        onOpenChange(false);
+      } finally {
+        setTransferSaving(false);
+      }
+      return;
+    }
+
     // Transfer flow — direct insert to transfers table
     if (activeTab === "transfer") {
       if (!user || !toAccountId || toAccountId === data.account_id) return;
@@ -752,7 +853,46 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>
                 )}
 
-                {/* Debt payment panel for transfers to debt accounts */}
+                {/* OPCIÓN A: Selector de deuda destino cuando categoría = "Créditos y Deudas" */}
+                {showDebtTargetSelector && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-foreground">
+                          ¿A qué deuda se aplica este pago?
+                        </p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Lo registraremos como transferencia para que el saldo de la deuda baje automáticamente.
+                        </p>
+                      </div>
+                    </div>
+                    <select
+                      className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                      value={debtTargetId}
+                      onChange={(e) => setDebtTargetId(e.target.value)}
+                    >
+                      <option value="">— No aplica a una deuda específica —</option>
+                      {transferableDebts.map(d => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} · saldo: {formatCurrency(Math.abs(d.current_balance), d.currency)}
+                        </option>
+                      ))}
+                    </select>
+                    {transferableDebts.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground italic">
+                        No hay deudas de largo plazo con cuenta vinculada disponibles.
+                      </p>
+                    )}
+                    {debtTargetId && debtTarget && (
+                      <p className="text-[10px] text-primary leading-tight">
+                        Se registrará como transferencia: {selectedAccount?.name} → {debtTarget.name}.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+
                 {isTransferToDebtAccount && availableFixedDebts.length > 0 && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-3 space-y-2">
                     <p className="text-xs font-medium text-amber-800 dark:text-amber-300">

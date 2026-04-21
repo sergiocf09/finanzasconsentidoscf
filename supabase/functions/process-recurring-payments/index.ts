@@ -63,10 +63,27 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Pre-fetch latest FX rates → MXN (for amount_in_base in budgets/reports)
+  const { data: ratesData } = await supabase
+    .from("exchange_rates")
+    .select("from_currency, rate, date")
+    .eq("to_currency", "MXN")
+    .order("date", { ascending: false })
+    .limit(50);
+
+  const fxRates: Record<string, number> = { MXN: 1 };
+  for (const r of ratesData || []) {
+    if (!fxRates[r.from_currency]) fxRates[r.from_currency] = Number(r.rate);
+  }
+
   let processed = 0;
   const errors: string[] = [];
 
   for (const p of payments || []) {
+    // B.2: Apply FX so budgets reflect MXN equivalent
+    const rate = fxRates[p.currency] ?? 1;
+    const amountInBase = Number(p.amount) * rate;
+
     const { error: txErr } = await supabase.from("transactions").insert({
       user_id: p.user_id,
       account_id: p.account_id,
@@ -74,8 +91,8 @@ Deno.serve(async (req) => {
       type: p.type,
       amount: p.amount,
       currency: p.currency,
-      exchange_rate: 1,
-      amount_in_base: p.amount,
+      exchange_rate: rate,
+      amount_in_base: amountInBase,
       description: p.description || p.name,
       transaction_date: p.next_execution_date,
       is_recurring: true,

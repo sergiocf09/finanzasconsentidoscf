@@ -180,7 +180,10 @@ export function UpcomingDueDates({
     setConfirmingRecurring(recurringItem.id);
     try {
       // Determine if destination is a liability account → must go through transfers
-      const sourceAcc = accounts.find(a => a.id === accountToUse);
+      const allAccs = summaryAccounts ?? hookAccounts ?? [];
+      const sourceAcc = allAccs.find((a: any) => a.id === accountToUse);
+      const liabilityTypes = ["credit_card", "personal_loan", "mortgage", "auto_loan", "payable"];
+      const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
       const liabilityTypes = ["credit_card", "personal_loan", "mortgage", "auto_loan", "payable"];
       const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
 

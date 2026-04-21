@@ -307,8 +307,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
         form.reset();
         setDebtTargetId("");
-        setSelectedDebtId("");
-        setDebtPaymentAmount("");
         onOpenChange(false);
       } finally {
         setTransferSaving(false);
@@ -438,17 +436,6 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
       transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
     });
 
-    // Register debt payment if applicable
-    if (selectedDebtId && debtPaymentAmount && Number(debtPaymentAmount) > 0) {
-      await addDebtPayment.mutateAsync({
-        debt_id: selectedDebtId,
-        amount: Number(debtPaymentAmount),
-        payment_type: "capital",
-        payment_date: format(data.transaction_date, "yyyy-MM-dd"),
-        notes: `Abono a deuda desde movimiento: ${description}`,
-      });
-    }
-
     if (activeTab === "expense") {
       setTimeout(() => checkAlerts(), 1000);
     }
@@ -477,9 +464,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     setRecurringManual(false);
     setSuggestedCategory(null);
     setUserSelectedCategory(false);
-    setSelectedDebtId("");
-    setDebtPaymentAmount("");
     setToAccountId("");
+    setDebtTargetId("");
     onOpenChange(false);
   };
 

@@ -853,7 +853,46 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
                   <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.account_id.message}</p>
                 )}
 
-                {/* Debt payment panel for transfers to debt accounts */}
+                {/* OPCIÓN A: Selector de deuda destino cuando categoría = "Créditos y Deudas" */}
+                {showDebtTargetSelector && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-foreground">
+                          ¿A qué deuda se aplica este pago?
+                        </p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          Lo registraremos como transferencia para que el saldo de la deuda baje automáticamente.
+                        </p>
+                      </div>
+                    </div>
+                    <select
+                      className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                      value={debtTargetId}
+                      onChange={(e) => setDebtTargetId(e.target.value)}
+                    >
+                      <option value="">— No aplica a una deuda específica —</option>
+                      {transferableDebts.map(d => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} · saldo: {formatCurrency(Math.abs(d.current_balance), d.currency)}
+                        </option>
+                      ))}
+                    </select>
+                    {transferableDebts.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground italic">
+                        No hay deudas de largo plazo con cuenta vinculada disponibles.
+                      </p>
+                    )}
+                    {debtTargetId && debtTarget && (
+                      <p className="text-[10px] text-primary leading-tight">
+                        Se registrará como transferencia: {selectedAccount?.name} → {debtTarget.name}.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+
                 {isTransferToDebtAccount && availableFixedDebts.length > 0 && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 p-3 space-y-2">
                     <p className="text-xs font-medium text-amber-800 dark:text-amber-300">

@@ -147,11 +147,18 @@ export function useDebts(options?: { enabled?: boolean }) {
         .single();
       if (accError) throw accError;
 
-      // 2) Create the debt linked to the account
+      // 2) Auto-assign debt_category based on type:
+      // - credit_card → 'current' (gasto ya registrado en la compra original)
+      // - mortgage/personal_loan/car_loan/student_loan → 'fixed' (genera gasto al pagar)
+      const LONG_TERM_TYPES = ['mortgage', 'personal_loan', 'car_loan', 'student_loan'];
+      const autoCategory = LONG_TERM_TYPES.includes(data.type) ? 'fixed' : 'current';
+
+      // 3) Create the debt linked to the account
       const { error } = await supabase
         .from('debts')
         .insert({
           ...data,
+          debt_category: data.debt_category || autoCategory,
           user_id: user!.id,
           account_id: newAccount.id,
         });

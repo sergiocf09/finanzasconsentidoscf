@@ -682,6 +682,7 @@ export function UpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
+      queryClient.invalidateQueries({ queryKey: ["due_date_transfers_cycle"] });
       toast.success("Transferencia registrada");
       // Limpiar monto editado del item ya pagado
       setEditedAmounts(prev => {

@@ -514,11 +514,20 @@ export function UpcomingDueDates({
       const keyWithAccount = item.accountId ? `${key}::${item.accountId}` : null;
       const dates = (keyWithAccount && paidByKey.get(keyWithAccount)) || paidByKey.get(key) || [];
 
-      // Cycle window for THIS month's due date: (prevMonthDay, thisMonthDay]
+      // Cycle window for THIS month's due date: (prevDueDate, nextDueDate)
+      // A payment counts for this cycle if registered AFTER the previous due date
+      // AND BEFORE the following month's due date — even if registered after the
+      // current due date (i.e. the item was overdue when the user paid).
       const next = item.nextDate;
       const prev = new Date(next.getFullYear(), next.getMonth() - 1, next.getDate());
       prev.setHours(0, 0, 0, 0);
-      const paidThisCycle = dates.some(d => d && !isNaN(d.getTime()) && d.getTime() > prev.getTime() && d.getTime() <= next.getTime());
+      const followingMonth = new Date(next.getFullYear(), next.getMonth() + 1, 1);
+      const daysInFollowing = new Date(followingMonth.getFullYear(), followingMonth.getMonth() + 1, 0).getDate();
+      const followingDue = new Date(followingMonth.getFullYear(), followingMonth.getMonth(), Math.min(item.day, daysInFollowing));
+      followingDue.setHours(0, 0, 0, 0);
+      const paidThisCycle = dates.some(
+        d => d && !isNaN(d.getTime()) && d.getTime() > prev.getTime() && d.getTime() < followingDue.getTime()
+      );
 
       if (!paidThisCycle) {
         // Show the current cycle's due date (may be overdue)
@@ -527,13 +536,9 @@ export function UpcomingDueDates({
       }
 
       // Already paid this cycle — show NEXT month's occurrence if within filter window
-      const nextMonth = new Date(next.getFullYear(), next.getMonth() + 1, 1);
-      const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-      const nextOcc = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), Math.min(item.day, daysInNextMonth));
-      nextOcc.setHours(0, 0, 0, 0);
-      const diff = Math.ceil((nextOcc.getTime() - today.getTime()) / 86400000);
+      const diff = Math.ceil((followingDue.getTime() - today.getTime()) / 86400000);
       if (diff <= maxDays) {
-        result.push({ ...item, nextDate: nextOcc, daysLeft: diff });
+        result.push({ ...item, nextDate: followingDue, daysLeft: diff });
       }
     }
 

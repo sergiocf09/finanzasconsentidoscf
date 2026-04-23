@@ -118,7 +118,7 @@ export function useReconciliation() {
           currency: params.currency,
           exchange_rate: 1,
           description: expense.concept || "Gasto no registrado",
-          transaction_date: params.date,
+          transaction_date: expense.expense_date || params.date,
           notes: "Registrado durante conciliación de estado de cuenta",
         });
       }

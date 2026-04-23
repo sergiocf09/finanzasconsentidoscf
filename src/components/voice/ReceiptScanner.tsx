@@ -400,6 +400,11 @@ export function ReceiptScanner() {
       toast.error("Selecciona al menos un movimiento");
       return;
     }
+    const missingAccount = selected.some((t) => !t.resolvedAccountId);
+    if (missingAccount) {
+      toast.error("Selecciona la cuenta para registrar los movimientos");
+      return;
+    }
 
     const inserts = selected.map((t) => {
       const { amountInBase, exchangeRate } = calcAmountInBase(

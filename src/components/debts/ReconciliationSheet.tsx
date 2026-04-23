@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, CalendarIcon } from "lucide-react";
 import { useReconciliation, UnregisteredExpense } from "@/hooks/useReconciliation";
 import { useCategories } from "@/hooks/useCategories";
 import { formatCurrencyAbs } from "@/lib/formatters";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface ReconciliationSheetProps {
   open: boolean;
@@ -19,16 +24,51 @@ interface ReconciliationSheetProps {
   currentBalance: number;
   currency: string;
   reconciliationType: "fixed" | "current";
+  /** Last cut day of the credit card (1-31). Used as default expense date. */
+  cutDay?: number | null;
+}
+
+/**
+ * Compute the most recent past cut date based on cut_day.
+ * If today's day >= cut_day → cut date is this month.
+ * Otherwise → cut date is previous month.
+ */
+function getLastCutDate(cutDay: number | null | undefined): string {
+  const today = new Date();
+  if (!cutDay || cutDay < 1 || cutDay > 31) {
+    return today.toISOString().split("T")[0];
+  }
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0-indexed
+  const todayDay = today.getDate();
+
+  let cutYear = year;
+  let cutMonth = month;
+  if (todayDay < cutDay) {
+    // Cut day in current month hasn't happened yet → use previous month's cut
+    cutMonth -= 1;
+    if (cutMonth < 0) {
+      cutMonth = 11;
+      cutYear -= 1;
+    }
+  }
+  // Clamp to last day of month if cutDay > days in month
+  const lastDayOfMonth = new Date(cutYear, cutMonth + 1, 0).getDate();
+  const day = Math.min(cutDay, lastDayOfMonth);
+  const cutDate = new Date(cutYear, cutMonth, day);
+  return cutDate.toISOString().split("T")[0];
 }
 
 export function ReconciliationSheet({
   open, onOpenChange, debtId, accountId,
-  debtName, currentBalance, currency, reconciliationType,
+  debtName, currentBalance, currency, reconciliationType, cutDay,
 }: ReconciliationSheetProps) {
   const [realBalance, setRealBalance] = useState("");
   const [expenses, setExpenses] = useState<UnregisteredExpense[]>([]);
   const { reconcileFixedDebt, reconcileCreditCard, isLoading } = useReconciliation();
   const { expenseCategories } = useCategories();
+
+  const defaultExpenseDate = useMemo(() => getLastCutDate(cutDay), [cutDay]);
 
   const realBalanceNum = Number(realBalance) || 0;
   const difference = realBalanceNum - currentBalance;
@@ -41,6 +81,7 @@ export function ReconciliationSheet({
       concept: "",
       amount: 0,
       category_id: null,
+      expense_date: defaultExpenseDate,
     }]);
   };
 
@@ -71,7 +112,13 @@ export function ReconciliationSheet({
         previousBalance: currentBalance,
         realBalance: realBalanceNum,
         currency,
-        unregisteredExpenses: expenses.filter(e => e.amount > 0 && e.concept),
+        unregisteredExpenses: expenses
+          .filter(e => e.amount > 0 && e.concept)
+          .map(e => ({
+            ...e,
+            // Fallback to default cut-day-based date when user leaves it blank
+            expense_date: e.expense_date || defaultExpenseDate,
+          })),
         date: today,
       });
     }
@@ -147,43 +194,76 @@ export function ReconciliationSheet({
               </p>
               <p className="text-[10px] text-muted-foreground">
                 Si hiciste compras que no capturaste en la app, agrégalas aquí. Lo que quede sin explicar se registrará como costo financiero.
+                {cutDay ? ` Si no recuerdas la fecha exacta, usaremos la fecha de corte (${format(parseISO(defaultExpenseDate), "d 'de' MMM", { locale: es })}).` : ""}
               </p>
 
-              {expenses.map(expense => (
-                <div key={expense.id} className="space-y-1.5 rounded-lg bg-background p-2 border border-border">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      className="h-7 text-xs flex-1"
-                      placeholder="Concepto (ej. Cena restaurante)"
-                      value={expense.concept}
-                      onChange={(e) => updateExpense(expense.id, "concept", e.target.value)}
-                    />
-                    <button onClick={() => removeExpense(expense.id)} className="text-muted-foreground hover:text-foreground p-1">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+              {expenses.map(expense => {
+                const expenseDateObj = expense.expense_date ? parseISO(expense.expense_date) : parseISO(defaultExpenseDate);
+                return (
+                  <div key={expense.id} className="space-y-1.5 rounded-lg bg-background p-2 border border-border">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className="h-7 text-xs flex-1"
+                        placeholder="Concepto (ej. Cena restaurante)"
+                        value={expense.concept}
+                        onChange={(e) => updateExpense(expense.id, "concept", e.target.value)}
+                      />
+                      <button onClick={() => removeExpense(expense.id)} className="text-muted-foreground hover:text-foreground p-1">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="flex-1 h-7 text-xs rounded-md border border-input bg-background px-2"
+                        value={expense.category_id || ""}
+                        onChange={(e) => updateExpense(expense.id, "category_id", e.target.value || null)}
+                      >
+                        <option value="">Sin categoría</option>
+                        {expenseCategories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-7 text-xs text-right w-24"
+                        placeholder="$0.00"
+                        value={expense.amount || ""}
+                        onChange={(e) => updateExpense(expense.id, "amount", Number(e.target.value))}
+                      />
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "h-7 w-full justify-start text-xs font-normal gap-1.5",
+                            !expense.expense_date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="h-3 w-3" />
+                          {format(expenseDateObj, "d 'de' MMM yyyy", { locale: es })}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={expenseDateObj}
+                          onSelect={(date) => {
+                            if (date) {
+                              updateExpense(expense.id, "expense_date", format(date, "yyyy-MM-dd"));
+                            }
+                          }}
+                          disabled={(date) => date > new Date()}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="flex-1 h-7 text-xs rounded-md border border-input bg-background px-2"
-                      value={expense.category_id || ""}
-                      onChange={(e) => updateExpense(expense.id, "category_id", e.target.value || null)}
-                    >
-                      <option value="">Sin categoría</option>
-                      {expenseCategories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      className="h-7 text-xs text-right w-24"
-                      placeholder="$0.00"
-                      value={expense.amount || ""}
-                      onChange={(e) => updateExpense(expense.id, "amount", Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1" onClick={addExpense}>
                 <Plus className="h-3 w-3" /> Agregar gasto no registrado

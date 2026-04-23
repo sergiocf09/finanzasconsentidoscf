@@ -282,20 +282,56 @@ Responde ÚNICAMENTE con JSON válido. Sin texto. Sin backticks:
       throw new Error("AI gateway error");
     }
 
-    const aiResult = await response.json();
-    const rawText = aiResult.choices?.[0]?.message?.content || "{}";
-    const clean = rawText.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
+    const aiResultText = await response.text();
+    let aiResult: any = {};
+    try {
+      aiResult = aiResultText ? JSON.parse(aiResultText) : {};
+    } catch (e) {
+      console.error("scan-receipt: AI gateway returned non-JSON:", aiResultText.slice(0, 500));
+      return new Response(
+        JSON.stringify({ error: "No se pudo leer la imagen. Intenta con mejor iluminación." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const rawText = aiResult.choices?.[0]?.message?.content ?? "";
+    const clean = String(rawText).replace(/```json|```/g, "").trim();
+
+    if (!clean) {
+      console.error("scan-receipt: empty content from AI", JSON.stringify(aiResult).slice(0, 500));
+      return new Response(
+        JSON.stringify({ error: "No se pudo leer la imagen. Intenta con mejor iluminación." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Extract first JSON object/array even if model added extra text
+    let jsonStr = clean;
+    const firstBrace = clean.search(/[\[{]/);
+    if (firstBrace > 0) jsonStr = clean.slice(firstBrace);
+    const lastBrace = Math.max(jsonStr.lastIndexOf("}"), jsonStr.lastIndexOf("]"));
+    if (lastBrace > 0) jsonStr = jsonStr.slice(0, lastBrace + 1);
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (e) {
+      console.error("scan-receipt: could not parse model JSON:", clean.slice(0, 500));
+      return new Response(
+        JSON.stringify({ error: "No se pudo leer la imagen. Intenta con mejor iluminación." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (err: any) {
-    console.error("scan-receipt error:", err.message);
+    console.error("scan-receipt error:", err?.message || err);
     return new Response(
       JSON.stringify({ error: "No se pudo leer la imagen. Intenta con mejor iluminación." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

@@ -191,7 +191,7 @@ export function ReceiptScanner() {
           categoryId: result.category_hint
             ? resolveCategoryId(result.category_hint, "expense")
             : "",
-          accountId: activeAccounts[0]?.id || "",
+          accountId: "",
           type: "expense",
         });
         setMode("single");

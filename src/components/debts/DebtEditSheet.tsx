@@ -262,6 +262,7 @@ export function DebtEditSheet({ debt, open, onOpenChange, onOpenReconciliation }
           currentBalance={Math.abs(debt.current_balance ?? 0)}
           currency={debt.currency}
           reconciliationType={debt.type === "credit_card" ? "current" : "fixed"}
+          cutDay={debt.cut_day}
         />
       )}
 

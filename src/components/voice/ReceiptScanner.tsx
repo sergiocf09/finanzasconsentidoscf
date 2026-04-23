@@ -308,7 +308,7 @@ export function ReceiptScanner() {
         t.category_hint || "otro",
         t.type || "expense"
       ),
-      resolvedAccountId: activeAccounts[0]?.id || "",
+      resolvedAccountId: "",
     }));
   };
 

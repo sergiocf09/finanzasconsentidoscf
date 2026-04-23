@@ -274,19 +274,24 @@ export function UpcomingDueDates({
   }, [user, queryClient, summaryAccounts, hookAccounts, fxRates]);
 
   // Only query paid transfers if no summary data
+  // Look back 35 days so we can evaluate the full previous billing cycle
+  const cycleLookbackStart = useMemo(() => format(subMonths(today, 1), "yyyy-MM-dd"), [today]);
+
   const { data: paidTransfers } = useQuery({
-    queryKey: ["due_date_transfers", user?.id, monthStart],
+    queryKey: ["due_date_transfers_cycle", user?.id, cycleLookbackStart, monthEnd],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transfers")
-        .select("description, to_account_id")
+        .select("description, to_account_id, transfer_date")
         .eq("created_from", "due_dates")
-        .gte("transfer_date", monthStart)
+        .gte("transfer_date", cycleLookbackStart)
         .lte("transfer_date", monthEnd);
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user && !summaryPaidDueDates,
+    enabled: !!user,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Query credit card spending since last cut date for each "current" debt
@@ -477,34 +482,63 @@ export function UpcomingDueDates({
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [summaryDebts, summaryGoals, hookDebts, hookGoals, timeFilter]);
 
-  // Filter out items that already have a due_dates transfer this month
-  const paidKeys = useMemo(() => {
-    const set = new Set<string>();
-    const source = summaryPaidDueDates ?? paidTransfers ?? [];
-    source.forEach((t: any) => {
-      if (t.description) {
-        set.add(t.description);
-        if (t.to_account_id) set.add(`${t.description}::${t.to_account_id}`);
-      }
+  // Build a map: descriptionKey -> array of paid transfer dates (sorted desc)
+  // We always prefer the cycle-aware paidTransfers query (with transfer_date) when available.
+  const paidByKey = useMemo(() => {
+    const map = new Map<string, Date[]>();
+    const source = (paidTransfers && paidTransfers.length >= 0) ? paidTransfers : (summaryPaidDueDates ?? []);
+    (source as any[]).forEach((t: any) => {
+      if (!t.description) return;
+      const dateStr = t.transfer_date as string | undefined;
+      const d = dateStr ? new Date(dateStr + "T00:00:00") : null;
+      const keys = [t.description as string];
+      if (t.to_account_id) keys.push(`${t.description}::${t.to_account_id}`);
+      keys.forEach(k => {
+        const arr = map.get(k) ?? [];
+        if (d) arr.push(d);
+        map.set(k, arr);
+      });
     });
-    return set;
-  }, [summaryPaidDueDates, paidTransfers]);
+    // Sort descending
+    map.forEach(arr => arr.sort((a, b) => b.getTime() - a.getTime()));
+    return map;
+  }, [paidTransfers, summaryPaidDueDates]);
 
   const visibleItems = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    return items.filter(item => {
-      const isCurrentMonth = item.nextDate.getMonth() === currentMonth && item.nextDate.getFullYear() === currentYear;
-      if (!isCurrentMonth) return true;
+    const maxDays = getMaxDays(timeFilter, today);
+    const result: DueItem[] = [];
+
+    for (const item of items) {
       const descLabel = item.type === "debt" ? "Pago" : "Aportación";
       const key = `${descLabel}: ${item.name}`;
       const keyWithAccount = item.accountId ? `${key}::${item.accountId}` : null;
-      if (keyWithAccount && paidKeys.has(keyWithAccount)) return false;
-      if (!keyWithAccount && paidKeys.has(key)) return false;
-      return true;
-    });
-  }, [items, paidKeys]);
+      const dates = (keyWithAccount && paidByKey.get(keyWithAccount)) || paidByKey.get(key) || [];
+
+      // Cycle window for THIS month's due date: (prevMonthDay, thisMonthDay]
+      const next = item.nextDate;
+      const prev = new Date(next.getFullYear(), next.getMonth() - 1, next.getDate());
+      prev.setHours(0, 0, 0, 0);
+      const paidThisCycle = dates.some(d => d && !isNaN(d.getTime()) && d.getTime() > prev.getTime() && d.getTime() <= next.getTime());
+
+      if (!paidThisCycle) {
+        // Show the current cycle's due date (may be overdue)
+        result.push(item);
+        continue;
+      }
+
+      // Already paid this cycle — show NEXT month's occurrence if within filter window
+      const nextMonth = new Date(next.getFullYear(), next.getMonth() + 1, 1);
+      const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+      const nextOcc = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), Math.min(item.day, daysInNextMonth));
+      nextOcc.setHours(0, 0, 0, 0);
+      const diff = Math.ceil((nextOcc.getTime() - today.getTime()) / 86400000);
+      if (diff <= maxDays) {
+        result.push({ ...item, nextDate: nextOcc, daysLeft: diff });
+      }
+    }
+
+    return result.sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [items, paidByKey, today, timeFilter]);
 
   const hasAnyDueItems = useMemo(() => {
     if (recurringItems.length > 0) return true;

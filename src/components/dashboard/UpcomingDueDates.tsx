@@ -274,19 +274,24 @@ export function UpcomingDueDates({
   }, [user, queryClient, summaryAccounts, hookAccounts, fxRates]);
 
   // Only query paid transfers if no summary data
+  // Look back 35 days so we can evaluate the full previous billing cycle
+  const cycleLookbackStart = useMemo(() => format(subMonths(today, 1), "yyyy-MM-dd"), [today]);
+
   const { data: paidTransfers } = useQuery({
-    queryKey: ["due_date_transfers", user?.id, monthStart],
+    queryKey: ["due_date_transfers_cycle", user?.id, cycleLookbackStart, monthEnd],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transfers")
-        .select("description, to_account_id")
+        .select("description, to_account_id, transfer_date")
         .eq("created_from", "due_dates")
-        .gte("transfer_date", monthStart)
+        .gte("transfer_date", cycleLookbackStart)
         .lte("transfer_date", monthEnd);
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!user && !summaryPaidDueDates,
+    enabled: !!user,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Query credit card spending since last cut date for each "current" debt

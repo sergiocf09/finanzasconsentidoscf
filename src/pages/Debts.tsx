@@ -239,6 +239,7 @@ export default function Debts() {
           currentBalance={Math.abs(adjustTarget.current_balance)}
           currency={adjustTarget.currency}
           reconciliationType={adjustTarget.type === "credit_card" && adjustTarget.debt_category !== "fixed" ? "current" : "fixed"}
+          cutDay={adjustTarget.cut_day}
         />
       )}
 

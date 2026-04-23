@@ -375,6 +375,7 @@ export default function Accounts() {
           open={!!reconcilingAccount}
           onOpenChange={(o) => { if (!o) setReconcilingAccount(null); }}
           accountId={reconcilingAccount.id}
+          debtId={debts.find(d => d.account_id === reconcilingAccount.id)?.id}
           debtName={reconcilingAccount.name}
           currentBalance={Math.abs(reconcilingAccount.current_balance ?? 0)}
           currency={reconcilingAccount.currency}
@@ -383,6 +384,7 @@ export default function Accounts() {
               ? "current"
               : "fixed"
           }
+          cutDay={debts.find(d => d.account_id === reconcilingAccount.id)?.cut_day ?? null}
         />
       )}
 

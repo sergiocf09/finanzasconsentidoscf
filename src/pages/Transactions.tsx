@@ -119,6 +119,7 @@ export default function Transactions() {
     searchQuery,
     sortAsc,
     categories: categories.map(c => ({ id: c.id, name: c.name })),
+    accounts: accounts.map(a => ({ id: a.id, name: a.name })),
   });
 
   // Sync type filter from URL params

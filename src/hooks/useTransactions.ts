@@ -217,6 +217,7 @@ export function useTransactionsPaginated(options?: {
   searchQuery?: string;
   sortAsc?: boolean;
   categories?: { id: string; name: string }[];
+  accounts?: { id: string; name: string }[];
 }) {
   const { user } = useAuth();
   const startDate = options?.startDate ?? startOfMonth(new Date());
@@ -225,6 +226,7 @@ export function useTransactionsPaginated(options?: {
   const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
   const sortAsc = options?.sortAsc ?? false;
   const categories = options?.categories ?? [];
+  const accounts = options?.accounts ?? [];
 
   // When searching, use a dedicated query that searches ALL transactions in the period at DB level
   const searchResultsQuery = useQuery({
@@ -236,12 +238,18 @@ export function useTransactionsPaginated(options?: {
       typeFilter,
       sortAsc,
       searchQuery,
+      accounts.map(a => a.id).join(','),
     ],
     queryFn: async () => {
       // Build category IDs that match the search query
       const matchingCategoryIds = categories
         .filter(c => c.name.toLowerCase().includes(searchQuery))
         .map(c => c.id);
+
+      // Build account IDs whose name matches the search query
+      const matchingAccountIds = accounts
+        .filter(a => a.name.toLowerCase().includes(searchQuery))
+        .map(a => a.id);
 
       // Query with ilike on description and notes
       let query = supabase
@@ -255,13 +263,17 @@ export function useTransactionsPaginated(options?: {
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
 
-      // Use OR filter: description, notes, or matching category_id
+      // Use OR filter: description, notes, matching category_id, or matching account_id
       const orFilters = [
         `description.ilike.%${searchQuery}%`,
         `notes.ilike.%${searchQuery}%`,
       ];
       if (matchingCategoryIds.length > 0) {
         orFilters.push(`category_id.in.(${matchingCategoryIds.join(',')})`);
+      }
+      if (matchingAccountIds.length > 0) {
+        orFilters.push(`account_id.in.(${matchingAccountIds.join(',')})`);
+        orFilters.push(`related_account_id.in.(${matchingAccountIds.join(',')})`);
       }
       query = query.or(orFilters.join(','));
 

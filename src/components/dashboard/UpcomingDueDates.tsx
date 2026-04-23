@@ -603,6 +603,7 @@ export function UpcomingDueDates({
           created_from: "due_dates",
         });
         queryClient.invalidateQueries({ queryKey: ["due_date_transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["due_date_transfers_cycle"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
         toast.success("Vencimiento marcado como cubierto ($0)");
         setEditedAmounts(prev => {

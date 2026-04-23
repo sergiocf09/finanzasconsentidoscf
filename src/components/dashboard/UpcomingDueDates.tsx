@@ -482,34 +482,53 @@ export function UpcomingDueDates({
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [summaryDebts, summaryGoals, hookDebts, hookGoals, timeFilter]);
 
-  // Filter out items that already have a due_dates transfer this month
-  const paidKeys = useMemo(() => {
-    const set = new Set<string>();
-    const source = summaryPaidDueDates ?? paidTransfers ?? [];
-    source.forEach((t: any) => {
-      if (t.description) {
-        set.add(t.description);
-        if (t.to_account_id) set.add(`${t.description}::${t.to_account_id}`);
-      }
+  // Build a map: descriptionKey -> array of paid transfer dates (sorted desc)
+  // We always prefer the cycle-aware paidTransfers query (with transfer_date) when available.
+  const paidByKey = useMemo(() => {
+    const map = new Map<string, Date[]>();
+    const source = (paidTransfers && paidTransfers.length >= 0) ? paidTransfers : (summaryPaidDueDates ?? []);
+    (source as any[]).forEach((t: any) => {
+      if (!t.description) return;
+      const dateStr = t.transfer_date as string | undefined;
+      const d = dateStr ? new Date(dateStr + "T00:00:00") : null;
+      const keys = [t.description as string];
+      if (t.to_account_id) keys.push(`${t.description}::${t.to_account_id}`);
+      keys.forEach(k => {
+        const arr = map.get(k) ?? [];
+        if (d) arr.push(d);
+        map.set(k, arr);
+      });
     });
-    return set;
-  }, [summaryPaidDueDates, paidTransfers]);
+    // Sort descending
+    map.forEach(arr => arr.sort((a, b) => b.getTime() - a.getTime()));
+    return map;
+  }, [paidTransfers, summaryPaidDueDates]);
 
   const visibleItems = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
     return items.filter(item => {
-      const isCurrentMonth = item.nextDate.getMonth() === currentMonth && item.nextDate.getFullYear() === currentYear;
-      if (!isCurrentMonth) return true;
       const descLabel = item.type === "debt" ? "Pago" : "Aportación";
       const key = `${descLabel}: ${item.name}`;
       const keyWithAccount = item.accountId ? `${key}::${item.accountId}` : null;
-      if (keyWithAccount && paidKeys.has(keyWithAccount)) return false;
-      if (!keyWithAccount && paidKeys.has(key)) return false;
-      return true;
+      const dates = (keyWithAccount && paidByKey.get(keyWithAccount)) || paidByKey.get(key) || [];
+
+      if (dates.length === 0) return true;
+
+      // Cycle window: previous occurrence (next month back) → next occurrence (this item's nextDate)
+      const next = item.nextDate;
+      const prev = new Date(next.getFullYear(), next.getMonth() - 1, next.getDate());
+      prev.setHours(0, 0, 0, 0);
+
+      // If any paid transfer falls within (prev, next] (inclusive of next), treat as paid for this cycle
+      const paidInCycle = dates.some(d => d.getTime() > prev.getTime() && d.getTime() <= next.getTime());
+      // Fallback: if transfer has no date (legacy summary), use month-calendar rule
+      const hasUndatedPaid = dates.length > 0 && dates.every(d => !d || isNaN(d.getTime()));
+      if (hasUndatedPaid) {
+        const sameMonth = next.getMonth() === today.getMonth() && next.getFullYear() === today.getFullYear();
+        return !sameMonth;
+      }
+      return !paidInCycle;
     });
-  }, [items, paidKeys]);
+  }, [items, paidByKey, today]);
 
   const hasAnyDueItems = useMemo(() => {
     if (recurringItems.length > 0) return true;

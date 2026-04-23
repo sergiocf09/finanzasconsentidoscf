@@ -191,7 +191,7 @@ export function ReceiptScanner() {
           categoryId: result.category_hint
             ? resolveCategoryId(result.category_hint, "expense")
             : "",
-          accountId: activeAccounts[0]?.id || "",
+          accountId: "",
           type: "expense",
         });
         setMode("single");
@@ -308,7 +308,7 @@ export function ReceiptScanner() {
         t.category_hint || "otro",
         t.type || "expense"
       ),
-      resolvedAccountId: activeAccounts[0]?.id || "",
+      resolvedAccountId: "",
     }));
   };
 
@@ -398,6 +398,11 @@ export function ReceiptScanner() {
     const selected = transactions.filter((t) => t.selected && t.amount > 0);
     if (selected.length === 0) {
       toast.error("Selecciona al menos un movimiento");
+      return;
+    }
+    const missingAccount = selected.some((t) => !t.resolvedAccountId);
+    if (missingAccount) {
+      toast.error("Selecciona la cuenta para registrar los movimientos");
       return;
     }
 
@@ -870,6 +875,7 @@ export function ReceiptScanner() {
                     Cuenta:
                   </span>
                   <select
+                    value={transactions[0]?.resolvedAccountId || ""}
                     onChange={(e) => {
                       const accountId = e.target.value;
                       setTransactions((prev) =>
@@ -879,9 +885,9 @@ export function ReceiptScanner() {
                         }))
                       );
                     }}
-                    defaultValue={activeAccounts[0]?.id || ""}
                     className="flex-1 h-8 text-sm border border-input rounded-md px-2 bg-background"
                   >
+                    <option value="">Selecciona cuenta</option>
                     {activeAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
@@ -889,6 +895,11 @@ export function ReceiptScanner() {
                     ))}
                   </select>
                 </div>
+                {!transactions[0]?.resolvedAccountId && (
+                  <p className="text-[11px] text-destructive -mt-1">
+                    Selecciona la cuenta antes de confirmar.
+                  </p>
+                )}
 
                 {/* Transactions list */}
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto">

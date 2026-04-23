@@ -482,27 +482,38 @@ export function UpcomingDueDates({
     return result.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [summaryDebts, summaryGoals, hookDebts, hookGoals, timeFilter]);
 
-  // Build a map: descriptionKey -> array of paid transfer dates (sorted desc)
-  // We always prefer the cycle-aware paidTransfers query (with transfer_date) when available.
+  // Build a map: descriptionKey -> array of paid transfer dates (sorted desc).
+  // We MERGE both sources so that even if one is stale or missing transfer_date,
+  // a paid marker still hides the item. summaryPaidDueDates lacks transfer_date,
+  // so we synthesize "today" as a proxy date — this guarantees the calendar-month
+  // fallback continues to hide items while paidTransfers (cycle-aware) loads.
   const paidByKey = useMemo(() => {
     const map = new Map<string, Date[]>();
-    const source = (paidTransfers && paidTransfers.length >= 0) ? paidTransfers : (summaryPaidDueDates ?? []);
-    (source as any[]).forEach((t: any) => {
-      if (!t.description) return;
-      const dateStr = t.transfer_date as string | undefined;
-      const d = dateStr ? new Date(dateStr + "T00:00:00") : null;
-      const keys = [t.description as string];
-      if (t.to_account_id) keys.push(`${t.description}::${t.to_account_id}`);
-      keys.forEach(k => {
-        const arr = map.get(k) ?? [];
-        if (d) arr.push(d);
-        map.set(k, arr);
+
+    const ingest = (entries: any[], fallbackDate: Date | null) => {
+      entries.forEach((t: any) => {
+        if (!t.description) return;
+        const dateStr = t.transfer_date as string | undefined;
+        const d = dateStr ? new Date(dateStr + "T00:00:00") : fallbackDate;
+        if (!d || isNaN(d.getTime())) return;
+        const keys = [t.description as string];
+        if (t.to_account_id) keys.push(`${t.description}::${t.to_account_id}`);
+        keys.forEach(k => {
+          const arr = map.get(k) ?? [];
+          arr.push(d);
+          map.set(k, arr);
+        });
       });
-    });
-    // Sort descending
+    };
+
+    // Primary: cycle-aware query with real transfer_date
+    if (Array.isArray(paidTransfers)) ingest(paidTransfers, null);
+    // Fallback: dashboard summary (no transfer_date) — assume today as proxy
+    if (Array.isArray(summaryPaidDueDates)) ingest(summaryPaidDueDates, today);
+
     map.forEach(arr => arr.sort((a, b) => b.getTime() - a.getTime()));
     return map;
-  }, [paidTransfers, summaryPaidDueDates]);
+  }, [paidTransfers, summaryPaidDueDates, today]);
 
   const visibleItems = useMemo(() => {
     const maxDays = getMaxDays(timeFilter, today);
@@ -512,12 +523,14 @@ export function UpcomingDueDates({
       const descLabel = item.type === "debt" ? "Pago" : "Aportación";
       const key = `${descLabel}: ${item.name}`;
       const keyWithAccount = item.accountId ? `${key}::${item.accountId}` : null;
-      const dates = (keyWithAccount && paidByKey.get(keyWithAccount)) || paidByKey.get(key) || [];
+      const dates = [
+        ...((keyWithAccount && paidByKey.get(keyWithAccount)) || []),
+        ...(paidByKey.get(key) || []),
+      ];
 
-      // Cycle window for THIS month's due date: (prevDueDate, nextDueDate)
+      // Cycle window for THIS month's due date: (prevDueDate, nextDueDate]
       // A payment counts for this cycle if registered AFTER the previous due date
-      // AND BEFORE the following month's due date — even if registered after the
-      // current due date (i.e. the item was overdue when the user paid).
+      // AND ON OR BEFORE the following month's due date — covers overdue payments.
       const next = item.nextDate;
       const prev = new Date(next.getFullYear(), next.getMonth() - 1, next.getDate());
       prev.setHours(0, 0, 0, 0);
@@ -525,19 +538,20 @@ export function UpcomingDueDates({
       const daysInFollowing = new Date(followingMonth.getFullYear(), followingMonth.getMonth() + 1, 0).getDate();
       const followingDue = new Date(followingMonth.getFullYear(), followingMonth.getMonth(), Math.min(item.day, daysInFollowing));
       followingDue.setHours(0, 0, 0, 0);
-      const paidThisCycle = dates.some(
-        d => d && !isNaN(d.getTime()) && d.getTime() > prev.getTime() && d.getTime() < followingDue.getTime()
-      );
+
+      const paidThisCycle = dates.some(d => {
+        if (!d || isNaN(d.getTime())) return false;
+        return d.getTime() > prev.getTime() && d.getTime() <= followingDue.getTime();
+      });
 
       if (!paidThisCycle) {
-        // Show the current cycle's due date (may be overdue)
         result.push(item);
         continue;
       }
 
       // Already paid this cycle — show NEXT month's occurrence if within filter window
       const diff = Math.ceil((followingDue.getTime() - today.getTime()) / 86400000);
-      if (diff <= maxDays) {
+      if (diff >= 0 && diff <= maxDays) {
         result.push({ ...item, nextDate: followingDue, daysLeft: diff });
       }
     }

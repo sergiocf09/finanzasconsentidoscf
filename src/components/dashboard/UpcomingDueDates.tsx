@@ -505,30 +505,40 @@ export function UpcomingDueDates({
   }, [paidTransfers, summaryPaidDueDates]);
 
   const visibleItems = useMemo(() => {
-    return items.filter(item => {
+    const maxDays = getMaxDays(timeFilter, today);
+    const result: DueItem[] = [];
+
+    for (const item of items) {
       const descLabel = item.type === "debt" ? "Pago" : "Aportación";
       const key = `${descLabel}: ${item.name}`;
       const keyWithAccount = item.accountId ? `${key}::${item.accountId}` : null;
       const dates = (keyWithAccount && paidByKey.get(keyWithAccount)) || paidByKey.get(key) || [];
 
-      if (dates.length === 0) return true;
-
-      // Cycle window: previous occurrence (next month back) → next occurrence (this item's nextDate)
+      // Cycle window for THIS month's due date: (prevMonthDay, thisMonthDay]
       const next = item.nextDate;
       const prev = new Date(next.getFullYear(), next.getMonth() - 1, next.getDate());
       prev.setHours(0, 0, 0, 0);
+      const paidThisCycle = dates.some(d => d && !isNaN(d.getTime()) && d.getTime() > prev.getTime() && d.getTime() <= next.getTime());
 
-      // If any paid transfer falls within (prev, next] (inclusive of next), treat as paid for this cycle
-      const paidInCycle = dates.some(d => d.getTime() > prev.getTime() && d.getTime() <= next.getTime());
-      // Fallback: if transfer has no date (legacy summary), use month-calendar rule
-      const hasUndatedPaid = dates.length > 0 && dates.every(d => !d || isNaN(d.getTime()));
-      if (hasUndatedPaid) {
-        const sameMonth = next.getMonth() === today.getMonth() && next.getFullYear() === today.getFullYear();
-        return !sameMonth;
+      if (!paidThisCycle) {
+        // Show the current cycle's due date (may be overdue)
+        result.push(item);
+        continue;
       }
-      return !paidInCycle;
-    });
-  }, [items, paidByKey, today]);
+
+      // Already paid this cycle — show NEXT month's occurrence if within filter window
+      const nextMonth = new Date(next.getFullYear(), next.getMonth() + 1, 1);
+      const daysInNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+      const nextOcc = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), Math.min(item.day, daysInNextMonth));
+      nextOcc.setHours(0, 0, 0, 0);
+      const diff = Math.ceil((nextOcc.getTime() - today.getTime()) / 86400000);
+      if (diff <= maxDays) {
+        result.push({ ...item, nextDate: nextOcc, daysLeft: diff });
+      }
+    }
+
+    return result.sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [items, paidByKey, today, timeFilter]);
 
   const hasAnyDueItems = useMemo(() => {
     if (recurringItems.length > 0) return true;

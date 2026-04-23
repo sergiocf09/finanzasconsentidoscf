@@ -10,6 +10,7 @@ export interface UnregisteredExpense {
   concept: string;
   amount: number;
   category_id: string | null;
+  expense_date?: string; // YYYY-MM-DD; falls back to params.date when missing
 }
 
 export function useReconciliation() {

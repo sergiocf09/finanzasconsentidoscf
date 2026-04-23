@@ -875,6 +875,7 @@ export function ReceiptScanner() {
                     Cuenta:
                   </span>
                   <select
+                    value={transactions[0]?.resolvedAccountId || ""}
                     onChange={(e) => {
                       const accountId = e.target.value;
                       setTransactions((prev) =>
@@ -884,9 +885,9 @@ export function ReceiptScanner() {
                         }))
                       );
                     }}
-                    defaultValue={activeAccounts[0]?.id || ""}
                     className="flex-1 h-8 text-sm border border-input rounded-md px-2 bg-background"
                   >
+                    <option value="">Selecciona cuenta</option>
                     {activeAccounts.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
@@ -894,6 +895,11 @@ export function ReceiptScanner() {
                     ))}
                   </select>
                 </div>
+                {!transactions[0]?.resolvedAccountId && (
+                  <p className="text-[11px] text-destructive -mt-1">
+                    Selecciona la cuenta antes de confirmar.
+                  </p>
+                )}
 
                 {/* Transactions list */}
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto">

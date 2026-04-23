@@ -833,6 +833,7 @@ export function UpcomingDueDates({
                   const destAcc = accounts.find(a => a.id === item.accountId);
                   const isCross = sourceAcc && destAcc && sourceAcc.currency !== destAcc.currency;
                   const amt = parseFloat(getDisplayAmount(item)) || 0;
+                  const isZero = amt === 0;
                   const usdRate = fxRates["USD"] || 1;
 
                   let previewFrom = amt;
@@ -851,65 +852,75 @@ export function UpcomingDueDates({
 
                   return (
                     <div className="space-y-2 mt-2 pt-2 border-t border-border">
-                      {/* Currency selector */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Moneda:</span>
-                        <Select value={transferCurrency} onValueChange={setTransferCurrency}>
-                          <SelectTrigger className="h-7 text-xs w-20">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MXN" className="text-xs">MXN</SelectItem>
-                            <SelectItem value="USD" className="text-xs">USD</SelectItem>
-                            <SelectItem value="EUR" className="text-xs">EUR</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Source account selector */}
-                      <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Selecciona cuenta de origen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sourceAccounts
-                            .filter(a => a.id !== item.accountId)
-                            .map(a => {
-                              const bal = a.current_balance ?? 0;
-                              const isNeg = bal < 0;
-                              return (
-                                <SelectItem key={a.id} value={a.id} className="text-xs">
-                                  <div className="flex items-center justify-between gap-3 w-full">
-                                    <span className="truncate">{a.name}</span>
-                                    <span className={cn(
-                                      "tabular-nums shrink-0",
-                                      isNeg ? "text-expense" : "text-muted-foreground"
-                                    )}>
-                                      {isNeg ? "-" : ""}{formatCurrencyAbs(bal, a.currency)}
-                                    </span>
-                                  </div>
-                                </SelectItem>
-                              );
-                            })}
-                        </SelectContent>
-                      </Select>
-
-                      {/* FX preview */}
-                      {isCross && amt > 0 && (
-                        <div className="rounded-lg bg-muted px-3 py-2 text-xs space-y-0.5">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Sale de {sourceAcc.name}</span>
-                            <span className="font-medium text-foreground">{formatCurrencyAbs(Math.round(previewFrom * 100) / 100, sourceAcc.currency)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Llega a {destAcc.name}</span>
-                            <span className="font-medium text-foreground">{formatCurrencyAbs(Math.round(previewTo * 100) / 100, destAcc.currency)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Tipo de cambio</span>
-                            <span>TC: ${usdRate.toFixed(2)}</span>
-                          </div>
+                      {isZero ? (
+                        // Simplified flow when amount is 0: no account needed, just confirm
+                        <div className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                          Sin movimiento este mes. Se ocultará de los próximos vencimientos
+                          hasta el siguiente ciclo.
                         </div>
+                      ) : (
+                        <>
+                          {/* Currency selector */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Moneda:</span>
+                            <Select value={transferCurrency} onValueChange={setTransferCurrency}>
+                              <SelectTrigger className="h-7 text-xs w-20">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="MXN" className="text-xs">MXN</SelectItem>
+                                <SelectItem value="USD" className="text-xs">USD</SelectItem>
+                                <SelectItem value="EUR" className="text-xs">EUR</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Source account selector */}
+                          <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecciona cuenta de origen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sourceAccounts
+                                .filter(a => a.id !== item.accountId)
+                                .map(a => {
+                                  const bal = a.current_balance ?? 0;
+                                  const isNeg = bal < 0;
+                                  return (
+                                    <SelectItem key={a.id} value={a.id} className="text-xs">
+                                      <div className="flex items-center justify-between gap-3 w-full">
+                                        <span className="truncate">{a.name}</span>
+                                        <span className={cn(
+                                          "tabular-nums shrink-0",
+                                          isNeg ? "text-expense" : "text-muted-foreground"
+                                        )}>
+                                          {isNeg ? "-" : ""}{formatCurrencyAbs(bal, a.currency)}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                            </SelectContent>
+                          </Select>
+
+                          {/* FX preview */}
+                          {isCross && amt > 0 && (
+                            <div className="rounded-lg bg-muted px-3 py-2 text-xs space-y-0.5">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Sale de {sourceAcc.name}</span>
+                                <span className="font-medium text-foreground">{formatCurrencyAbs(Math.round(previewFrom * 100) / 100, sourceAcc.currency)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Llega a {destAcc.name}</span>
+                                <span className="font-medium text-foreground">{formatCurrencyAbs(Math.round(previewTo * 100) / 100, destAcc.currency)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Tipo de cambio</span>
+                                <span>TC: ${usdRate.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       <div className="flex items-center gap-2 justify-end">
@@ -927,10 +938,19 @@ export function UpcomingDueDates({
                           size="sm"
                           className="h-7 gap-1 px-3 text-xs"
                           onClick={() => handleConfirmTransfer(item)}
-                          disabled={isSaving || ((parseFloat(getDisplayAmount(item)) || 0) > 0 && !sourceAccountId)}
+                          disabled={isSaving || (!isZero && !sourceAccountId)}
                         >
-                          <ArrowRightLeft className="h-3.5 w-3.5" />
-                          {(parseFloat(getDisplayAmount(item)) || 0) === 0 ? "Marcar cubierto" : "Transferir"}
+                          {isZero ? (
+                            <>
+                              <Check className="h-3.5 w-3.5" />
+                              Confirmar sin movimiento
+                            </>
+                          ) : (
+                            <>
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                              Transferir
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>

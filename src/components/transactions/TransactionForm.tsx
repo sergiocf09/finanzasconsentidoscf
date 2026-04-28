@@ -30,13 +30,11 @@ import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories, Category } from "@/hooks/useCategories";
-import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
-import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
+import { FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { useDebts } from "@/hooks/useDebts";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useTransactionSubmit } from "@/hooks/useTransactionSubmit";
 
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),

@@ -198,15 +198,8 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     };
   }, [activeTab, watchedAccountId, toAccountId, watchedAmount, watchedCurrency, fxRate, activeAccounts]);
 
-  // Long-term debt detection: by type (mortgage/loan) OR by debt_category='fixed' (CC with installments)
-  const LONG_TERM_TYPES = ['mortgage', 'personal_loan', 'auto_loan', 'caucion_bursatil'];
-  const isLongTermDebt = (d: typeof debts[0]) =>
-    d.is_active &&
-    Math.abs(d.current_balance) > 0 &&
-    (LONG_TERM_TYPES.includes(d.type) || d.debt_category === "fixed");
+  // Long-term debts (provided by useTransactionSubmit hook)
 
-  // All long-term debts available for capital payment selection
-  const allLongTermDebts = debts.filter(isLongTermDebt);
 
   // ====================================================================
   // OPCIÓN A: Detección "Gasto con categoría Créditos y Deudas"
@@ -243,216 +236,26 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
   const isTransferValid = activeTab !== "transfer" || (toAccountId && toAccountId !== watchedAccountId && watchedAmount > 0 && watchedAccountId);
 
   const onSubmit = async (data: TransactionFormValues) => {
-    // ============================================================
-    // OPCIÓN A: Gasto con categoría "Créditos y Deudas" + deuda destino elegida
-    // → Convertir automáticamente a TRANSFERENCIA hacia la cuenta de la deuda.
-    // El trigger sync_debt_from_transfer registra el abono y el budget se actualiza.
-    // ============================================================
-    if (
-      activeTab === "expense" &&
-      isCreditsCategory &&
-      debtTargetId &&
-      debtTargetAccount &&
-      user
-    ) {
-      setTransferSaving(true);
-      try {
-        const fromAcc = activeAccounts.find(a => a.id === data.account_id);
-        const toAcc = debtTargetAccount;
-        if (!fromAcc) return;
-
-        const isCross = fromAcc.currency !== toAcc.currency;
-        let amountFrom = data.amount;
-        let amountTo = data.amount;
-        let fxRateUsed: number | null = null;
-
-        if (isCross && fxRate > 0) {
-          fxRateUsed = fxRate;
-          const userCurrency = data.currency;
-          if (userCurrency === fromAcc.currency) {
-            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = data.amount * fxRate;
-            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = data.amount / fxRate;
-          } else if (userCurrency === toAcc.currency) {
-            amountTo = data.amount;
-            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountFrom = data.amount / fxRate;
-            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountFrom = data.amount * fxRate;
-          }
-        }
-
-        await supabase.from("transfers").insert({
-          user_id: user.id,
-          from_account_id: data.account_id,
-          to_account_id: toAcc.id,
-          amount_from: Math.round(amountFrom * 100) / 100,
-          currency_from: fromAcc.currency,
-          amount_to: Math.round(amountTo * 100) / 100,
-          currency_to: toAcc.currency,
-          fx_rate: fxRateUsed,
-          transfer_date: format(data.transaction_date, "yyyy-MM-dd"),
-          description: data.description || `Pago: ${debtTarget!.name}`,
-          created_from: "manual",
-        });
-
-        queryClient.invalidateQueries({ queryKey: ["transfers"] });
-        queryClient.invalidateQueries({ queryKey: ["accounts"] });
-        queryClient.invalidateQueries({ queryKey: ["debts"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
-        queryClient.invalidateQueries({ queryKey: ["budgets"] });
-
-        form.reset();
-        setDebtTargetId("");
-        onOpenChange(false);
-      } finally {
-        setTransferSaving(false);
-      }
-      return;
-    }
-
-    // Transfer flow — direct insert to transfers table
-    if (activeTab === "transfer") {
-      if (!user || !toAccountId || toAccountId === data.account_id) return;
-      setTransferSaving(true);
-      try {
-        const fromAcc = activeAccounts.find(a => a.id === data.account_id);
-        const toAcc = activeAccounts.find(a => a.id === toAccountId);
-        if (!fromAcc || !toAcc) return;
-
-        const isCross = fromAcc.currency !== toAcc.currency;
-        let amountFrom = data.amount;
-        let amountTo = data.amount;
-        let fxRateUsed: number | null = null;
-
-        if (isCross && fxRate > 0) {
-          fxRateUsed = fxRate;
-          const userCurrency = data.currency; // currency the user selected
-
-          if (userCurrency === fromAcc.currency) {
-            amountFrom = data.amount;
-            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountTo = data.amount * fxRate;
-            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountTo = data.amount / fxRate;
-          } else if (userCurrency === toAcc.currency) {
-            amountTo = data.amount;
-            if (fromAcc.currency === "USD" && toAcc.currency === "MXN") amountFrom = data.amount / fxRate;
-            else if (fromAcc.currency === "MXN" && toAcc.currency === "USD") amountFrom = data.amount * fxRate;
-          }
-        }
-
-        // B.4: Auto-cierre de vencimiento si la cuenta destino tiene una deuda activa con due_day próximo (≤30 días)
-        const linkedDebt = debts.find(d => d.account_id === toAccountId && d.is_active);
-        let createdFrom = "manual";
-        let finalDescription = data.description || undefined;
-        if (linkedDebt && linkedDebt.due_day) {
-          const today = new Date();
-          const y = today.getFullYear();
-          const m = today.getMonth();
-          const dim = new Date(y, m + 1, 0).getDate();
-          const dueDate = new Date(y, m, Math.min(linkedDebt.due_day, dim));
-          dueDate.setHours(0, 0, 0, 0);
-          today.setHours(0, 0, 0, 0);
-          const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / 86400000);
-          if (daysDiff <= 30) {
-            createdFrom = "due_dates";
-            finalDescription = `Pago: ${linkedDebt.name}`;
-          }
-        }
-
-        await supabase.from("transfers").insert({
-          user_id: user.id,
-          from_account_id: data.account_id,
-          to_account_id: toAccountId,
-          amount_from: Math.round(amountFrom * 100) / 100,
-          currency_from: fromAcc.currency,
-          amount_to: Math.round(amountTo * 100) / 100,
-          currency_to: toAcc.currency,
-          fx_rate: fxRateUsed,
-          transfer_date: format(data.transaction_date, "yyyy-MM-dd"),
-          description: finalDescription,
-          created_from: createdFrom,
-        });
-
-        queryClient.invalidateQueries({ queryKey: ["transfers"] });
-        queryClient.invalidateQueries({ queryKey: ["accounts"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
-
-        form.reset();
-        setToAccountId("");
-        onOpenChange(false);
-      } finally {
-        setTransferSaving(false);
-      }
-      return;
-    }
-
-    // Income/expense flow
-    const account = accounts.find(a => a.id === data.account_id);
-    const crossCurrency = account && data.currency !== account.currency;
-
-    let finalAmount = data.amount;
-    let finalCurrency = data.currency;
-    let exchangeRate = 1;
-    let amountInBase: number | undefined;
-    let description = data.description || "";
-    let notes = "";
-
-    if (crossCurrency && fxRate > 0) {
-      if (data.currency === "USD" && account.currency === "MXN") {
-        finalAmount = data.amount * fxRate;
-        amountInBase = finalAmount;
-        exchangeRate = fxRate;
-      } else if (data.currency === "MXN" && account.currency === "USD") {
-        finalAmount = data.amount / fxRate;
-        amountInBase = data.amount;
-        exchangeRate = 1 / fxRate;
-      }
-      finalCurrency = account.currency;
-      const eqMxn = amountInBase ?? finalAmount;
-      notes = `Originalmente $${data.amount.toFixed(2)} ${data.currency} · TC: $${fxRate.toFixed(2)} · Equivalente: $${eqMxn.toFixed(2)} MXN`;
-    } else if (!crossCurrency && account && account.currency !== "MXN") {
-      // Same currency but not MXN → calculate MXN equivalent for budgets/reports
-      const rateForCurrency = fxRates[account.currency] || fxRate;
-      if (rateForCurrency > 0) {
-        amountInBase = data.amount * rateForCurrency;
-        exchangeRate = rateForCurrency;
-        notes = `$${data.amount.toFixed(2)} ${account.currency} · TC: $${rateForCurrency.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`;
-      }
-    }
-
-    await createTransaction.mutateAsync({
-      account_id: data.account_id,
-      amount: Math.round(finalAmount * 100) / 100,
-      currency: finalCurrency,
-      exchange_rate: exchangeRate,
-      amount_in_base: amountInBase,
-      notes: notes || undefined,
-      category_id: data.category_id && data.category_id.length > 0 ? data.category_id : undefined,
-      description,
-      type: activeTab as "income" | "expense",
-      transaction_date: format(data.transaction_date, "yyyy-MM-dd"),
-    });
-
-    if (activeTab === "expense") {
-      setTimeout(() => checkAlerts(), 1000);
-    }
-
-    if (makeRecurring && data.account_id) {
-      const nextDate = getNextExecutionDate(data.transaction_date, recurringFrequency);
-      await createRecurring.mutateAsync({
-        name: data.description || "Pago recurrente",
-        description: data.description || null,
-        type: activeTab as "income" | "expense",
-        account_id: data.account_id,
-        category_id: data.category_id || undefined,
+    const ok = await submitTransaction(
+      {
+        type: activeTab === "transfer" ? "expense" : (activeTab as "income" | "expense"),
         amount: data.amount,
         currency: data.currency,
-        frequency: recurringFrequency,
-        start_date: format(data.transaction_date, "yyyy-MM-dd"),
-        next_execution_date: format(nextDate, "yyyy-MM-dd"),
-        payments_made: 1,
-        requires_manual_action: recurringManual,
-      });
-      queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
-    }
-
+        account_id: data.account_id,
+        category_id: data.category_id,
+        description: data.description,
+        transaction_date: data.transaction_date,
+      },
+      {
+        activeTab,
+        toAccountId,
+        debtTargetId,
+        makeRecurring,
+        recurringFrequency,
+        recurringManual,
+      }
+    );
+    if (!ok) return;
     form.reset();
     setMakeRecurring(false);
     setRecurringManual(false);
@@ -463,7 +266,7 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
     onOpenChange(false);
   };
 
-  const isSaving = createTransaction.isPending || transferSaving;
+  const isSaving = isSubmitting;
 
   // Account combobox renderer (reused for from/to)
   const renderAccountCombo = (

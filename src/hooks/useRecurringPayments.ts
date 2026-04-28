@@ -110,6 +110,7 @@ export function useRecurringPayments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments", user?.id] });
       toast({ title: "Pago recurrente creado", description: "Se ha programado correctamente." });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -125,6 +126,7 @@ export function useRecurringPayments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments", user?.id] });
       toast({ title: "Pago recurrente actualizado" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -140,6 +142,7 @@ export function useRecurringPayments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments", user?.id] });
       toast({ title: "Pago recurrente cancelado" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -155,6 +158,7 @@ export function useRecurringPayments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments", user?.id] });
       toast({ title: "Pago recurrente eliminado" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),

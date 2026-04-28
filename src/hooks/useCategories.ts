@@ -60,6 +60,36 @@ export function useCategories() {
     },
   });
 
+  const updateCategory = useMutation({
+    mutationFn: async ({
+      id, name, type, bucket,
+    }: { id: string; name: string; type: string; bucket: string }) => {
+      const { error } = await supabase
+        .from("categories")
+        .update({ name, type, bucket } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["categories", user?.id] });
+    },
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["categories", user?.id] });
+    },
+  });
+
   // Find category by keyword
   const findCategoryByKeyword = (text: string): Category | undefined => {
     const lowerText = text.toLowerCase();
@@ -76,6 +106,8 @@ export function useCategories() {
     transferCategories,
     isLoading: categoriesQuery.isLoading,
     createCategory,
+    updateCategory,
+    deleteCategory,
     findCategoryByKeyword,
   };
 }

@@ -226,6 +226,37 @@ export function useDebts(options?: { enabled?: boolean }) {
     },
   });
 
+  // Insert a debt row tied to an existing account (account already created elsewhere)
+  const createDebtForAccount = useMutation({
+    mutationFn: async (data: {
+      account_id: string;
+      name: string;
+      type: Debt['type'];
+      creditor?: string | null;
+      original_amount: number;
+      current_balance: number;
+      interest_rate?: number;
+      minimum_payment?: number;
+      monthly_commitment?: number;
+      due_day?: number | null;
+      debt_category?: string;
+      currency: string;
+    }) => {
+      const { error } = await supabase.from('debts').insert({
+        ...data,
+        user_id: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const addPayment = useMutation({
     mutationFn: async (data: { debt_id: string; amount: number; payment_date?: string; notes?: string; payment_type?: string; interest_amount?: number; transaction_id?: string }) => {
       const { error } = await supabase
@@ -265,6 +296,7 @@ export function useDebts(options?: { enabled?: boolean }) {
     snowballOrder,
     avalancheOrder,
     createDebt,
+    createDebtForAccount,
     updateDebt,
     deleteDebt,
     addPayment,

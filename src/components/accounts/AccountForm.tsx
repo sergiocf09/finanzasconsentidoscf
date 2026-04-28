@@ -7,10 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAccounts, isLiability } from "@/hooks/useAccounts";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { isLiability } from "@/hooks/useAccounts";
+import { useAccountForm } from "@/hooks/useAccountForm";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre"),
@@ -43,9 +41,7 @@ interface AccountFormProps {
 }
 
 export function AccountForm({ open, onOpenChange }: AccountFormProps) {
-  const { createAccount } = useAccounts();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { submit, isPending } = useAccountForm();
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
@@ -62,54 +58,13 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
   const isLiab = isLiability(selectedType);
 
   const onSubmit = async (data: AccountFormValues) => {
-    if (!user) return;
-
-    const balance = isLiability(data.type) && data.initial_balance > 0
-      ? -Math.abs(data.initial_balance)
-      : data.initial_balance;
-
-    const { data: newAccount, error } = await supabase
-      .from("accounts")
-      .insert({
-        user_id: user.id,
-        name: data.name,
-        type: data.type,
-        currency: data.currency,
-        initial_balance: balance,
-        current_balance: balance,
-      })
-      .select()
-      .single();
-
-    if (error || !newAccount) return;
-
-    if (isLiability(data.type)) {
-      const debtTypeMap: Record<string, string> = {
-        credit_card: "credit_card", mortgage: "mortgage",
-        auto_loan: "car_loan", personal_loan: "personal_loan",
-        caucion_bursatil: "other", payable: "other",
-      };
-      await supabase.from("debts").insert({
-        user_id: user.id,
-        account_id: newAccount.id,
-        name: data.name,
-        type: debtTypeMap[data.type] || "other",
-        creditor: data.creditor || null,
-        original_amount: Math.abs(data.initial_balance) || 0,
-        current_balance: Math.abs(data.initial_balance) || 0,
-        interest_rate: data.interest_rate || 0,
-        minimum_payment: data.minimum_payment || 0,
-        monthly_commitment: data.monthly_commitment || 0,
-        due_day: data.due_day || null,
-        debt_category: data.debt_category || "current",
-        currency: data.currency,
-      });
+    try {
+      await submit(data);
+      form.reset();
+      onOpenChange(false);
+    } catch {
+      // toast already shown inside hook
     }
-
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-    queryClient.invalidateQueries({ queryKey: ["debts"] });
-    form.reset();
-    onOpenChange(false);
   };
 
   return (
@@ -246,8 +201,8 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
               onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={createAccount.isPending}>
-              {createAccount.isPending
+            <Button type="submit" className="flex-1" disabled={isPending}>
+              {isPending
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
                 : "Crear cuenta"
               }

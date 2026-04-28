@@ -18,16 +18,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
-import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
-import { useDebts } from "@/hooks/useDebts";
-import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
+import { FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { useVoiceSubmit } from "@/hooks/useVoiceSubmit";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════
@@ -35,15 +32,11 @@ import { format } from "date-fns";
 // ═══════════════════════════════════════════════════════════
 export function VoiceButton() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
-  const { checkAlerts } = useBudgetAlerts();
-  const { debts } = useDebts({ enabled: true });
-  const { createPayment: createRecurring } = useRecurringPayments();
   const { rates: fxRates } = useExchangeRate();
+  const { submitVoiceTransaction, logVoiceTranscript, isPending: isSaving } = useVoiceSubmit();
   const [isOpen, setIsOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [committedText, setCommittedText] = useState("");
   const [cleanTranscript, setCleanTranscript] = useState("");
   const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);
@@ -112,12 +105,11 @@ export function VoiceButton() {
 
       // Log
       if (user) {
-        supabase.from("voice_logs").insert([{
-          user_id: user.id,
+        logVoiceTranscript({
           transcript_raw: rawText,
-          parsed_json: { ...result, transcript_clean: cleaned } as any,
+          parsed_json: { ...result, transcript_clean: cleaned },
           confidence: result.amount ? (result.accountScore > 0.7 ? 85 : 60) : 30,
-        }]).then(() => {});
+        }).catch(() => {});
       }
 
       if (result.warning) toast.warning(result.warning);
@@ -188,149 +180,26 @@ export function VoiceButton() {
 
   const handleConfirm = async () => {
     if (!user || !canConfirm()) return;
-    setIsSaving(true);
     try {
-      const amount = parseFloat(editAmount);
-
-      if (editType === "transfer") {
-        const from = accounts.find(a => a.id === editAccountId)!;
-        const to = accounts.find(a => a.id === editToAccountId)!;
-        const usdRate = fxRates["USD"] || 1;
-        const userCurrency = editCurrency;
-
-        let amountFrom = amount;
-        let amountTo = amount;
-        let fxRateUsed: number | null = null;
-
-        if (userCurrency === from.currency && from.currency !== to.currency) {
-          fxRateUsed = usdRate;
-          if (from.currency === "USD" && to.currency === "MXN") amountTo = amount * usdRate;
-          else if (from.currency === "MXN" && to.currency === "USD") amountTo = amount / usdRate;
-          amountFrom = amount;
-        } else if (userCurrency !== from.currency && userCurrency === to.currency) {
-          fxRateUsed = usdRate;
-          amountTo = amount;
-          if (from.currency === "USD" && to.currency === "MXN") amountFrom = amount / usdRate;
-          else if (from.currency === "MXN" && to.currency === "USD") amountFrom = amount * usdRate;
-        }
-
-        // B.5: Auto-cierre de vencimiento si la cuenta destino tiene una deuda activa con due_day próximo (≤30 días)
-        const linkedDebt = debts.find(d => d.account_id === editToAccountId && d.is_active);
-        let createdFrom = "voice";
-        let finalDescription = editDescription || cleanTranscript || committedText;
-        if (linkedDebt && linkedDebt.due_day) {
-          const today = new Date();
-          const y = today.getFullYear();
-          const m = today.getMonth();
-          const dim = new Date(y, m + 1, 0).getDate();
-          const dueDate = new Date(y, m, Math.min(linkedDebt.due_day, dim));
-          dueDate.setHours(0, 0, 0, 0);
-          today.setHours(0, 0, 0, 0);
-          const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / 86400000);
-          if (daysDiff <= 30) {
-            createdFrom = "due_dates";
-            finalDescription = `Pago: ${linkedDebt.name}`;
-          }
-        }
-
-        await supabase.from("transfers").insert({
-          user_id: user.id,
-          from_account_id: editAccountId,
-          to_account_id: editToAccountId,
-          amount_from: Math.round(amountFrom * 100) / 100,
-          currency_from: from.currency,
-          amount_to: Math.round(amountTo * 100) / 100,
-          currency_to: to.currency,
-          fx_rate: fxRateUsed,
-          transfer_date: editDate,
-          description: finalDescription,
-          created_from: createdFrom,
-        });
-        queryClient.invalidateQueries({ queryKey: ["transfers"] });
-      } else {
-        const acc = accounts.find(a => a.id === editAccountId)!;
-        let finalAmount = amount;
-        let amountInBase = amount;
-        let exchangeRate = 1;
-        let notes: string | null = null;
-
-        const usdRate = fxRates["USD"] || 0;
-        if (editCurrency !== acc.currency && usdRate > 0) {
-          if (editCurrency === "MXN" && acc.currency === "USD") {
-            finalAmount = amount / usdRate;
-            amountInBase = amount;
-            exchangeRate = 1 / usdRate;
-            notes = `Registrado: $${amount.toFixed(2)} MXN · TC: $${usdRate.toFixed(2)} · En cuenta: $${finalAmount.toFixed(2)} USD`;
-          } else if (editCurrency === "USD" && acc.currency === "MXN") {
-            finalAmount = amount * usdRate;
-            amountInBase = finalAmount;
-            exchangeRate = usdRate;
-            notes = `Registrado: $${amount.toFixed(2)} USD · TC: $${usdRate.toFixed(2)} · Equivalente: $${finalAmount.toFixed(2)} MXN`;
-          }
-        } else if (editCurrency === acc.currency && acc.currency !== "MXN") {
-          // Same currency but not MXN → calculate MXN equivalent
-          const rateForCurrency = fxRates[acc.currency] || 0;
-          if (rateForCurrency > 0) {
-            amountInBase = amount * rateForCurrency;
-            exchangeRate = rateForCurrency;
-            notes = `$${amount.toFixed(2)} ${acc.currency} · TC: $${rateForCurrency.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`;
-          }
-        }
-
-        await supabase.from("transactions").insert({
-          user_id: user.id,
-          account_id: editAccountId,
-          category_id: editCategoryId || null,
-          type: editType,
-          amount: finalAmount,
-          currency: acc.currency,
-          exchange_rate: exchangeRate,
-          amount_in_base: amountInBase,
-          notes,
-          description: editDescription || cleanTranscript || committedText,
-          transaction_date: editDate,
-          voice_transcript: committedText,
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      // Check budget alerts after expense
-      if (editType === "expense") {
-        setTimeout(() => checkAlerts(), 1000);
-      }
-
-      // Create recurring payment if switch is on
-      if (makeRecurring && editType !== "transfer" && editAccountId) {
-        const acc = accounts.find(a => a.id === editAccountId)!;
-        const txDate = new Date(editDate + "T12:00:00");
-        const nextDate = getNextExecutionDate(txDate, recurringFrequency);
-        await createRecurring.mutateAsync({
-          name: editDescription || cleanTranscript || committedText || "Pago recurrente",
-          description: editDescription || cleanTranscript || committedText || null,
-          type: editType,
-          account_id: editAccountId,
-          category_id: editCategoryId || undefined,
-          amount: parseFloat(editAmount),
-          currency: acc.currency,
-          frequency: recurringFrequency,
-          start_date: editDate,
-          next_execution_date: format(nextDate, "yyyy-MM-dd"),
-          payments_made: 1,
-          requires_manual_action: requiresManualAction,
-        });
-        queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
-        queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
-      }
-
-      toast.success("Registrado correctamente");
+      await submitVoiceTransaction({
+        editType,
+        editAmount,
+        editAccountId,
+        editToAccountId,
+        editCategoryId,
+        editDescription,
+        editDate,
+        editCurrency,
+        cleanTranscript,
+        committedText,
+        makeRecurring,
+        recurringFrequency,
+        requiresManualAction,
+      });
       handleReset();
       setIsOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Error al guardar");
-    } finally {
-      setIsSaving(false);
+    } catch {
+      // toast already shown inside hook
     }
   };
 

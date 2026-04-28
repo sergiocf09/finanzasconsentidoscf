@@ -18,16 +18,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
-import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
-import { useDebts } from "@/hooks/useDebts";
-import { useRecurringPayments, getNextExecutionDate, FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
+import { FREQUENCY_LABELS } from "@/hooks/useRecurringPayments";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
+import { useVoiceSubmit } from "@/hooks/useVoiceSubmit";
 import { format } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════

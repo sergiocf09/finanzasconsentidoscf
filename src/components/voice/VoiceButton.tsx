@@ -105,12 +105,11 @@ export function VoiceButton() {
 
       // Log
       if (user) {
-        supabase.from("voice_logs").insert([{
-          user_id: user.id,
+        logVoiceTranscript({
           transcript_raw: rawText,
-          parsed_json: { ...result, transcript_clean: cleaned } as any,
+          parsed_json: { ...result, transcript_clean: cleaned },
           confidence: result.amount ? (result.accountScore > 0.7 ? 85 : 60) : 30,
-        }]).then(() => {});
+        }).catch(() => {});
       }
 
       if (result.warning) toast.warning(result.warning);

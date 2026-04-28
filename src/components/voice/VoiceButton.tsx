@@ -32,15 +32,12 @@ import { format } from "date-fns";
 // ═══════════════════════════════════════════════════════════
 export function VoiceButton() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
-  const { checkAlerts } = useBudgetAlerts();
-  const { debts } = useDebts({ enabled: true });
-  const { createPayment: createRecurring } = useRecurringPayments();
   const { rates: fxRates } = useExchangeRate();
+  const { submitVoiceTransaction, logVoiceTranscript, isPending: isSaving } = useVoiceSubmit();
   const [isOpen, setIsOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [committedText, setCommittedText] = useState("");
   const [committedText, setCommittedText] = useState("");
   const [cleanTranscript, setCleanTranscript] = useState("");
   const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);

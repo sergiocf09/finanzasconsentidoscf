@@ -41,9 +41,7 @@ interface AccountFormProps {
 }
 
 export function AccountForm({ open, onOpenChange }: AccountFormProps) {
-  const { createAccount } = useAccounts();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { submit, isPending } = useAccountForm();
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
@@ -60,54 +58,13 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
   const isLiab = isLiability(selectedType);
 
   const onSubmit = async (data: AccountFormValues) => {
-    if (!user) return;
-
-    const balance = isLiability(data.type) && data.initial_balance > 0
-      ? -Math.abs(data.initial_balance)
-      : data.initial_balance;
-
-    const { data: newAccount, error } = await supabase
-      .from("accounts")
-      .insert({
-        user_id: user.id,
-        name: data.name,
-        type: data.type,
-        currency: data.currency,
-        initial_balance: balance,
-        current_balance: balance,
-      })
-      .select()
-      .single();
-
-    if (error || !newAccount) return;
-
-    if (isLiability(data.type)) {
-      const debtTypeMap: Record<string, string> = {
-        credit_card: "credit_card", mortgage: "mortgage",
-        auto_loan: "car_loan", personal_loan: "personal_loan",
-        caucion_bursatil: "other", payable: "other",
-      };
-      await supabase.from("debts").insert({
-        user_id: user.id,
-        account_id: newAccount.id,
-        name: data.name,
-        type: debtTypeMap[data.type] || "other",
-        creditor: data.creditor || null,
-        original_amount: Math.abs(data.initial_balance) || 0,
-        current_balance: Math.abs(data.initial_balance) || 0,
-        interest_rate: data.interest_rate || 0,
-        minimum_payment: data.minimum_payment || 0,
-        monthly_commitment: data.monthly_commitment || 0,
-        due_day: data.due_day || null,
-        debt_category: data.debt_category || "current",
-        currency: data.currency,
-      });
+    try {
+      await submit(data);
+      form.reset();
+      onOpenChange(false);
+    } catch {
+      // toast already shown inside hook
     }
-
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-    queryClient.invalidateQueries({ queryKey: ["debts"] });
-    form.reset();
-    onOpenChange(false);
   };
 
   return (

@@ -59,6 +59,7 @@ export function useNonFinancialAssets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["non_financial_assets"] });
+      queryClient.invalidateQueries({ queryKey: ["non_financial_assets", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
     },
   });
@@ -74,6 +75,7 @@ export function useNonFinancialAssets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["non_financial_assets"] });
+      queryClient.invalidateQueries({ queryKey: ["non_financial_assets", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
     },
   });
@@ -89,6 +91,7 @@ export function useNonFinancialAssets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["non_financial_assets"] });
+      queryClient.invalidateQueries({ queryKey: ["non_financial_assets", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
     },
   });
@@ -104,6 +107,7 @@ export function useNonFinancialAssets() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["non_financial_assets"] });
+      queryClient.invalidateQueries({ queryKey: ["non_financial_assets", user?.id] });
     },
   });
 

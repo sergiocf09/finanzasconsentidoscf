@@ -56,7 +56,7 @@ export function useAccountForm() {
         monthly_commitment: data.monthly_commitment || 0,
         due_day: data.due_day || null,
         debt_category: data.debt_category || "current",
-        currency: data.currency,
+        currency,
       });
     }
   };

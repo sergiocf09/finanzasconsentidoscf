@@ -227,18 +227,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
         period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
         budget_type: budgetType,
       }));
-      if (inserts.length > 0) {
-        const { error } = await supabase.from("budgets").upsert(inserts, {
-          onConflict: "user_id,category_id,period,month,year",
-          ignoreDuplicates: false,
-        });
-        if (error) throw error;
-
-        // Recalculate spent from actual transactions
-        await supabase.rpc("recalculate_budget_spent", { p_year: year, p_month: month });
-      }
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+      await upsertBudgets(inserts, year, month);
       toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
       onOpenChange(false);
     } catch (err: any) {
@@ -264,22 +253,9 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     if (!user) return;
     setPeriodLoading(true);
     try {
-      const { count, error } = await supabase
-        .from("budgets")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("year", year)
-        .eq("month", month)
-        .eq("is_active", true);
-
-      if (error) {
-        console.error("Budget check error:", error);
-        await proceedAfterPeriod();
-        return;
-      }
-
-      if ((count ?? 0) > 0) {
-        setExistingCount(count ?? 0);
+      const count = await checkExistingBudgets(year, month);
+      if (count > 0) {
+        setExistingCount(count);
         setExistingBudgetDialog(true);
       } else {
         await proceedAfterPeriod();
@@ -295,13 +271,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const handleReplaceExisting = async () => {
     if (!user) return;
     setExistingBudgetDialog(false);
-    await supabase
-      .from("budgets")
-      .update({ is_active: false })
-      .eq("user_id", user.id)
-      .eq("year", year)
-      .eq("month", month)
-      .eq("is_active", true);
+    await deactivateOldBudgets(year, month);
     await proceedAfterPeriod();
   };
 

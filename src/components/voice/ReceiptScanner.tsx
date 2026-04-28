@@ -1,6 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { useExchangeRate } from "@/hooks/useExchangeRate";
-import { Camera, FileText, Loader2, Check, Trash2, X, ImagePlus, Images } from "lucide-react";
+import { useState, useRef } from "react";
+import { Camera, FileText, Loader2, Check, Trash2, X, Images } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,514 +9,75 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useCategories } from "@/hooks/useCategories";
-import { useAccounts } from "@/hooks/useAccounts";
 import { formatCurrency } from "@/lib/formatters";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query";
+import { useReceiptScanner, type ScannedTransaction } from "@/hooks/useReceiptScanner";
 
 const MAX_IMAGES = 5;
 
-const CATEGORY_HINT_MAP: Record<string, string[]> = {
-  restaurante: ["restaurante", "café", "comida"],
-  supermercado: ["alimentación", "super", "mercado"],
-  gasolina: ["transporte", "gasolina"],
-  farmacia: ["salud", "farmacia"],
-  transporte: ["transporte"],
-  entretenimiento: ["entretenimiento"],
-  ropa: ["ropa"],
-  servicios: ["servicios del hogar", "servicios"],
-  salud: ["salud"],
-  educacion: ["educación"],
-  transferencia: ["transferencia"],
-  seguro: ["seguro", "seguros", "insurance"],
-};
-
-interface ScannedTransaction {
-  id: string;
-  amount: number;
-  currency: string;
-  date: string;
-  merchant: string;
-  type: "expense" | "income";
-  category_hint: string;
-  description: string;
-  selected: boolean;
-  resolvedCategoryId: string;
-  resolvedAccountId: string;
-}
-
 export function ReceiptScanner() {
-  const { user } = useAuth();
-  const { categories } = useCategories();
-  const { accounts } = useAccounts();
-  const { rates: fxRates } = useExchangeRate();
-  const queryClient = useQueryClient();
+  const {
+    scanMode,
+    setScanMode,
+    scannedTransactions,
+    setScannedTransactions,
+    singleData,
+    setSingleData,
+    mode,
+    isProcessing,
+    errorMessage,
+    scanProgress,
+    processImages,
+    saveSingleTransaction,
+    saveStatementTransactions,
+    clearTransactions,
+    expenseCategories,
+    incomeCategories,
+    activeAccounts,
+  } = useReceiptScanner();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const [selectOpen, setSelectOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
-  const [mode, setMode] = useState<"scanning" | "single" | "statement" | "error">("scanning");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [scanMode, setScanMode] = useState<"single" | "statement">("single");
-  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 });
-
-  const [singleData, setSingleData] = useState({
-    amount: "",
-    currency: "MXN",
-    date: format(new Date(), "yyyy-MM-dd"),
-    merchant: "",
-    description: "",
-    categoryId: "",
-    accountId: "",
-    type: "expense" as "expense" | "income",
-  });
-
-  const [transactions, setTransactions] = useState<ScannedTransaction[]>([]);
-
-  const activeAccounts = accounts.filter((a) => a.is_active);
-  const expenseCategories = categories.filter((c) => c.type === "expense");
-  const incomeCategories = categories.filter((c) => c.type === "income");
-
-  const resolveCategoryId = useCallback(
-    (hint: string, type: "expense" | "income"): string => {
-      const pool = type === "expense" ? expenseCategories : incomeCategories;
-      const keywords = CATEGORY_HINT_MAP[hint] || [hint];
-      for (const kw of keywords) {
-        const match = pool.find((c) =>
-          c.name.toLowerCase().includes(kw.toLowerCase())
-        );
-        if (match) return match.id;
-      }
-      return pool[0]?.id || "";
-    },
-    [expenseCategories, incomeCategories]
-  );
-
-  const imageToBase64 = (
-    file: File,
-    highRes: boolean = false
-  ): Promise<{ base64: string; mediaType: string }> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-
-        const MAX = highRes ? 1600 : 800;
-        const MAX_BASE64 = highRes ? 800_000 : 300_000;
-        const QUALITY_FIRST = highRes ? 0.82 : 0.5;
-        const QUALITY_FALLBACK = highRes ? 0.65 : 0.3;
-
-        let w = img.width;
-        let h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, w, h);
-
-        let dataUrl = canvas.toDataURL("image/jpeg", QUALITY_FIRST);
-        let base64 = dataUrl.split(",")[1];
-        if (base64.length > MAX_BASE64) {
-          dataUrl = canvas.toDataURL("image/jpeg", QUALITY_FALLBACK);
-          base64 = dataUrl.split(",")[1];
-        }
-
-        console.log(
-          `[ReceiptScanner] Image compressed: ${Math.round(base64.length / 1024)}KB` +
-          ` (${w}x${h}, highRes=${highRes})`
-        );
-        resolve({ base64, mediaType: "image/jpeg" });
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error("No se pudo cargar la imagen"));
-      };
-      img.src = objectUrl;
-    });
-  };
-
-  const processImages = async (files: File[]) => {
-    setIsLoading(true);
-    setMode("scanning");
-    setResultOpen(true);
-    setScanProgress({ current: 0, total: files.length });
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
-
-      if (scanMode === "single" && files.length === 1) {
-        // Single receipt, single image — legacy behavior
-        setScanProgress({ current: 1, total: 1 });
-        const { base64, mediaType } = await imageToBase64(files[0]);
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ imageBase64: base64, mediaType, mode: "single" }),
-          }
-        );
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error || "Error al procesar la imagen");
-        }
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-
-        setSingleData({
-          amount: result.amount ? String(normalizeAmount(result.amount)) : "",
-          currency: result.currency || "MXN",
-          date: result.date || format(new Date(), "yyyy-MM-dd"),
-          merchant: result.merchant || "",
-          description: result.description || result.merchant || "",
-          categoryId: result.category_hint
-            ? resolveCategoryId(result.category_hint, "expense")
-            : "",
-          accountId: "",
-          type: "expense",
-        });
-        setMode("single");
-      } else if (scanMode === "single" && files.length > 1) {
-        // Multiple receipts — each is independent, send all images in one request
-        setScanProgress({ current: 1, total: 1 });
-        const compressedImages = [];
-        for (let i = 0; i < files.length; i++) {
-          setScanProgress({ current: i + 1, total: files.length });
-          compressedImages.push(await imageToBase64(files[i]));
-        }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ images: compressedImages, mode: "single" }),
-          }
-        );
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error || "Error al procesar las imágenes");
-        }
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-
-        // Result should be statement-like with transactions array
-        const txs = mapTransactions(result.transactions || []);
-        setTransactions(txs);
-        setMode("statement");
-      } else {
-        // Statement mode — all images are pages of the same document
-        const compressedImages = [];
-        for (let i = 0; i < files.length; i++) {
-          setScanProgress({ current: i + 1, total: files.length });
-          compressedImages.push(await imageToBase64(files[i], true));
-        }
-
-        const body = files.length === 1
-          ? { imageBase64: compressedImages[0].base64, mediaType: compressedImages[0].mediaType, mode: "statement" }
-          : { images: compressedImages, mode: "statement" };
-
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-receipt`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify(body),
-          }
-        );
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error || "Error al procesar las imágenes");
-        }
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-
-        const txs = mapTransactions(result.transactions || []);
-        setTransactions(txs);
-        setMode("statement");
-      }
-    } catch (err: any) {
-      console.error("Receipt scan failed:", err);
-      setMode("error");
-      setErrorMessage(err.message || "No se pudo leer la imagen. Intenta con mejor iluminación.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Normaliza un monto que puede venir como número o string con
-  // separadores ambiguos. Devuelve entero redondeado (sin decimales).
-  const normalizeAmount = (raw: number | string | null | undefined): number => {
-    if (raw === null || raw === undefined) return 0;
-    if (typeof raw === "number") return Math.round(raw);
-    const str = String(raw).trim();
-    const lastDotIdx = str.lastIndexOf(".");
-    const lastCommaIdx = str.lastIndexOf(",");
-    const lastSepIdx = Math.max(lastDotIdx, lastCommaIdx);
-    let normalized = str;
-    if (lastSepIdx > 0 && lastSepIdx === str.length - 3) {
-      const decimalSep = str[lastSepIdx];
-      const thousandSep = decimalSep === "." ? "," : ".";
-      normalized = str
-        .replace(new RegExp("\\" + thousandSep, "g"), "")
-        .replace(decimalSep, ".");
-    } else {
-      normalized = str.replace(/[.,]/g, "");
-    }
-    normalized = normalized.replace(/[$\s]/g, "");
-    const parsed = parseFloat(normalized);
-    return isNaN(parsed) ? 0 : Math.round(parsed);
-  };
-
-  const mapTransactions = (rawTxs: any[]): ScannedTransaction[] => {
-    return rawTxs.map((t: any, i: number) => ({
-      id: `scan-${i}`,
-      amount: normalizeAmount(t.amount),
-      currency: t.currency || "MXN",
-      date: t.date || format(new Date(), "yyyy-MM-dd"),
-      merchant: t.merchant || "",
-      type: t.type || "expense",
-      category_hint: t.category_hint || "otro",
-      description: t.description || t.merchant || "",
-      selected: true,
-      resolvedCategoryId: resolveCategoryId(
-        t.category_hint || "otro",
-        t.type || "expense"
-      ),
-      resolvedAccountId: "",
-    }));
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
     const files = Array.from(fileList).slice(0, MAX_IMAGES);
+    setResultOpen(true);
     processImages(files);
     e.target.value = "";
   };
 
   const handleTakePhoto = () => {
     setSelectOpen(false);
-    setTimeout(() => {
-      fileInputRef.current?.click();
-    }, 300);
+    setTimeout(() => fileInputRef.current?.click(), 300);
   };
 
   const handleGalleryClick = () => {
     setSelectOpen(false);
-    setTimeout(() => {
-      galleryInputRef.current?.click();
-    }, 300);
+    setTimeout(() => galleryInputRef.current?.click(), 300);
   };
 
-  const calcAmountInBase = useCallback((
-    amount: number,
-    transactionCurrency: string,
-    accountId: string
-  ): { amountInBase: number; exchangeRate: number } => {
-    const account = accounts.find(a => a.id === accountId);
-    const accountCurrency = account?.currency || "MXN";
-    const usdRate = fxRates["USD"] || 1;
-
-    if (transactionCurrency === "USD" && accountCurrency === "MXN") {
-      return { amountInBase: amount * usdRate, exchangeRate: usdRate };
-    }
-    if (transactionCurrency === "MXN" && accountCurrency === "USD") {
-      return { amountInBase: amount, exchangeRate: 1 / usdRate };
-    }
-    if (transactionCurrency === "USD" && accountCurrency === "USD") {
-      return { amountInBase: amount * usdRate, exchangeRate: usdRate };
-    }
-    return { amountInBase: amount, exchangeRate: 1 };
-  }, [accounts, fxRates]);
-
   const handleSingleConfirm = async () => {
-    if (!singleData.amount || !singleData.accountId) {
-      toast.error("Completa el monto y la cuenta");
-      return;
-    }
-    try {
-      const amount = parseFloat(singleData.amount);
-      const { amountInBase, exchangeRate } = calcAmountInBase(
-        amount,
-        singleData.currency,
-        singleData.accountId
-      );
-
-      const { error } = await supabase.from("transactions").insert({
-        user_id: user!.id,
-        account_id: singleData.accountId,
-        category_id: singleData.categoryId || null,
-        type: singleData.type,
-        amount,
-        amount_in_base: amountInBase,
-        currency: singleData.currency,
-        exchange_rate: exchangeRate,
-        description: singleData.description || singleData.merchant,
-        transaction_date: singleData.date,
-        notes: exchangeRate !== 1
-          ? `Escaneo de recibo · TC: $${exchangeRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`
-          : "Registrado mediante escaneo de recibo",
-      });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      toast.success("Movimiento registrado");
+    const ok = await saveSingleTransaction();
+    if (ok) {
       setResultOpen(false);
-      reset();
-    } catch {
-      toast.error("Error al guardar");
+      clearTransactions();
     }
   };
 
   const handleStatementConfirm = async () => {
-    const selected = transactions.filter((t) => t.selected && t.amount > 0);
-    if (selected.length === 0) {
-      toast.error("Selecciona al menos un movimiento");
-      return;
+    const ok = await saveStatementTransactions();
+    if (ok) {
+      setResultOpen(false);
+      clearTransactions();
     }
-    const missingAccount = selected.some((t) => !t.resolvedAccountId);
-    if (missingAccount) {
-      toast.error("Selecciona la cuenta para registrar los movimientos");
-      return;
-    }
-
-    const inserts = selected.map((t) => {
-      const { amountInBase, exchangeRate } = calcAmountInBase(
-        t.amount,
-        t.currency,
-        t.resolvedAccountId
-      );
-      return {
-        user_id: user!.id,
-        account_id: t.resolvedAccountId,
-        category_id: t.resolvedCategoryId || null,
-        type: t.type,
-        amount: t.amount,
-        amount_in_base: amountInBase,
-        currency: t.currency || "MXN",
-        exchange_rate: exchangeRate,
-        description: (t.description || t.merchant || "Sin descripción").substring(0, 255),
-        transaction_date: t.date || format(new Date(), "yyyy-MM-dd"),
-        notes: exchangeRate !== 1
-          ? `Escaneo de estado de cuenta · TC: $${exchangeRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`
-          : "Registrado mediante escaneo de imagen",
-      };
-    });
-
-    const BATCH_SIZE = 10;
-    let saved = 0;
-    let failed = 0;
-
-    for (let i = 0; i < inserts.length; i += BATCH_SIZE) {
-      const batch = inserts.slice(i, i + BATCH_SIZE);
-      try {
-        const { error } = await supabase.from("transactions").insert(batch);
-        if (error) {
-          console.error(`Batch ${i}-${i + BATCH_SIZE} failed:`, error.message);
-          for (const item of batch) {
-            try {
-              const { error: singleError } = await supabase
-                .from("transactions")
-                .insert([item]);
-              if (singleError) {
-                console.error("Single insert failed:", singleError.message, item);
-                failed++;
-              } else {
-                saved++;
-              }
-            } catch {
-              failed++;
-            }
-          }
-        } else {
-          saved += batch.length;
-        }
-      } catch {
-        failed += batch.length;
-      }
-    }
-
-    queryClient.invalidateQueries({ queryKey: ["transactions"] });
-    queryClient.invalidateQueries({ queryKey: ["transactions_paginated"] });
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-    queryClient.invalidateQueries({ queryKey: ["budgets"] });
-    queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
-
-    // Determine the date range of saved transactions for user feedback
-    const dates = selected.map(t => t.date).filter(Boolean).sort();
-    const minDate = dates[0];
-    const maxDate = dates[dates.length - 1];
-    const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    let periodHint = "";
-    if (minDate) {
-      const m = parseInt(minDate.split("-")[1], 10) - 1;
-      const currentMonth = new Date().getMonth();
-      if (m !== currentMonth) {
-        periodHint = ` en ${monthNames[m]}`;
-      }
-    }
-
-    if (failed === 0) {
-      toast.success(
-        `${saved} movimiento${saved !== 1 ? "s" : ""} registrado${saved !== 1 ? "s" : ""}${periodHint}`,
-        { description: periodHint ? "Cambia el período en Movimientos para verlos." : undefined, duration: 5000 }
-      );
-    } else if (saved > 0) {
-      toast.warning(
-        `${saved} registrados, ${failed} no se pudieron guardar`
-      );
-    } else {
-      toast.error("No se pudo guardar ningún movimiento");
-    }
-
-    setResultOpen(false);
-    reset();
-  };
-
-  const reset = () => {
-    setMode("scanning");
-    setErrorMessage("");
-    setScanProgress({ current: 0, total: 0 });
-    setSingleData({
-      amount: "",
-      currency: "MXN",
-      date: format(new Date(), "yyyy-MM-dd"),
-      merchant: "",
-      description: "",
-      categoryId: "",
-      accountId: "",
-      type: "expense",
-    });
-    setTransactions([]);
   };
 
   const toggleTransaction = (id: string) => {
-    setTransactions((prev) =>
+    setScannedTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, selected: !t.selected } : t))
     );
   };
@@ -527,16 +87,16 @@ export function ReceiptScanner() {
     field: keyof ScannedTransaction,
     value: any
   ) => {
-    setTransactions((prev) =>
+    setScannedTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
     );
   };
 
   const removeTransaction = (id: string) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    setScannedTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const selectedCount = transactions.filter((t) => t.selected).length;
+  const selectedCount = scannedTransactions.filter((t) => t.selected).length;
 
   return (
     <>
@@ -642,9 +202,9 @@ export function ReceiptScanner() {
       <Dialog
         open={resultOpen}
         onOpenChange={(open) => {
-          if (!open && !isLoading) {
+          if (!open && !isProcessing) {
             setResultOpen(false);
-            reset();
+            clearTransactions();
           }
         }}
       >
@@ -705,7 +265,7 @@ export function ReceiptScanner() {
                     className="flex-1"
                     onClick={() => {
                       setResultOpen(false);
-                      reset();
+                      clearTransactions();
                     }}
                   >
                     Cancelar
@@ -714,7 +274,7 @@ export function ReceiptScanner() {
                     className="flex-1"
                     onClick={() => {
                       setResultOpen(false);
-                      reset();
+                      clearTransactions();
                       setTimeout(() => setSelectOpen(true), 300);
                     }}
                   >
@@ -727,14 +287,11 @@ export function ReceiptScanner() {
             {/* SINGLE RECEIPT */}
             {mode === "single" && (
               <div className="space-y-3">
-                {/* Type */}
                 <div className="flex gap-2">
                   {(["expense", "income"] as const).map((t) => (
                     <button
                       key={t}
-                      onClick={() =>
-                        setSingleData((d) => ({ ...d, type: t }))
-                      }
+                      onClick={() => setSingleData((d) => ({ ...d, type: t }))}
                       className={cn(
                         "flex-1 py-1.5 rounded-lg text-sm font-medium border-2 transition-all",
                         singleData.type === t
@@ -749,16 +306,10 @@ export function ReceiptScanner() {
                   ))}
                 </div>
 
-                {/* Amount */}
                 <div className="flex gap-2">
                   <select
                     value={singleData.currency}
-                    onChange={(e) =>
-                      setSingleData((d) => ({
-                        ...d,
-                        currency: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setSingleData((d) => ({ ...d, currency: e.target.value }))}
                     className="h-10 text-sm border border-input rounded-md px-2 bg-background"
                   >
                     <option>MXN</option>
@@ -768,67 +319,36 @@ export function ReceiptScanner() {
                     type="number"
                     placeholder="Monto"
                     value={singleData.amount}
-                    onChange={(e) =>
-                      setSingleData((d) => ({
-                        ...d,
-                        amount: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setSingleData((d) => ({ ...d, amount: e.target.value }))}
                   />
                 </div>
 
-                {/* Description */}
                 <Input
                   placeholder="Descripción"
                   value={singleData.description}
-                  onChange={(e) =>
-                    setSingleData((d) => ({
-                      ...d,
-                      description: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setSingleData((d) => ({ ...d, description: e.target.value }))}
                 />
 
-                {/* Date */}
                 <Input
                   type="date"
                   value={singleData.date}
-                  onChange={(e) =>
-                    setSingleData((d) => ({ ...d, date: e.target.value }))
-                  }
+                  onChange={(e) => setSingleData((d) => ({ ...d, date: e.target.value }))}
                 />
 
-                {/* Category */}
                 <select
                   value={singleData.categoryId}
-                  onChange={(e) =>
-                    setSingleData((d) => ({
-                      ...d,
-                      categoryId: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setSingleData((d) => ({ ...d, categoryId: e.target.value }))}
                   className="w-full h-10 text-sm border border-input rounded-md px-2 bg-background"
                 >
                   <option value="">Sin categoría</option>
-                  {(singleData.type === "expense"
-                    ? expenseCategories
-                    : incomeCategories
-                  ).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
+                  {(singleData.type === "expense" ? expenseCategories : incomeCategories).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
 
-                {/* Account */}
                 <select
                   value={singleData.accountId}
-                  onChange={(e) =>
-                    setSingleData((d) => ({
-                      ...d,
-                      accountId: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => setSingleData((d) => ({ ...d, accountId: e.target.value }))}
                   className="w-full h-10 text-sm border border-input rounded-md px-2 bg-background"
                 >
                   <option value="">Selecciona cuenta</option>
@@ -839,17 +359,14 @@ export function ReceiptScanner() {
                   ))}
                 </select>
 
-                {/* Buttons */}
                 <div className="flex gap-2 pt-2">
                   <Button
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
                       setResultOpen(false);
-                      reset();
-                      setTimeout(() => {
-                        setSelectOpen(true);
-                      }, 300);
+                      clearTransactions();
+                      setTimeout(() => setSelectOpen(true), 300);
                     }}
                   >
                     Volver a escanear
@@ -869,41 +386,32 @@ export function ReceiptScanner() {
                   Revisa y ajusta. Desmarca los que no quieras registrar.
                 </p>
 
-                {/* Global account */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    Cuenta:
-                  </span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Cuenta:</span>
                   <select
-                    value={transactions[0]?.resolvedAccountId || ""}
+                    value={scannedTransactions[0]?.resolvedAccountId || ""}
                     onChange={(e) => {
                       const accountId = e.target.value;
-                      setTransactions((prev) =>
-                        prev.map((t) => ({
-                          ...t,
-                          resolvedAccountId: accountId,
-                        }))
+                      setScannedTransactions((prev) =>
+                        prev.map((t) => ({ ...t, resolvedAccountId: accountId }))
                       );
                     }}
                     className="flex-1 h-8 text-sm border border-input rounded-md px-2 bg-background"
                   >
                     <option value="">Selecciona cuenta</option>
                     {activeAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
+                      <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
                 </div>
-                {!transactions[0]?.resolvedAccountId && (
+                {!scannedTransactions[0]?.resolvedAccountId && (
                   <p className="text-[11px] text-destructive -mt-1">
                     Selecciona la cuenta antes de confirmar.
                   </p>
                 )}
 
-                {/* Transactions list */}
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                  {transactions.map((tx) => (
+                  {scannedTransactions.map((tx) => (
                     <div
                       key={tx.id}
                       className={cn(
@@ -911,43 +419,26 @@ export function ReceiptScanner() {
                         !tx.selected && "opacity-40"
                       )}
                     >
-                      {/* Row 1 */}
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => toggleTransaction(tx.id)}
                           className={cn(
                             "h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
-                            tx.selected
-                              ? "border-primary bg-primary"
-                              : "border-border bg-background"
+                            tx.selected ? "border-primary bg-primary" : "border-border bg-background"
                           )}
                         >
-                          {tx.selected && (
-                            <Check className="h-3 w-3 text-primary-foreground" />
-                          )}
+                          {tx.selected && <Check className="h-3 w-3 text-primary-foreground" />}
                         </button>
                         <Input
                           className="h-7 text-xs flex-1"
                           value={tx.description}
-                          onChange={(e) =>
-                            updateTransaction(
-                              tx.id,
-                              "description",
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => updateTransaction(tx.id, "description", e.target.value)}
                         />
                         <Input
                           type="number"
                           className="h-7 text-xs w-20"
                           value={tx.amount}
-                          onChange={(e) =>
-                            updateTransaction(
-                              tx.id,
-                              "amount",
-                              Number(e.target.value)
-                            )
-                          }
+                          onChange={(e) => updateTransaction(tx.id, "amount", Number(e.target.value))}
                         />
                         <button
                           onClick={() => removeTransaction(tx.id)}
@@ -957,26 +448,17 @@ export function ReceiptScanner() {
                         </button>
                       </div>
 
-                      {/* Row 2 */}
                       {tx.selected && (
                         <div className="flex items-center gap-1.5 pl-6">
                           <Input
                             type="date"
                             className="h-6 text-[11px] flex-1"
                             value={tx.date}
-                            onChange={(e) =>
-                              updateTransaction(tx.id, "date", e.target.value)
-                            }
+                            onChange={(e) => updateTransaction(tx.id, "date", e.target.value)}
                           />
                           <select
                             value={tx.type}
-                            onChange={(e) =>
-                              updateTransaction(
-                                tx.id,
-                                "type",
-                                e.target.value as any
-                              )
-                            }
+                            onChange={(e) => updateTransaction(tx.id, "type", e.target.value as any)}
                             className="h-6 text-[11px] border border-input rounded px-1 bg-background"
                           >
                             <option value="expense">Gasto</option>
@@ -984,23 +466,12 @@ export function ReceiptScanner() {
                           </select>
                           <select
                             value={tx.resolvedCategoryId}
-                            onChange={(e) =>
-                              updateTransaction(
-                                tx.id,
-                                "resolvedCategoryId",
-                                e.target.value
-                              )
-                            }
+                            onChange={(e) => updateTransaction(tx.id, "resolvedCategoryId", e.target.value)}
                             className="h-6 text-[11px] border border-input rounded px-1 bg-background flex-1"
                           >
                             <option value="">—</option>
-                            {(tx.type === "expense"
-                              ? expenseCategories
-                              : incomeCategories
-                            ).map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
+                            {(tx.type === "expense" ? expenseCategories : incomeCategories).map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                           </select>
                         </div>
@@ -1009,17 +480,14 @@ export function ReceiptScanner() {
                   ))}
                 </div>
 
-                {/* Buttons */}
                 <div className="flex gap-2 pt-2">
                   <Button
                     variant="outline"
                     className="flex-1"
                     onClick={() => {
                       setResultOpen(false);
-                      reset();
-                      setTimeout(() => {
-                        setSelectOpen(true);
-                      }, 300);
+                      clearTransactions();
+                      setTimeout(() => setSelectOpen(true), 300);
                     }}
                   >
                     Volver a escanear

@@ -15,9 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -38,8 +36,7 @@ const bucketLabels: Record<string, string> = {
 
 export default function Categories() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { categories, isLoading } = useCategories();
+  const { categories, isLoading, createCategory, updateCategory, deleteCategory } = useCategories();
   const [activeBlock, setActiveBlock] = useState<BlockKey | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
@@ -90,20 +87,12 @@ export default function Categories() {
     if (!user || !name.trim()) return;
     try {
       if (editCat) {
-        const { error } = await supabase
-          .from("categories")
-          .update({ name: name.trim(), type, bucket })
-          .eq("id", editCat.id);
-        if (error) throw error;
+        await updateCategory.mutateAsync({ id: editCat.id, name: name.trim(), type, bucket });
         toast.success("Categoría actualizada");
       } else {
-        const { error } = await supabase
-          .from("categories")
-          .insert({ name: name.trim(), type, bucket, user_id: user.id, is_system: false });
-        if (error) throw error;
+        await createCategory.mutateAsync({ name: name.trim(), type: type as any, bucket } as any);
         toast.success("Categoría creada");
       }
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
       setFormOpen(false);
     } catch (err: any) {
       toast.error(err.message);
@@ -113,9 +102,7 @@ export default function Categories() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const { error } = await supabase.from("categories").delete().eq("id", deleteTarget.id);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await deleteCategory.mutateAsync(deleteTarget.id);
       toast.success("Categoría eliminada");
       setDeleteTarget(null);
     } catch (err: any) {

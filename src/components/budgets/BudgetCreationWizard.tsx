@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCategories, Category } from "@/hooks/useCategories";
+import { useBudgetWizard } from "@/hooks/useBudgetWizard";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -83,6 +84,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizardProps) {
   const { user } = useAuth();
   const { expenseCategories, incomeCategories } = useCategories();
+  const { fetchHistoricalSpend, upsertBudgets, deactivateOldBudgets, checkExistingBudgets } = useBudgetWizard();
   const queryClient = useQueryClient();
 
   const currentYear = new Date().getFullYear();
@@ -133,19 +135,8 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const fetchHistoricalData = async () => {
     if (!user) return;
     setLoadingHistory(true);
-    const end = endOfMonth(new Date());
-    const start = startOfMonth(subMonths(new Date(), historyMonths));
     const txType = budgetType === "income" ? "income" : "expense";
-    const { data: txs } = await supabase
-      .from("transactions")
-      .select("category_id, amount")
-      .eq("type", txType)
-      .gte("transaction_date", format(start, "yyyy-MM-dd"))
-      .lte("transaction_date", format(end, "yyyy-MM-dd"));
-    const catTotals: Record<string, number> = {};
-    (txs ?? []).forEach((tx) => {
-      if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount);
-    });
+    const catTotals = await fetchHistoricalSpend(historyMonths, txType);
     const budgets = activeCategories.map((c) => ({
       category_id: c.id, name: c.name, bucket: (c as any).bucket || "lifestyle",
       amount: Math.round((catTotals[c.id] || 0) / historyMonths),
@@ -181,15 +172,13 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     setLoadingHistory(true);
     const end = endOfMonth(new Date());
     const start = startOfMonth(subMonths(new Date(), 3));
-    const [{ data: txs }, { data: incomeTxs }] = await Promise.all([
-      supabase.from("transactions").select("category_id, amount").eq("type", "expense").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
+    const [catTotals, { data: incomeTxs }] = await Promise.all([
+      fetchHistoricalSpend(3, "expense"),
       supabase.from("transactions").select("amount").eq("type", "income").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
     ]);
     const totalIncome = (incomeTxs ?? []).reduce((s, t) => s + Number(t.amount), 0) / 3;
     setMonthlyIncome(Math.round(totalIncome));
-    const catTotals: Record<string, number> = {};
-    let totalExpense = 0;
-    (txs ?? []).forEach((tx) => { totalExpense += Number(tx.amount); if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount); });
+    const totalExpense = Object.values(catTotals).reduce((s, v) => s + v, 0);
     let stabilityTotal = 0, lifestyleTotal = 0, buildTotal = 0;
     const catMap = new Map(activeCategories.map((c) => [c.id, c]));
     Object.entries(catTotals).forEach(([catId, amount]) => {
@@ -238,18 +227,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
         period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
         budget_type: budgetType,
       }));
-      if (inserts.length > 0) {
-        const { error } = await supabase.from("budgets").upsert(inserts, {
-          onConflict: "user_id,category_id,period,month,year",
-          ignoreDuplicates: false,
-        });
-        if (error) throw error;
-
-        // Recalculate spent from actual transactions
-        await supabase.rpc("recalculate_budget_spent", { p_year: year, p_month: month });
-      }
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+      await upsertBudgets(inserts, year, month);
       toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
       onOpenChange(false);
     } catch (err: any) {
@@ -275,22 +253,9 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     if (!user) return;
     setPeriodLoading(true);
     try {
-      const { count, error } = await supabase
-        .from("budgets")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("year", year)
-        .eq("month", month)
-        .eq("is_active", true);
-
-      if (error) {
-        console.error("Budget check error:", error);
-        await proceedAfterPeriod();
-        return;
-      }
-
-      if ((count ?? 0) > 0) {
-        setExistingCount(count ?? 0);
+      const count = await checkExistingBudgets(year, month);
+      if (count > 0) {
+        setExistingCount(count);
         setExistingBudgetDialog(true);
       } else {
         await proceedAfterPeriod();
@@ -306,13 +271,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const handleReplaceExisting = async () => {
     if (!user) return;
     setExistingBudgetDialog(false);
-    await supabase
-      .from("budgets")
-      .update({ is_active: false })
-      .eq("user_id", user.id)
-      .eq("year", year)
-      .eq("month", month)
-      .eq("is_active", true);
+    await deactivateOldBudgets(year, month);
     await proceedAfterPeriod();
   };
 

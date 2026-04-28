@@ -201,8 +201,8 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
               onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={createAccount.isPending}>
-              {createAccount.isPending
+            <Button type="submit" className="flex-1" disabled={isPending}>
+              {isPending
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
                 : "Crear cuenta"
               }

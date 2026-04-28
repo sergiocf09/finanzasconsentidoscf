@@ -135,19 +135,8 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const fetchHistoricalData = async () => {
     if (!user) return;
     setLoadingHistory(true);
-    const end = endOfMonth(new Date());
-    const start = startOfMonth(subMonths(new Date(), historyMonths));
     const txType = budgetType === "income" ? "income" : "expense";
-    const { data: txs } = await supabase
-      .from("transactions")
-      .select("category_id, amount")
-      .eq("type", txType)
-      .gte("transaction_date", format(start, "yyyy-MM-dd"))
-      .lte("transaction_date", format(end, "yyyy-MM-dd"));
-    const catTotals: Record<string, number> = {};
-    (txs ?? []).forEach((tx) => {
-      if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount);
-    });
+    const catTotals = await fetchHistoricalSpend(historyMonths, txType);
     const budgets = activeCategories.map((c) => ({
       category_id: c.id, name: c.name, bucket: (c as any).bucket || "lifestyle",
       amount: Math.round((catTotals[c.id] || 0) / historyMonths),

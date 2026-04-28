@@ -2,10 +2,10 @@ import { useAccounts, isLiability } from "@/hooks/useAccounts";
 import { useDebts } from "@/hooks/useDebts";
 
 export interface AccountFormSubmitData {
-  name: string;
-  type: string;
-  currency: string;
-  initial_balance: number;
+  name?: string;
+  type?: string;
+  currency?: string;
+  initial_balance?: number;
   creditor?: string;
   interest_rate?: number;
   minimum_payment?: number;

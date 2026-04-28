@@ -172,15 +172,13 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
     setLoadingHistory(true);
     const end = endOfMonth(new Date());
     const start = startOfMonth(subMonths(new Date(), 3));
-    const [{ data: txs }, { data: incomeTxs }] = await Promise.all([
-      supabase.from("transactions").select("category_id, amount").eq("type", "expense").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
+    const [catTotals, { data: incomeTxs }] = await Promise.all([
+      fetchHistoricalSpend(3, "expense"),
       supabase.from("transactions").select("amount").eq("type", "income").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
     ]);
     const totalIncome = (incomeTxs ?? []).reduce((s, t) => s + Number(t.amount), 0) / 3;
     setMonthlyIncome(Math.round(totalIncome));
-    const catTotals: Record<string, number> = {};
-    let totalExpense = 0;
-    (txs ?? []).forEach((tx) => { totalExpense += Number(tx.amount); if (tx.category_id) catTotals[tx.category_id] = (catTotals[tx.category_id] || 0) + Number(tx.amount); });
+    const totalExpense = Object.values(catTotals).reduce((s, v) => s + v, 0);
     let stabilityTotal = 0, lifestyleTotal = 0, buildTotal = 0;
     const catMap = new Map(activeCategories.map((c) => [c.id, c]));
     Object.entries(catTotals).forEach(([catId, amount]) => {

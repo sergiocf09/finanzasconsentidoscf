@@ -86,20 +86,16 @@ export function TransactionForm({ open, onOpenChange, defaultType = "expense", v
 
   // Transfer state
   const [toAccountId, setToAccountId] = useState("");
-  const [transferSaving, setTransferSaving] = useState(false);
 
   // Opción A: deuda destino cuando se elige categoría "Créditos y Deudas" en un Gasto
   const [debtTargetId, setDebtTargetId] = useState("");
 
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { createTransaction } = useTransactions();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories, categories: allCategories } = useCategories();
-  const { checkAlerts } = useBudgetAlerts();
-  const { rate: fxRate, rates: fxRates } = useExchangeRate();
-  const { createPayment: createRecurring } = useRecurringPayments();
+  const { rate: fxRate } = useExchangeRate();
   const { debts } = useDebts({ enabled: open });
+  const { submitTransaction, isPending: isSubmitting, allLongTermDebts } = useTransactionSubmit();
 
   const activeAccounts = accounts.filter(a => a.is_active);
 

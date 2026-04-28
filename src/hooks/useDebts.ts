@@ -296,6 +296,7 @@ export function useDebts(options?: { enabled?: boolean }) {
     snowballOrder,
     avalancheOrder,
     createDebt,
+    createDebtForAccount,
     updateDebt,
     deleteDebt,
     addPayment,

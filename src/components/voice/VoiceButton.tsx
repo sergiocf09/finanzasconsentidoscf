@@ -38,7 +38,6 @@ export function VoiceButton() {
   const { submitVoiceTransaction, logVoiceTranscript, isPending: isSaving } = useVoiceSubmit();
   const [isOpen, setIsOpen] = useState(false);
   const [committedText, setCommittedText] = useState("");
-  const [committedText, setCommittedText] = useState("");
   const [cleanTranscript, setCleanTranscript] = useState("");
   const [parseResult, setParseResult] = useState<ParsedVoiceCommand | null>(null);
   const [isEditing, setIsEditing] = useState(false);

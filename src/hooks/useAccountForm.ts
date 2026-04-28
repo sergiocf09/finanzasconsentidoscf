@@ -28,25 +28,29 @@ export function useAccountForm() {
   const { createDebtForAccount } = useDebts({ enabled: false });
 
   const submit = async (data: AccountFormSubmitData) => {
-    const balance = isLiability(data.type) && data.initial_balance > 0
-      ? -Math.abs(data.initial_balance)
-      : data.initial_balance;
+    const type = (data.type ?? "bank") as string;
+    const initial = data.initial_balance ?? 0;
+    const currency = data.currency ?? "MXN";
+    const name = data.name ?? "";
+    const balance = isLiability(type) && initial > 0
+      ? -Math.abs(initial)
+      : initial;
 
     const newAccount = await createAccount.mutateAsync({
-      name: data.name,
-      type: data.type as any,
-      currency: data.currency,
+      name,
+      type: type as any,
+      currency,
       initial_balance: balance,
     });
 
-    if (isLiability(data.type) && newAccount) {
+    if (isLiability(type) && newAccount) {
       await createDebtForAccount.mutateAsync({
         account_id: newAccount.id,
-        name: data.name,
-        type: (debtTypeMap[data.type] || "other") as any,
+        name,
+        type: (debtTypeMap[type] || "other") as any,
         creditor: data.creditor || null,
-        original_amount: Math.abs(data.initial_balance) || 0,
-        current_balance: Math.abs(data.initial_balance) || 0,
+        original_amount: Math.abs(initial) || 0,
+        current_balance: Math.abs(initial) || 0,
         interest_rate: data.interest_rate || 0,
         minimum_payment: data.minimum_payment || 0,
         monthly_commitment: data.monthly_commitment || 0,

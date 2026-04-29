@@ -55,9 +55,30 @@ export function useReconciliations(accountId?: string) {
     },
   });
 
+  const createReconciliation = useMutation({
+    mutationFn: async (data: {
+      account_id: string;
+      user_id: string;
+      previous_balance: number;
+      new_balance: number;
+      delta: number;
+      note: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("account_reconciliations")
+        .insert(data);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reconciliations"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+  });
+
   return {
     reconciliations: query.data ?? [],
     isLoading: query.isLoading,
     deleteReconciliation,
+    createReconciliation,
   };
 }

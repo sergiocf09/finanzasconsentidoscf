@@ -43,10 +43,32 @@ export function useProfile() {
     queryClient.invalidateQueries({ queryKey: ["profile"] });
   };
 
+  const updateBaseCurrency = async (currency: string) => {
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ base_currency: currency })
+      .eq("id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+  };
+
+  const dismissOnboarding = async () => {
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ onboarding_dismissed: true } as any)
+      .eq("id", user.id);
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+  };
+
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
     error: profileQuery.error,
     updateWeeklySummarySeen,
+    updateBaseCurrency,
+    dismissOnboarding,
   };
 }

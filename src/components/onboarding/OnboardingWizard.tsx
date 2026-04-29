@@ -13,9 +13,8 @@ import {
 import { Sparkles, Wallet, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
-import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
 interface OnboardingWizardProps {
@@ -37,14 +36,13 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
   const [saving, setSaving] = useState(false);
 
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { createAccount, accounts } = useAccounts();
   const { createTransaction } = useTransactions();
+  const { updateBaseCurrency, dismissOnboarding } = useProfile();
 
   const saveCurrency = async () => {
     if (!user) return;
-    await supabase.from("profiles").update({ base_currency: currency }).eq("id", user.id);
-    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    await updateBaseCurrency(currency);
   };
 
   const saveAccount = async () => {
@@ -82,8 +80,7 @@ export function OnboardingWizard({ open, onDismiss, displayName, baseCurrency }:
 
   const handleFinish = async () => {
     if (dontShowAgain && user) {
-      await supabase.from("profiles").update({ onboarding_dismissed: true }).eq("id", user.id);
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      await dismissOnboarding();
     }
     onDismiss();
   };

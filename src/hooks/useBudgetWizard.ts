@@ -111,8 +111,23 @@ export function useBudgetWizard() {
     return count ?? 0;
   };
 
+  const fetchHistoricalIncome = async (months: number): Promise<number> => {
+    const end = endOfMonth(new Date());
+    const start = startOfMonth(subMonths(new Date(), months));
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("type", "income")
+      .gte("transaction_date", format(start, "yyyy-MM-dd"))
+      .lte("transaction_date", format(end, "yyyy-MM-dd"));
+    if (error) throw error;
+    const total = (data ?? []).reduce((s, t) => s + Number(t.amount), 0);
+    return Math.round(total / months);
+  };
+
   return {
     fetchHistoricalSpend,
+    fetchHistoricalIncome,
     upsertBudgets,
     deactivateOldBudgets,
     checkExistingBudgets,

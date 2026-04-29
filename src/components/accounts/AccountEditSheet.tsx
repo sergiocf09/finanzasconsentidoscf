@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAccounts, Account } from "@/hooks/useAccounts";
-import { supabase } from "@/integrations/supabase/client";
+import { useReconciliations } from "@/hooks/useReconciliations";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,7 @@ const LIABILITY_TYPES = ["credit_card", "payable", "mortgage", "auto_loan", "per
 export function AccountEditSheet({ account, open, onOpenChange, onOpenReconciliation }: AccountEditSheetProps) {
   const { user } = useAuth();
   const { updateAccount } = useAccounts();
+  const { createReconciliation } = useReconciliations();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -107,9 +108,9 @@ export function AccountEditSheet({ account, open, onOpenChange, onOpenReconcilia
       });
 
       if (balanceChanged) {
-        await supabase.from("account_reconciliations").insert({
+        await createReconciliation.mutateAsync({
           account_id: account.id,
-          user_id: user.id,
+          user_id: user!.id,
           previous_balance: account.current_balance,
           new_balance: parsedBalance,
           delta: parsedBalance - account.current_balance,

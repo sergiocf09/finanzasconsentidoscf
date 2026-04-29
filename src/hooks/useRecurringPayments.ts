@@ -164,6 +164,58 @@ export function useRecurringPayments() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const insertRetroTransactions = useMutation({
+    mutationFn: async (transactions: {
+      user_id: string;
+      account_id: string;
+      category_id: string | null;
+      type: string;
+      amount: number;
+      currency: string;
+      exchange_rate: number;
+      amount_in_base: number;
+      description: string;
+      transaction_date: string;
+      is_recurring: boolean;
+      recurring_payment_id: string | null;
+    }[]) => {
+      const { error } = await supabase.from("transactions").insert(transactions);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+    },
+  });
+
+  const updateRemainingBalance = useMutation({
+    mutationFn: async ({
+      id, remaining_balance, payments_made,
+    }: {
+      id: string;
+      remaining_balance?: number;
+      payments_made?: number;
+    }) => {
+      const updateData: Record<string, unknown> = {};
+      if (remaining_balance !== undefined) updateData.remaining_balance = remaining_balance;
+      if (payments_made !== undefined) updateData.payments_made = payments_made;
+      const { error } = await supabase
+        .from("recurring_payments" as any)
+        .update(updateData as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["recurring_payments", user?.id] });
+    },
+  });
+
   return {
     payments: query.data ?? [],
     isLoading: query.isLoading,
@@ -172,6 +224,8 @@ export function useRecurringPayments() {
     updatePayment,
     cancelPayment,
     deletePayment,
+    insertRetroTransactions,
+    updateRemainingBalance,
   };
 }
 

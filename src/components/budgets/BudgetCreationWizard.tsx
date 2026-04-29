@@ -84,7 +84,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizardProps) {
   const { user } = useAuth();
   const { expenseCategories, incomeCategories } = useCategories();
-  const { fetchHistoricalSpend, upsertBudgets, deactivateOldBudgets, checkExistingBudgets } = useBudgetWizard();
+  const { fetchHistoricalSpend, fetchHistoricalIncome, upsertBudgets, deactivateOldBudgets, checkExistingBudgets } = useBudgetWizard();
   const queryClient = useQueryClient();
 
   const currentYear = new Date().getFullYear();
@@ -170,14 +170,12 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const runSmartAnalysis = async () => {
     if (!user) return;
     setLoadingHistory(true);
-    const end = endOfMonth(new Date());
-    const start = startOfMonth(subMonths(new Date(), 3));
-    const [catTotals, { data: incomeTxs }] = await Promise.all([
+    const [catTotals, avgMonthlyIncome] = await Promise.all([
       fetchHistoricalSpend(3, "expense"),
-      supabase.from("transactions").select("amount").eq("type", "income").gte("transaction_date", format(start, "yyyy-MM-dd")).lte("transaction_date", format(end, "yyyy-MM-dd")),
+      fetchHistoricalIncome(3),
     ]);
-    const totalIncome = (incomeTxs ?? []).reduce((s, t) => s + Number(t.amount), 0) / 3;
-    setMonthlyIncome(Math.round(totalIncome));
+    setMonthlyIncome(avgMonthlyIncome);
+    const totalIncome = avgMonthlyIncome;
     const totalExpense = Object.values(catTotals).reduce((s, v) => s + v, 0);
     let stabilityTotal = 0, lifestyleTotal = 0, buildTotal = 0;
     const catMap = new Map(activeCategories.map((c) => [c.id, c]));

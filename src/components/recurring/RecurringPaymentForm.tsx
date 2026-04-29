@@ -85,7 +85,7 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
   const queryClient = useQueryClient();
   const { accounts } = useAccounts();
   const { expenseCategories, incomeCategories } = useCategories();
-  const { createPayment, updatePayment } = useRecurringPayments();
+  const { createPayment, updatePayment, insertRetroTransactions, updateRemainingBalance } = useRecurringPayments();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -242,25 +242,17 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             recurring_payment_id: editPayment.id,
           }));
 
-          await supabase.from("transactions").insert(transactions);
-
           const newPaymentsMade = (editPayment.payments_made || 0) + retroDates.length;
-          const updateData: any = { payments_made: newPaymentsMade };
-          if (originalTotal) {
-            const totalPaid = parsedAmount * newPaymentsMade;
-            updateData.remaining_balance = Math.max(0, parseFloat(originalTotal) - totalPaid);
-          }
-          await supabase
-            .from("recurring_payments" as any)
-            .update(updateData as any)
-            .eq("id", editPayment.id);
-
-          queryClient.invalidateQueries({ queryKey: ["transactions"] });
-          queryClient.invalidateQueries({ queryKey: ["accounts"] });
-          queryClient.invalidateQueries({ queryKey: ["budgets"] });
-          queryClient.invalidateQueries({ queryKey: ["recurring_payments"] });
-          queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
+          await insertRetroTransactions.mutateAsync(transactions);
+          await updateRemainingBalance.mutateAsync({
+            id: editPayment.id,
+            payments_made: newPaymentsMade,
+            ...(originalTotal ? {
+              remaining_balance: Math.max(
+                0, parseFloat(originalTotal) - parsedAmount * newPaymentsMade
+              )
+            } : {}),
+          });
         } finally {
           setIsSavingRetro(false);
         }

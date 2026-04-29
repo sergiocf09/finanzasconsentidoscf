@@ -278,22 +278,16 @@ export function RecurringPaymentForm({ open, onOpenChange, editPayment, prefill 
             recurring_payment_id: (result as any)?.id || null,
           }));
 
-          await supabase.from("transactions").insert(transactions);
-          
+          await insertRetroTransactions.mutateAsync(transactions);
           if (originalTotal) {
-            const totalPaid = parsedAmount * retroDates.length;
-            const remaining = Math.max(0, parseFloat(originalTotal) - totalPaid);
-            await supabase
-              .from("recurring_payments" as any)
-              .update({ remaining_balance: remaining } as any)
-              .eq("id", (result as any)?.id);
+            const remaining = Math.max(
+              0, parseFloat(originalTotal) - parsedAmount * retroDates.length
+            );
+            await updateRemainingBalance.mutateAsync({
+              id: (result as any)?.id,
+              remaining_balance: remaining,
+            });
           }
-
-          queryClient.invalidateQueries({ queryKey: ["transactions"] });
-          queryClient.invalidateQueries({ queryKey: ["accounts"] });
-          queryClient.invalidateQueries({ queryKey: ["budgets"] });
-          queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
-          queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
         } finally {
           setIsSavingRetro(false);
         }

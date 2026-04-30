@@ -1026,11 +1026,13 @@ export type Database = {
           description: string | null
           exchange_rate: number | null
           id: string
+          is_mirror: boolean
           is_recurring: boolean | null
           notes: string | null
           recurring_frequency: string | null
           recurring_payment_id: string | null
           related_account_id: string | null
+          source_transfer_id: string | null
           transaction_date: string
           type: string
           updated_at: string | null
@@ -1047,11 +1049,13 @@ export type Database = {
           description?: string | null
           exchange_rate?: number | null
           id?: string
+          is_mirror?: boolean
           is_recurring?: boolean | null
           notes?: string | null
           recurring_frequency?: string | null
           recurring_payment_id?: string | null
           related_account_id?: string | null
+          source_transfer_id?: string | null
           transaction_date?: string
           type: string
           updated_at?: string | null
@@ -1068,11 +1072,13 @@ export type Database = {
           description?: string | null
           exchange_rate?: number | null
           id?: string
+          is_mirror?: boolean
           is_recurring?: boolean | null
           notes?: string | null
           recurring_frequency?: string | null
           recurring_payment_id?: string | null
           related_account_id?: string | null
+          source_transfer_id?: string | null
           transaction_date?: string
           type?: string
           updated_at?: string | null

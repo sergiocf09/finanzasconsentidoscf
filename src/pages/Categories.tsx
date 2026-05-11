@@ -54,9 +54,9 @@ export default function Categories() {
     if (!activeBlock) return [];
     const block = blocks.find(b => b.key === activeBlock)!;
     if (block.key === "income") {
-      return categories.filter(c => c.type === "income");
+      return allCategories.filter(c => c.type === "income");
     }
-    return categories.filter(c => c.type === "expense" && (c as any).bucket === block.bucket);
+    return allCategories.filter(c => c.type === "expense" && (c as any).bucket === block.bucket);
   };
 
   const openCreate = () => {
@@ -151,14 +151,14 @@ export default function Categories() {
               >
                 {blocks[0].icon}
                 {blocks[0].label}
-                <span className="text-sm font-bold opacity-80">{categories.filter(c => c.type === "income").length}</span>
+                <span className="text-sm font-bold opacity-80">{allCategories.filter(c => c.type === "income").length}</span>
               </button>
             </div>
 
             {/* Expense blocks row */}
             <div className="grid grid-cols-3 gap-2">
               {blocks.slice(1).map(block => {
-                const count = categories.filter(c => c.type === "expense" && (c as any).bucket === block.bucket).length;
+                const count = allCategories.filter(c => c.type === "expense" && (c as any).bucket === block.bucket).length;
                 return (
                   <button
                     key={block.key}

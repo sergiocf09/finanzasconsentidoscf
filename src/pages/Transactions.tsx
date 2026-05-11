@@ -393,6 +393,51 @@ export default function Transactions() {
         )}
       </div>
 
+      {/* Banner de presupuesto por categoría */}
+      {categoryFilter !== "all" && (
+        <div className="rounded-xl border border-border bg-card p-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground truncate">
+                {selectedCategoryName} · {period === "last3" ? "Últimos 3 meses" : periodLabels[period]}
+              </p>
+              <p className="text-sm font-bold font-heading text-expense tabular-nums">
+                -{formatCurrency(categorySpent, "MXN")}
+              </p>
+            </div>
+            {categoryBudget !== null ? (
+              <div className="text-right shrink-0">
+                <p className="text-[10px] text-muted-foreground">Presupuesto</p>
+                <p className={cn(
+                  "text-sm font-semibold tabular-nums",
+                  categorySpent > categoryBudget ? "text-expense" : "text-income"
+                )}>
+                  {formatCurrency(categoryBudget, "MXN")}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {categorySpent > categoryBudget
+                    ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre límite`
+                    : `${formatCurrency(categoryBudget - categorySpent, "MXN")} disponible`}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground shrink-0">Sin presupuesto</p>
+            )}
+          </div>
+          {categoryBudget !== null && (
+            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all",
+                  categorySpent > categoryBudget ? "bg-expense" : "bg-income"
+                )}
+                style={{ width: `${Math.min((categorySpent / categoryBudget) * 100, 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Clickable filter cards: Ingresos / Gastos / Transferencias */}
       <div className="grid grid-cols-3 gap-2">
         {filterCards.map((card) => {

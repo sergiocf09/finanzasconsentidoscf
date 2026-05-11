@@ -13,8 +13,11 @@ import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet"
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRelativeDate } from "@/lib/formatters";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, getMonth, getYear } from "date-fns";
 import { es } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -105,6 +108,77 @@ export default function Transactions() {
   const { transfers, isLoading: transfersLoading, totalTransferAmount, deleteTransfer } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();
   const { accounts } = useAccounts();
+  const { user } = useAuth();
+
+  // Total gastado en la categoría seleccionada durante el periodo
+  const { data: categorySpentData } = useQuery({
+    queryKey: ["category_spent", user?.id, categoryFilter, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      if (!categoryFilter || categoryFilter === "all") return { total: 0 };
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("amount, amount_in_base, exchange_rate")
+        .eq("category_id", categoryFilter)
+        .eq("type", "expense")
+        .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
+        .lte("transaction_date", format(endDate, "yyyy-MM-dd"));
+      if (error) throw error;
+      const total = (data ?? []).reduce((sum, tx: any) => sum + (tx.amount_in_base ?? tx.amount), 0);
+      return { total };
+    },
+    enabled: !!user && categoryFilter !== "all",
+  });
+  const categorySpent = categorySpentData?.total ?? 0;
+
+  // Presupuesto de la categoría seleccionada para el periodo
+  const { data: categoryBudgetData } = useQuery({
+    queryKey: ["category_budget", user?.id, categoryFilter, period, format(startDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      if (!categoryFilter || categoryFilter === "all") return { budgetAmount: null as number | null };
+
+      const now = new Date();
+
+      if (period === "last3") {
+        const months = [
+          { year: getYear(subMonths(now, 2)), month: getMonth(subMonths(now, 2)) + 1 },
+          { year: getYear(subMonths(now, 1)), month: getMonth(subMonths(now, 1)) + 1 },
+          { year: getYear(now),               month: getMonth(now) + 1 },
+        ];
+        const { data, error } = await supabase
+          .from("budgets")
+          .select("amount, month, year")
+          .eq("category_id", categoryFilter)
+          .eq("budget_type", "expense")
+          .eq("is_active", true)
+          .in("year", [...new Set(months.map(m => m.year))]);
+        if (error) throw error;
+        const total = (data ?? [])
+          .filter((b: any) => months.some(m => m.year === b.year && m.month === b.month))
+          .reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+        return { budgetAmount: total > 0 ? total : null };
+      } else {
+        const targetYear = getYear(startDate);
+        const targetMonth = getMonth(startDate) + 1;
+        const { data, error } = await supabase
+          .from("budgets")
+          .select("amount")
+          .eq("category_id", categoryFilter)
+          .eq("budget_type", "expense")
+          .eq("is_active", true)
+          .eq("year", targetYear)
+          .eq("month", targetMonth)
+          .maybeSingle();
+        if (error) throw error;
+        return { budgetAmount: data?.amount ?? null };
+      }
+    },
+    enabled: !!user && categoryFilter !== "all",
+  });
+  const categoryBudget: number | null = categoryBudgetData?.budgetAmount ?? null;
+
+  const selectedCategoryName = categoryFilter !== "all"
+    ? categories.find(c => c.id === categoryFilter)?.name ?? ""
+    : "";
 
   // Paginated query for the list
   const {
@@ -318,6 +392,51 @@ export default function Transactions() {
           </div>
         )}
       </div>
+
+      {/* Banner de presupuesto por categoría */}
+      {categoryFilter !== "all" && (
+        <div className="rounded-xl border border-border bg-card p-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground truncate">
+                {selectedCategoryName} · {period === "last3" ? "Últimos 3 meses" : periodLabels[period]}
+              </p>
+              <p className="text-sm font-bold font-heading text-expense tabular-nums">
+                -{formatCurrency(categorySpent, "MXN")}
+              </p>
+            </div>
+            {categoryBudget !== null ? (
+              <div className="text-right shrink-0">
+                <p className="text-[10px] text-muted-foreground">Presupuesto</p>
+                <p className={cn(
+                  "text-sm font-semibold tabular-nums",
+                  categorySpent > categoryBudget ? "text-expense" : "text-income"
+                )}>
+                  {formatCurrency(categoryBudget, "MXN")}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {categorySpent > categoryBudget
+                    ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre límite`
+                    : `${formatCurrency(categoryBudget - categorySpent, "MXN")} disponible`}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground shrink-0">Sin presupuesto</p>
+            )}
+          </div>
+          {categoryBudget !== null && (
+            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all",
+                  categorySpent > categoryBudget ? "bg-expense" : "bg-income"
+                )}
+                style={{ width: `${Math.min((categorySpent / categoryBudget) * 100, 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Clickable filter cards: Ingresos / Gastos / Transferencias */}
       <div className="grid grid-cols-3 gap-2">

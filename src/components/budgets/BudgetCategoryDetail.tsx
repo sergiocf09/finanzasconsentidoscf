@@ -34,6 +34,7 @@ interface BudgetCategoryDetailProps {
     amount: number;
     spent: number;
     category_id: string | null;
+    budget_type?: "expense" | "income";
   } | null;
   year: number;
   month: number;

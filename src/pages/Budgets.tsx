@@ -79,12 +79,14 @@ export default function Budgets() {
   const unbudgetedTotal = unbudgetedExpenses.reduce((s, e) => s + e.total, 0);
   const adjustedTotalSpent = totalSpent + unbudgetedTotal;
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [initialBudgetType, setInitialBudgetType] = useState<"expense" | "income">("expense");
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
     name: string;
     amount: number;
     spent: number;
     category_id: string | null;
+    budget_type?: "expense" | "income";
   } | null>(null);
 
   // Previous month budget check for suggestion banner

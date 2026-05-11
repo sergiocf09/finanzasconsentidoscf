@@ -227,6 +227,11 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 >
                   {mask(formatCurrencyAbs(card.amount))}
                 </span>
+                {card.color === "income" && totalIncomeExpected > 0 && period === "current" && (
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    Meta: {mask(formatCurrency(totalIncomeExpected))}
+                  </span>
+                )}
               </button>
 
               <button

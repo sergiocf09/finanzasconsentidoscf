@@ -6,6 +6,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDebts } from "@/hooks/useDebts";
 import { useRecurringPayments, getNextExecutionDate } from "@/hooks/useRecurringPayments";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -39,6 +40,7 @@ export function useVoiceSubmit() {
   const { checkAlerts } = useBudgetAlerts();
   const { debts } = useDebts({ enabled: true });
   const { createPayment: createRecurring } = useRecurringPayments();
+  const { createTransaction } = useTransactions({ enabled: false });
   const { rates: fxRates } = useExchangeRate();
   const [isPending, setIsPending] = useState(false);
 
@@ -147,25 +149,20 @@ export function useVoiceSubmit() {
           }
         }
 
-        await supabase.from("transactions").insert({
-          user_id: user.id,
+        await createTransaction.mutateAsync({
           account_id: editAccountId,
-          category_id: editCategoryId || null,
-          type: editType,
-          amount: finalAmount,
+          category_id: editCategoryId || undefined,
+          type: editType as "income" | "expense",
+          amount: Math.round(finalAmount * 100) / 100,
           currency: acc.currency,
           exchange_rate: exchangeRate,
           amount_in_base: amountInBase,
-          notes,
-          description: editDescription || cleanTranscript || committedText,
+          notes: notes || undefined,
+          description: editDescription || cleanTranscript || committedText || undefined,
           transaction_date: editDate,
-          voice_transcript: committedText,
+          voice_transcript: committedText || undefined,
         });
       }
-
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
 
       if (editType === "expense") {
         setTimeout(() => checkAlerts(), 1000);
@@ -193,7 +190,9 @@ export function useVoiceSubmit() {
         queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
       }
 
-      toast.success("Registrado correctamente");
+      if (editType === "transfer") {
+        toast.success("Registrado correctamente");
+      }
     } catch (err: any) {
       toast.error(err.message || "Error al guardar");
       throw err;

@@ -266,6 +266,8 @@ export function useTransactionsPaginated(options?: {
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
 
+      if (categoryId) query = query.eq('category_id', categoryId);
+
       // Use OR filter: description, notes, matching category_id, or matching account_id
       const orFilters = [
         `description.ilike.%${searchQuery}%`,

@@ -88,6 +88,7 @@ export default function Transactions() {
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Period selector state
   const [period, setPeriod] = useState<PeriodKey>("current");

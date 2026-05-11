@@ -69,6 +69,7 @@ interface CategoryBudget {
 interface BudgetCreationWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialBudgetType?: "expense" | "income";
 }
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (

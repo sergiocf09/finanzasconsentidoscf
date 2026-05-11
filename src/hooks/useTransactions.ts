@@ -297,6 +297,7 @@ export function useTransactionsPaginated(options?: {
       format(endDate, 'yyyy-MM-dd'),
       typeFilter,
       sortAsc,
+      categoryId,
     ],
     queryFn: async ({ pageParam }) => {
       let query = supabase

@@ -190,7 +190,9 @@ export function useVoiceSubmit() {
         queryClient.invalidateQueries({ queryKey: ["upcoming_recurring"] });
       }
 
-      toast.success("Registrado correctamente");
+      if (editType === "transfer") {
+        toast.success("Registrado correctamente");
+      }
     } catch (err: any) {
       toast.error(err.message || "Error al guardar");
       throw err;

@@ -149,25 +149,20 @@ export function useVoiceSubmit() {
           }
         }
 
-        await supabase.from("transactions").insert({
-          user_id: user.id,
+        await createTransaction.mutateAsync({
           account_id: editAccountId,
-          category_id: editCategoryId || null,
-          type: editType,
-          amount: finalAmount,
+          category_id: editCategoryId || undefined,
+          type: editType as "income" | "expense",
+          amount: Math.round(finalAmount * 100) / 100,
           currency: acc.currency,
           exchange_rate: exchangeRate,
           amount_in_base: amountInBase,
-          notes,
-          description: editDescription || cleanTranscript || committedText,
+          notes: notes || undefined,
+          description: editDescription || cleanTranscript || committedText || undefined,
           transaction_date: editDate,
-          voice_transcript: committedText,
+          voice_transcript: committedText || undefined,
         });
       }
-
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
 
       if (editType === "expense") {
         setTimeout(() => checkAlerts(), 1000);

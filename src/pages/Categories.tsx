@@ -194,20 +194,45 @@ export default function Categories() {
               {cats.length === 0 ? (
                 <p className="text-center py-6 text-sm text-muted-foreground">Sin categorías en este bloque</p>
               ) : (
-                cats.map(cat => (
-                  <div key={cat.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border">
-                    <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{cat.name}</p>
-                    <div className="flex gap-0.5 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)}>
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                cats.map(cat => {
+                  const isHidden = hiddenIds.has(cat.id);
+                  return (
+                    <div
+                      key={cat.id}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border transition-opacity",
+                        isHidden && "opacity-50"
+                      )}
+                    >
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{cat.name}</p>
+                      {cat.is_system ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] text-muted-foreground">
+                            {isHidden ? "Oculta" : "Visible"}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => toggleCategoryVisibility.mutate({ categoryId: cat.id, hide: !isHidden })}
+                          >
+                            {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-0.5 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

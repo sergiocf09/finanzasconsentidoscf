@@ -165,7 +165,7 @@ export default function Transactions() {
     };
   });
 
-  const transferItems: UnifiedItem[] = transfers.map((t) => ({
+  const transferItems: UnifiedItem[] = categoryFilter !== "all" ? [] : transfers.map((t) => ({
     id: t.id,
     date: t.transfer_date,
     type: "transfer",

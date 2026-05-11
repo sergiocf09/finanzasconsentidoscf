@@ -178,14 +178,25 @@ export default function Budgets() {
             <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">
               Presupuestos
             </h1>
-          <Button
-            size="sm"
-            className="gap-1 h-8 text-xs px-3"
-            onClick={() => setWizardOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Crear
-          </Button>
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1 h-8 text-xs px-3"
+              onClick={() => { setInitialBudgetType("income"); setWizardOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Ingreso
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1 h-8 text-xs px-3"
+              onClick={() => { setInitialBudgetType("expense"); setWizardOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Gasto
+            </Button>
+          </div>
         </div>
 
         {/* Period Navigation */}

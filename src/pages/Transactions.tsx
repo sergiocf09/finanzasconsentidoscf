@@ -110,16 +110,23 @@ export default function Transactions() {
   const { accounts } = useAccounts();
   const { user } = useAuth();
 
-  // Total gastado en la categoría seleccionada durante el periodo
+  // Tipo de la categoría seleccionada (income o expense)
+  const selectedCategory = categoryFilter !== "all"
+    ? categories.find(c => c.id === categoryFilter)
+    : null;
+  const selectedCategoryType: "income" | "expense" =
+    selectedCategory?.type === "income" ? "income" : "expense";
+
+  // Total acumulado en la categoría seleccionada durante el periodo
   const { data: categorySpentData } = useQuery({
-    queryKey: ["category_spent", user?.id, categoryFilter, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
+    queryKey: ["category_spent", user?.id, categoryFilter, selectedCategoryType, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!categoryFilter || categoryFilter === "all") return { total: 0 };
       const { data, error } = await supabase
         .from("transactions")
         .select("amount, amount_in_base, exchange_rate")
         .eq("category_id", categoryFilter)
-        .eq("type", "expense")
+        .eq("type", selectedCategoryType)
         .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
         .lte("transaction_date", format(endDate, "yyyy-MM-dd"));
       if (error) throw error;
@@ -132,7 +139,7 @@ export default function Transactions() {
 
   // Presupuesto de la categoría seleccionada para el periodo
   const { data: categoryBudgetData } = useQuery({
-    queryKey: ["category_budget", user?.id, categoryFilter, period, format(startDate, "yyyy-MM-dd")],
+    queryKey: ["category_budget", user?.id, categoryFilter, selectedCategoryType, period, format(startDate, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!categoryFilter || categoryFilter === "all") return { budgetAmount: null as number | null };
 
@@ -148,7 +155,7 @@ export default function Transactions() {
           .from("budgets")
           .select("amount, month, year")
           .eq("category_id", categoryFilter)
-          .eq("budget_type", "expense")
+          .eq("budget_type", selectedCategoryType)
           .eq("is_active", true)
           .in("year", [...new Set(months.map(m => m.year))]);
         if (error) throw error;
@@ -163,7 +170,7 @@ export default function Transactions() {
           .from("budgets")
           .select("amount")
           .eq("category_id", categoryFilter)
-          .eq("budget_type", "expense")
+          .eq("budget_type", selectedCategoryType)
           .eq("is_active", true)
           .eq("year", targetYear)
           .eq("month", targetMonth)
@@ -415,8 +422,11 @@ export default function Transactions() {
               <p className="text-[11px] text-muted-foreground truncate">
                 {selectedCategoryName} · {period === "last3" ? "Últimos 3 meses" : periodLabels[period]}
               </p>
-              <p className="text-sm font-bold font-heading text-expense tabular-nums">
-                -{formatCurrency(categorySpent, "MXN")}
+              <p className={cn(
+                "text-sm font-bold font-heading tabular-nums",
+                selectedCategoryType === "income" ? "text-income" : "text-expense"
+              )}>
+                {selectedCategoryType === "income" ? "+" : "-"}{formatCurrency(categorySpent, "MXN")}
               </p>
             </div>
             {categoryBudget !== null ? (
@@ -424,14 +434,20 @@ export default function Transactions() {
                 <p className="text-[10px] text-muted-foreground">Presupuesto</p>
                 <p className={cn(
                   "text-sm font-semibold tabular-nums",
-                  categorySpent > categoryBudget ? "text-expense" : "text-income"
+                  selectedCategoryType === "income"
+                    ? (categorySpent >= categoryBudget ? "text-income" : "text-expense")
+                    : (categorySpent > categoryBudget ? "text-expense" : "text-income")
                 )}>
                   {formatCurrency(categoryBudget, "MXN")}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  {categorySpent > categoryBudget
-                    ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre límite`
-                    : `${formatCurrency(categoryBudget - categorySpent, "MXN")} disponible`}
+                  {selectedCategoryType === "income"
+                    ? (categorySpent >= categoryBudget
+                        ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre meta`
+                        : `${formatCurrency(categoryBudget - categorySpent, "MXN")} faltante`)
+                    : (categorySpent > categoryBudget
+                        ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre límite`
+                        : `${formatCurrency(categoryBudget - categorySpent, "MXN")} disponible`)}
                 </p>
               </div>
             ) : (
@@ -443,7 +459,9 @@ export default function Transactions() {
               <div
                 className={cn(
                   "h-full transition-all",
-                  categorySpent > categoryBudget ? "bg-expense" : "bg-income"
+                  selectedCategoryType === "income"
+                    ? "bg-income"
+                    : (categorySpent > categoryBudget ? "bg-expense" : "bg-income")
                 )}
                 style={{ width: `${Math.min((categorySpent / categoryBudget) * 100, 100)}%` }}
               />

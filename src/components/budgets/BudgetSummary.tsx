@@ -61,6 +61,15 @@ export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = 
           {remaining === 0 ? "Justo en presupuesto" : `Excedido por ${fmt(Math.abs(remaining))}`}
         </p>
       )}
+      {incomeExpected > 0 && (
+        <div className="mt-3 pt-3 border-t border-primary-foreground/20 flex items-center justify-between text-xs text-primary-foreground/80">
+          <span>Ingreso esperado</span>
+          <span className="font-bold tabular-nums">
+            {fmt(incomeReceived)}
+            <span className="font-normal opacity-70"> / {fmt(incomeExpected)}</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

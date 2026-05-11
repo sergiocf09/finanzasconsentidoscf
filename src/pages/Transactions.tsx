@@ -344,12 +344,26 @@ export default function Transactions() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="text-xs">Todas las categorías</SelectItem>
-              {categories
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map(c => (
-                  <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
-                ))}
+              {(() => {
+                const incomes = categories.filter(c => c.type === "income").slice().sort((a, b) => a.name.localeCompare(b.name));
+                const expenses = categories.filter(c => c.type === "expense").slice().sort((a, b) => a.name.localeCompare(b.name));
+                return (
+                  <>
+                    {incomes.length > 0 && (
+                      <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Ingresos</div>
+                    )}
+                    {incomes.map(c => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                    ))}
+                    {expenses.length > 0 && (
+                      <div className="px-2 py-1 mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Gastos</div>
+                    )}
+                    {expenses.map(c => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                    ))}
+                  </>
+                );
+              })()}
             </SelectContent>
           </Select>
         </div>

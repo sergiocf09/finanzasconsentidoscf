@@ -5,9 +5,11 @@ interface BudgetSummaryProps {
   totalBudgeted: number;
   totalSpent: number;
   currency?: string;
+  incomeExpected?: number;
+  incomeReceived?: number;
 }
 
-export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = "MXN" }: BudgetSummaryProps) {
+export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = "MXN", incomeExpected = 0, incomeReceived = 0 }: BudgetSummaryProps) {
   const totalSpent = Math.max(0, rawSpent);
   const percentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
   const remaining = totalBudgeted - totalSpent;

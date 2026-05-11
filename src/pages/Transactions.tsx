@@ -110,16 +110,23 @@ export default function Transactions() {
   const { accounts } = useAccounts();
   const { user } = useAuth();
 
-  // Total gastado en la categoría seleccionada durante el periodo
+  // Tipo de la categoría seleccionada (income o expense)
+  const selectedCategory = categoryFilter !== "all"
+    ? categories.find(c => c.id === categoryFilter)
+    : null;
+  const selectedCategoryType: "income" | "expense" =
+    selectedCategory?.type === "income" ? "income" : "expense";
+
+  // Total acumulado en la categoría seleccionada durante el periodo
   const { data: categorySpentData } = useQuery({
-    queryKey: ["category_spent", user?.id, categoryFilter, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
+    queryKey: ["category_spent", user?.id, categoryFilter, selectedCategoryType, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!categoryFilter || categoryFilter === "all") return { total: 0 };
       const { data, error } = await supabase
         .from("transactions")
         .select("amount, amount_in_base, exchange_rate")
         .eq("category_id", categoryFilter)
-        .eq("type", "expense")
+        .eq("type", selectedCategoryType)
         .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
         .lte("transaction_date", format(endDate, "yyyy-MM-dd"));
       if (error) throw error;

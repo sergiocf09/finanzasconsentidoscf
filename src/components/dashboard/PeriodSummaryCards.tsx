@@ -53,6 +53,8 @@ interface PeriodSummaryCardsProps {
 export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: PeriodSummaryCardsProps) {
   const navigate = useNavigate();
   const { hidden, toggle, mask } = useHideAmounts("period");
+  const now = new Date();
+  const { totalIncomeExpected } = useBudgets(now.getFullYear(), now.getMonth() + 1);
 
   const [period, setPeriod] = useState<PeriodKey>("current");
   const [customStart, setCustomStart] = useState<Date>(startOfMonth(new Date()));

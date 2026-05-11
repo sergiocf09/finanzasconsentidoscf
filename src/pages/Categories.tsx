@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Tag, DollarSign, Shield, Sparkles, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, DollarSign, Shield, Sparkles, TrendingUp, Eye, EyeOff } from "lucide-react";
 import CategoryReviewSheet from "@/components/categories/CategoryReviewSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -6,6 +6,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useBudgetAlerts } from "@/hooks/useBudgetAlerts";
 import { useDebts } from "@/hooks/useDebts";
 import { useRecurringPayments, getNextExecutionDate } from "@/hooks/useRecurringPayments";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { toast } from "sonner";
 import { format } from "date-fns";

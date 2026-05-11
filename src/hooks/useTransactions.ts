@@ -216,9 +216,17 @@ export function useTransactionsPaginated(options?: {
   typeFilter?: string;
   searchQuery?: string;
   sortAsc?: boolean;
+  categoryId?: string;
   categories?: { id: string; name: string }[];
   accounts?: { id: string; name: string }[];
 }) {
+  const { user } = useAuth();
+  const startDate = options?.startDate ?? startOfMonth(new Date());
+  const endDate = options?.endDate ?? endOfMonth(new Date());
+  const typeFilter = options?.typeFilter ?? "all";
+  const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
+  const sortAsc = options?.sortAsc ?? false;
+  const categoryId = options?.categoryId ?? "";
   const { user } = useAuth();
   const startDate = options?.startDate ?? startOfMonth(new Date());
   const endDate = options?.endDate ?? endOfMonth(new Date());

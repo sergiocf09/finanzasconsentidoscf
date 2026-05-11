@@ -119,6 +119,7 @@ export default function Transactions() {
     typeFilter: typeFilter === "transfer" ? "all" : typeFilter,
     searchQuery,
     sortAsc,
+    categoryId: categoryFilter !== "all" ? categoryFilter : "",
     categories: categories.map(c => ({ id: c.id, name: c.name })),
     accounts: accounts.map(a => ({ id: a.id, name: a.name })),
   });

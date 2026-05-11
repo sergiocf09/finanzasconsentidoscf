@@ -34,6 +34,7 @@ interface BudgetCategoryDetailProps {
     amount: number;
     spent: number;
     category_id: string | null;
+    budget_type?: "expense" | "income";
   } | null;
   year: number;
   month: number;
@@ -64,11 +65,12 @@ export function BudgetCategoryDetail({
           ? `${year + 1}-01-01`
           : `${year}-${String(month + 1).padStart(2, "0")}-01`;
 
+      const txType = budget?.budget_type === "income" ? "income" : "expense";
       const { data } = await supabase
         .from("transactions")
         .select("id, description, amount, amount_in_base, exchange_rate, transaction_date, currency")
         .eq("category_id", budget.category_id!)
-        .eq("type", "expense")
+        .eq("type", txType)
         .gte("transaction_date", startDate)
         .lt("transaction_date", endDate)
         .order("transaction_date", { ascending: false });
@@ -167,7 +169,7 @@ export function BudgetCategoryDetail({
               )}
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Gastado</span>
+              <span className="text-sm text-muted-foreground">{budget?.budget_type === "income" ? "Recibido" : "Gastado"}</span>
               <span className={cn("text-sm font-semibold", textColorClass)}>
                 {fmt(spent)}
               </span>

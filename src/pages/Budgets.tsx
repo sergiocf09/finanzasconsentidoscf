@@ -79,12 +79,14 @@ export default function Budgets() {
   const unbudgetedTotal = unbudgetedExpenses.reduce((s, e) => s + e.total, 0);
   const adjustedTotalSpent = totalSpent + unbudgetedTotal;
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [initialBudgetType, setInitialBudgetType] = useState<"expense" | "income">("expense");
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
     name: string;
     amount: number;
     spent: number;
     category_id: string | null;
+    budget_type?: "expense" | "income";
   } | null>(null);
 
   // Previous month budget check for suggestion banner
@@ -176,14 +178,25 @@ export default function Budgets() {
             <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">
               Presupuestos
             </h1>
-          <Button
-            size="sm"
-            className="gap-1 h-8 text-xs px-3"
-            onClick={() => setWizardOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Crear
-          </Button>
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1 h-8 text-xs px-3"
+              onClick={() => { setInitialBudgetType("income"); setWizardOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Ingreso
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1 h-8 text-xs px-3"
+              onClick={() => { setInitialBudgetType("expense"); setWizardOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Gasto
+            </Button>
+          </div>
         </div>
 
         {/* Period Navigation */}
@@ -201,47 +214,77 @@ export default function Budgets() {
       </div>
 
       {/* Income budgets section */}
-      {!isLoading && incomeBudgets.length > 0 && (
-        <div className="rounded-2xl border border-income/20 bg-income/5 p-4 space-y-3 animate-fade-in-up">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-income shrink-0" />
-            <h3 className="text-sm font-heading font-semibold text-foreground">Ingresos esperados del mes</h3>
-          </div>
-
-          <div className="space-y-2">
-            {incomeBudgets.map((b) => {
-              const pct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
-              const isComplete = pct >= 100;
-              return (
-                <div key={b.id} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-foreground truncate">{b.name}</span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="tabular-nums text-muted-foreground">{formatCurrency(b.spent)}</span>
-                      <span className="text-muted-foreground/60">/</span>
-                      <span className="tabular-nums font-medium">{formatCurrency(b.amount)}</span>
-                      {isComplete && <Check className="h-3.5 w-3.5 text-income" />}
-                    </div>
-                  </div>
-                  <Progress
-                    value={Math.min(pct, 100)}
-                    className="h-2 bg-income/10"
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-income/20 text-xs">
-            <span className="font-semibold text-foreground">Total esperado</span>
+      {!isLoading && (
+        <div className="rounded-2xl border border-income/25 bg-income/5 p-4 space-y-3 animate-fade-in-up">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="tabular-nums font-bold text-foreground">{formatCurrency(totalIncomeExpected)}</span>
-              <span className="text-muted-foreground">Recibido</span>
-              <span className={cn("tabular-nums font-bold", totalIncomeReceived >= totalIncomeExpected ? "text-income" : "text-foreground")}>
-                {formatCurrency(totalIncomeReceived)}
-              </span>
+              <TrendingUp className="h-4 w-4 text-income shrink-0" />
+              <h3 className="text-sm font-heading font-semibold text-foreground">Ingresos esperados</h3>
             </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-income hover:text-income gap-1 px-2"
+              onClick={() => { setInitialBudgetType("income"); setWizardOpen(true); }}
+            >
+              <Plus className="h-3 w-3" />
+              Agregar
+            </Button>
           </div>
+
+          {incomeBudgets.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              Sin presupuesto de ingresos. Agregar uno te permite saber si tus ingresos reales van según lo planeado.
+            </p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {incomeBudgets.map((b) => {
+                  const pct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
+                  const isComplete = pct >= 100;
+                  return (
+                    <div
+                      key={b.id}
+                      className="space-y-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-income/10 transition-colors"
+                      onClick={() => setDetailBudget({ id: b.id, name: b.name, amount: b.amount, spent: b.spent, category_id: b.category_id, budget_type: "income" })}
+                    >
+                      <div className="flex items-center justify-between text-xs gap-2">
+                        <span className="font-medium text-foreground truncate">{b.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="tabular-nums text-muted-foreground">{formatCurrency(b.spent)}</span>
+                          <span className="text-muted-foreground/50">/</span>
+                          <span className="tabular-nums font-medium">{formatCurrency(b.amount)}</span>
+                          {isComplete && <Check className="h-3.5 w-3.5 text-income" />}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                            onClick={(e) => { e.stopPropagation(); deleteBudget.mutate(b.id); }}
+                          >
+                            <span className="text-xs">✕</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <Progress value={Math.min(pct, 100)} className="h-1.5 bg-income/10 [&>div]:bg-income" />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-income/20 text-xs">
+                <span className="font-semibold text-foreground">Total</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Esperado</span>
+                  <span className="tabular-nums font-bold text-foreground">{formatCurrency(totalIncomeExpected)}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground">Recibido</span>
+                  <span className={cn("tabular-nums font-bold", totalIncomeReceived >= totalIncomeExpected ? "text-income" : "text-foreground")}>
+                    {formatCurrency(totalIncomeReceived)}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -249,7 +292,12 @@ export default function Budgets() {
       {isLoading ? (
         <Skeleton className="h-28 rounded-2xl" />
       ) : (
-        <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={adjustedTotalSpent} />
+        <BudgetSummary
+          totalBudgeted={totalBudgeted}
+          totalSpent={adjustedTotalSpent}
+          incomeExpected={totalIncomeExpected}
+          incomeReceived={totalIncomeReceived}
+        />
       )}
 
       {/* Comparativa vs mes anterior */}
@@ -494,7 +542,7 @@ export default function Budgets() {
       )}
 
       {/* Wizard */}
-      <BudgetCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <BudgetCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} initialBudgetType={initialBudgetType} />
 
       {/* Category Detail */}
       <BudgetCategoryDetail

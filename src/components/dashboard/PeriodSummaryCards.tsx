@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, ArrowRightLeft, Plus, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrencyAbs } from "@/lib/formatters";
+import { formatCurrencyAbs, formatCurrency } from "@/lib/formatters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransfers } from "@/hooks/useTransfers";
+import { useBudgets } from "@/hooks/useBudgets";
 import { useHideAmounts } from "@/hooks/useHideAmounts";
 import { Eye, EyeOff } from "lucide-react";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
@@ -52,6 +53,8 @@ interface PeriodSummaryCardsProps {
 export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: PeriodSummaryCardsProps) {
   const navigate = useNavigate();
   const { hidden, toggle, mask } = useHideAmounts("period");
+  const now = new Date();
+  const { totalIncomeExpected } = useBudgets(now.getFullYear(), now.getMonth() + 1);
 
   const [period, setPeriod] = useState<PeriodKey>("current");
   const [customStart, setCustomStart] = useState<Date>(startOfMonth(new Date()));
@@ -224,6 +227,11 @@ export function PeriodSummaryCards({ initialTotals, initialTransferTotal }: Peri
                 >
                   {mask(formatCurrencyAbs(card.amount))}
                 </span>
+                {card.color === "income" && totalIncomeExpected > 0 && period === "current" && (
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    Meta: {mask(formatCurrency(totalIncomeExpected))}
+                  </span>
+                )}
               </button>
 
               <button

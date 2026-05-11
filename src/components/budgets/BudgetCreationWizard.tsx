@@ -69,6 +69,7 @@ interface CategoryBudget {
 interface BudgetCreationWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialBudgetType?: "expense" | "income";
 }
 
 const FieldRow = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
@@ -81,7 +82,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
   </div>
 );
 
-export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizardProps) {
+export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "expense" }: BudgetCreationWizardProps) {
   const { user } = useAuth();
   const { expenseCategories, incomeCategories } = useCategories();
   const { fetchHistoricalSpend, fetchHistoricalIncome, upsertBudgets, deactivateOldBudgets, checkExistingBudgets } = useBudgetWizard();
@@ -102,7 +103,7 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
   const [saving, setSaving] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [smartAnalysis, setSmartAnalysis] = useState<{ stabilityPct: number; lifestylePct: number; buildPct: number; message: string } | null>(null);
-  const [budgetType, setBudgetType] = useState<"expense" | "income">("expense");
+  const [budgetType, setBudgetType] = useState<"expense" | "income">(initialBudgetType);
 
   useEffect(() => {
     if (!open) {
@@ -111,9 +112,11 @@ export function BudgetCreationWizard({ open, onOpenChange }: BudgetCreationWizar
       setCategoryBudgets([]);
       setSelectedTemplate(null);
       setSmartAnalysis(null);
-      setBudgetType("expense");
+      setBudgetType(initialBudgetType);
+    } else {
+      setBudgetType(initialBudgetType);
     }
-  }, [open]);
+  }, [open, initialBudgetType]);
 
   const activeCategories = budgetType === "income" ? incomeCategories : expenseCategories;
 

@@ -5,9 +5,11 @@ interface BudgetSummaryProps {
   totalBudgeted: number;
   totalSpent: number;
   currency?: string;
+  incomeExpected?: number;
+  incomeReceived?: number;
 }
 
-export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = "MXN" }: BudgetSummaryProps) {
+export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = "MXN", incomeExpected = 0, incomeReceived = 0 }: BudgetSummaryProps) {
   const totalSpent = Math.max(0, rawSpent);
   const percentage = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
   const remaining = totalBudgeted - totalSpent;
@@ -58,6 +60,15 @@ export function BudgetSummary({ totalBudgeted, totalSpent: rawSpent, currency = 
         <p className="text-xs font-bold mt-2 bg-[hsl(var(--status-danger)/0.5)] text-white rounded-lg px-2 py-1 inline-block">
           {remaining === 0 ? "Justo en presupuesto" : `Excedido por ${fmt(Math.abs(remaining))}`}
         </p>
+      )}
+      {incomeExpected > 0 && (
+        <div className="mt-3 pt-3 border-t border-primary-foreground/20 flex items-center justify-between text-xs text-primary-foreground/80">
+          <span>Ingreso esperado</span>
+          <span className="font-bold tabular-nums">
+            {fmt(incomeReceived)}
+            <span className="font-normal opacity-70"> / {fmt(incomeExpected)}</span>
+          </span>
+        </div>
       )}
     </div>
   );

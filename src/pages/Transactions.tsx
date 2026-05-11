@@ -139,7 +139,7 @@ export default function Transactions() {
 
   // Presupuesto de la categoría seleccionada para el periodo
   const { data: categoryBudgetData } = useQuery({
-    queryKey: ["category_budget", user?.id, categoryFilter, period, format(startDate, "yyyy-MM-dd")],
+    queryKey: ["category_budget", user?.id, categoryFilter, selectedCategoryType, period, format(startDate, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!categoryFilter || categoryFilter === "all") return { budgetAmount: null as number | null };
 

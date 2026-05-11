@@ -36,15 +36,15 @@ const bucketLabels: Record<string, string> = {
 
 export default function Categories() {
   const { user } = useAuth();
-  const { categories, isLoading, createCategory, updateCategory, deleteCategory } = useCategories();
+  const { allCategories, hiddenIds, isLoading, createCategory, updateCategory, deleteCategory, toggleCategoryVisibility } = useCategories();
   const [activeBlock, setActiveBlock] = useState<BlockKey | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
-  const userCategories = categories.filter(c => !c.is_system);
-  const systemCategories = categories.filter(c => c.is_system);
+  const userCategories = allCategories.filter(c => !c.is_system);
+  const systemCategories = allCategories.filter(c => c.is_system);
 
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("expense");

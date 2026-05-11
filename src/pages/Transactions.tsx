@@ -422,8 +422,11 @@ export default function Transactions() {
               <p className="text-[11px] text-muted-foreground truncate">
                 {selectedCategoryName} · {period === "last3" ? "Últimos 3 meses" : periodLabels[period]}
               </p>
-              <p className="text-sm font-bold font-heading text-expense tabular-nums">
-                -{formatCurrency(categorySpent, "MXN")}
+              <p className={cn(
+                "text-sm font-bold font-heading tabular-nums",
+                selectedCategoryType === "income" ? "text-income" : "text-expense"
+              )}>
+                {selectedCategoryType === "income" ? "+" : "-"}{formatCurrency(categorySpent, "MXN")}
               </p>
             </div>
             {categoryBudget !== null ? (
@@ -431,14 +434,20 @@ export default function Transactions() {
                 <p className="text-[10px] text-muted-foreground">Presupuesto</p>
                 <p className={cn(
                   "text-sm font-semibold tabular-nums",
-                  categorySpent > categoryBudget ? "text-expense" : "text-income"
+                  selectedCategoryType === "income"
+                    ? (categorySpent >= categoryBudget ? "text-income" : "text-expense")
+                    : (categorySpent > categoryBudget ? "text-expense" : "text-income")
                 )}>
                   {formatCurrency(categoryBudget, "MXN")}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  {categorySpent > categoryBudget
-                    ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre límite`
-                    : `${formatCurrency(categoryBudget - categorySpent, "MXN")} disponible`}
+                  {selectedCategoryType === "income"
+                    ? (categorySpent >= categoryBudget
+                        ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre meta`
+                        : `${formatCurrency(categoryBudget - categorySpent, "MXN")} faltante`)
+                    : (categorySpent > categoryBudget
+                        ? `+${formatCurrency(categorySpent - categoryBudget, "MXN")} sobre límite`
+                        : `${formatCurrency(categoryBudget - categorySpent, "MXN")} disponible`)}
                 </p>
               </div>
             ) : (
@@ -450,7 +459,9 @@ export default function Transactions() {
               <div
                 className={cn(
                   "h-full transition-all",
-                  categorySpent > categoryBudget ? "bg-expense" : "bg-income"
+                  selectedCategoryType === "income"
+                    ? "bg-income"
+                    : (categorySpent > categoryBudget ? "bg-expense" : "bg-income")
                 )}
                 style={{ width: `${Math.min((categorySpent / categoryBudget) * 100, 100)}%` }}
               />

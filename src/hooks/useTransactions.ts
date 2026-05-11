@@ -313,6 +313,8 @@ export function useTransactionsPaginated(options?: {
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
 
+      if (categoryId) query = query.eq('category_id', categoryId);
+
       // Cursor-based pagination: use offset from pageParam
       if (pageParam > 0) {
         query = query.range(pageParam, pageParam + PAGE_SIZE - 1);

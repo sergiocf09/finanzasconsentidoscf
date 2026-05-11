@@ -542,7 +542,7 @@ export default function Budgets() {
       )}
 
       {/* Wizard */}
-      <BudgetCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <BudgetCreationWizard open={wizardOpen} onOpenChange={setWizardOpen} initialBudgetType={initialBudgetType} />
 
       {/* Category Detail */}
       <BudgetCategoryDetail

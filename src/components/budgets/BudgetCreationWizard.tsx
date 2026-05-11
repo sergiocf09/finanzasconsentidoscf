@@ -583,9 +583,11 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
       <AlertDialog open={existingBudgetDialog} onOpenChange={setExistingBudgetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ya tienes un presupuesto para este mes</AlertDialogTitle>
+            <AlertDialogTitle>
+              Ya tienes un presupuesto de {budgetType === "income" ? "ingresos" : "gastos"} este mes
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Puedes editarlo, reemplazarlo por uno nuevo, o usarlo como base para ajustar.
+              Sólo afectaremos los presupuestos de {budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2">

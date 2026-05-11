@@ -254,7 +254,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
     if (!user) return;
     setPeriodLoading(true);
     try {
-      const count = await checkExistingBudgets(year, month);
+      const count = await checkExistingBudgets(year, month, budgetType);
       if (count > 0) {
         setExistingCount(count);
         setExistingBudgetDialog(true);
@@ -272,7 +272,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const handleReplaceExisting = async () => {
     if (!user) return;
     setExistingBudgetDialog(false);
-    await deactivateOldBudgets(year, month);
+    await deactivateOldBudgets(year, month, budgetType);
     await proceedAfterPeriod();
   };
 
@@ -285,6 +285,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
       .eq("user_id", user.id)
       .eq("year", year)
       .eq("month", month)
+      .eq("budget_type", budgetType)
       .eq("is_active", true);
 
     if (existing && existing.length > 0) {
@@ -582,9 +583,11 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
       <AlertDialog open={existingBudgetDialog} onOpenChange={setExistingBudgetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ya tienes un presupuesto para este mes</AlertDialogTitle>
+            <AlertDialogTitle>
+              Ya tienes un presupuesto de {budgetType === "income" ? "ingresos" : "gastos"} este mes
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Puedes editarlo, reemplazarlo por uno nuevo, o usarlo como base para ajustar.
+              Sólo afectaremos los presupuestos de {budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2">

@@ -81,7 +81,11 @@ export function useBudgetWizard() {
   /**
    * Marks all active budgets for the given year/month as inactive.
    */
-  const deactivateOldBudgets = async (year: number, month: number): Promise<void> => {
+  const deactivateOldBudgets = async (
+    year: number,
+    month: number,
+    budgetType: "expense" | "income" = "expense"
+  ): Promise<void> => {
     if (!user) return;
     await supabase
       .from("budgets")
@@ -89,13 +93,18 @@ export function useBudgetWizard() {
       .eq("user_id", user.id)
       .eq("year", year)
       .eq("month", month)
+      .eq("budget_type", budgetType)
       .eq("is_active", true);
   };
 
   /**
-   * Returns the count of active budgets for the given year/month.
+   * Returns the count of active budgets for the given year/month and type.
    */
-  const checkExistingBudgets = async (year: number, month: number): Promise<number> => {
+  const checkExistingBudgets = async (
+    year: number,
+    month: number,
+    budgetType: "expense" | "income" = "expense"
+  ): Promise<number> => {
     if (!user) return 0;
     const { count, error } = await supabase
       .from("budgets")
@@ -103,6 +112,7 @@ export function useBudgetWizard() {
       .eq("user_id", user.id)
       .eq("year", year)
       .eq("month", month)
+      .eq("budget_type", budgetType)
       .eq("is_active", true);
     if (error) {
       console.error("Budget check error:", error);

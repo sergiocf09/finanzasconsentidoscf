@@ -254,7 +254,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
     if (!user) return;
     setPeriodLoading(true);
     try {
-      const count = await checkExistingBudgets(year, month);
+      const count = await checkExistingBudgets(year, month, budgetType);
       if (count > 0) {
         setExistingCount(count);
         setExistingBudgetDialog(true);
@@ -272,7 +272,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const handleReplaceExisting = async () => {
     if (!user) return;
     setExistingBudgetDialog(false);
-    await deactivateOldBudgets(year, month);
+    await deactivateOldBudgets(year, month, budgetType);
     await proceedAfterPeriod();
   };
 
@@ -285,6 +285,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
       .eq("user_id", user.id)
       .eq("year", year)
       .eq("month", month)
+      .eq("budget_type", budgetType)
       .eq("is_active", true);
 
     if (existing && existing.length > 0) {

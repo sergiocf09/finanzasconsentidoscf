@@ -40,6 +40,7 @@ export function useVoiceSubmit() {
   const { checkAlerts } = useBudgetAlerts();
   const { debts } = useDebts({ enabled: true });
   const { createPayment: createRecurring } = useRecurringPayments();
+  const { createTransaction } = useTransactions({ enabled: false });
   const { rates: fxRates } = useExchangeRate();
   const [isPending, setIsPending] = useState(false);
 

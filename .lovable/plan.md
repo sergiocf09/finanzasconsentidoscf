@@ -1,61 +1,41 @@
-
+# Plan: aislar presupuestos de ingreso y de gasto
 
 ## Diagnóstico
 
-**Problema 1 — Gasto en USD desde cuenta USD no calcula `amount_in_base`**
+Al crear un presupuesto de ingresos para mayo, el wizard borró el presupuesto de gastos que ya existía. La causa está en `useBudgetWizard.ts` y `BudgetCreationWizard.tsx`:
 
-En `TransactionForm.tsx` línea 291, la condición `crossCurrency = data.currency !== account.currency` es `false` cuando ambos son USD. Resultado: `amount_in_base` queda `undefined`, y el trigger de presupuestos usa `COALESCE(amount_in_base, amount)` = 30 USD en lugar de ~600 MXN. El gasto acumulado en presupuestos y reportes queda subvaluado.
+1. `checkExistingBudgets(year, month)` cuenta TODOS los presupuestos del mes sin filtrar por `budget_type`. Si ya hay gastos cargados y se va a crear un ingreso, dispara el diálogo "Ya hay presupuestos" como si fueran del mismo tipo.
+2. Si el usuario elige "Reemplazar", `deactivateOldBudgets(year, month)` marca `is_active = false` en **todos** los presupuestos del mes, incluyendo los de gasto. Resultado: el presupuesto de gastos de mayo desaparece tras cargar el de ingresos.
+3. La constraint única de la tabla (`user_id, category_id, period, month, year`) tampoco distingue tipo, lo cual deja la puerta abierta a colisiones en upsert si una categoría llegara a usarse en ambos lados.
 
-La misma lógica aplica en `VoiceButton.tsx` línea 237: `editCurrency !== acc.currency` es `false` cuando ambos son USD, así que `amount_in_base` queda igual al monto en USD.
+Esto también explica por qué abril (sin ingreso aún) se ve "completo" y mayo se ve "modificado": en mayo el bloque de gastos fue desactivado, así que el resumen, la comparativa vs mes anterior y los bloques de gasto ya no tienen datos que mostrar.
 
-**Problema 2 — Voice UI no muestra selector de moneda**
+## Solución (sólo frontend + 1 migración mínima)
 
-En el modo de edición del VoiceButton (líneas 684-760), no hay ningún `Select` para `editCurrency`. El usuario no puede cambiar la moneda del gasto por voz. En la vista de confirmación (líneas 460-500) tampoco se muestra la moneda.
+### 1. `src/hooks/useBudgetWizard.ts`
+- `checkExistingBudgets(year, month, budgetType)` → agregar `.eq("budget_type", budgetType)`.
+- `deactivateOldBudgets(year, month, budgetType)` → agregar `.eq("budget_type", budgetType)`.
+- Ajustar firmas y tipos.
 
-## Plan de cambios
+### 2. `src/components/budgets/BudgetCreationWizard.tsx`
+- Pasar `budgetType` a `checkExistingBudgets` y `deactivateOldBudgets`.
+- En `handleCopyAsBase` el query de "existing" también filtra por `budget_type = budgetType` (sólo copia presupuestos del mismo tipo como base).
+- Los mensajes del `AlertDialog` aclaran el tipo: "Ya existe un presupuesto de **ingresos** para mayo 2026" (o "de **gastos**").
 
-### Cambio 1 — TransactionForm: calcular `amount_in_base` cuando la cuenta NO es MXN
+### 3. Migración SQL (recomendada, no destructiva)
+Cambiar el índice único del upsert para incluir `budget_type`:
 
-En `TransactionForm.tsx`, después de la lógica de `crossCurrency` (línea 313), agregar un bloque `else if` para el caso "same currency but not MXN":
-
-```
-// Cuenta y gasto son misma moneda pero no es MXN → calcular equivalente
-if (!crossCurrency && account && account.currency !== "MXN" && fxRate > 0) {
-  amountInBase = data.amount * fxRate;  // e.g. 30 USD * 20.5 = 615 MXN
-  exchangeRate = fxRate;
-  notes = `$${data.amount} ${account.currency} · TC: $${fxRate.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`;
-}
-```
-
-Esto asegura que `amount_in_base` tenga el equivalente en MXN para presupuestos y reportes, sin alterar el débito real de la cuenta (que sigue siendo en USD).
-
-### Cambio 2 — VoiceButton handleConfirm: misma corrección
-
-En `VoiceButton.tsx`, en el bloque `else` de handleConfirm (línea 229-264), después de la lógica de cross-currency, agregar el mismo bloque para "same currency, not MXN":
-
-```
-// Same currency but not MXN → set amount_in_base
-if (editCurrency === acc.currency && acc.currency !== "MXN") {
-  const rateForCurrency = fxRates[acc.currency] || 0;
-  if (rateForCurrency > 0) {
-    amountInBase = amount * rateForCurrency;
-    exchangeRate = rateForCurrency;
-    notes = `$${amount} ${acc.currency} · TC: $${rateForCurrency.toFixed(2)} · Equivalente: $${amountInBase.toFixed(2)} MXN`;
-  }
-}
+```text
+DROP existing unique index/constraint on (user_id, category_id, period, month, year)
+CREATE UNIQUE INDEX ... ON budgets (user_id, category_id, period, month, year, budget_type) WHERE is_active = true
 ```
 
-### Cambio 3 — VoiceButton: agregar selector de moneda en la UI
+Y actualizar el `onConflict` del upsert en `useBudgetWizard.ts` para incluir `budget_type`. Esto evita que un futuro upsert pise el otro tipo aunque compartan `category_id`.
 
-**En la vista de confirmación** (alrededor de línea 470): mostrar la moneda junto al monto parseado, y agregar chips de moneda para poder cambiarla.
+## Lo que NO se toca
+- Lógica de `useBudgets`, totales, comparativa vs mes anterior, `BudgetSummary`, `BudgetCategoryDetail`, `PeriodSummaryCards`.
+- UI de la sección de ingresos esperados.
+- Datos ya existentes en mayo: si el presupuesto de gastos ya fue desactivado, se podrá restaurar manualmente (o con un script breve) — lo confirmo antes de tocar nada en BD.
 
-**En el modo de edición** (líneas 711-714): agregar un `Select` de moneda debajo del campo de monto, con opciones MXN/USD/EUR.
-
-### Cambio 4 — VoiceButton: preview de conversión en vista de confirmación
-
-Cuando `editCurrency !== "MXN"`, mostrar un indicador del equivalente en MXN debajo del resumen parseado (similar al cross-currency indicator que ya existe en líneas 503-531), pero también para el caso "same currency, not MXN".
-
-### Archivos a modificar
-- `src/components/transactions/TransactionForm.tsx` — agregar cálculo de `amount_in_base` para cuentas no-MXN
-- `src/components/voice/VoiceButton.tsx` — agregar selector de moneda + cálculo de `amount_in_base` para cuentas no-MXN
-
+## Pregunta para ti antes de ejecutar
+¿Quieres que, además del fix, intente **restaurar el presupuesto de gastos de mayo 2026** que quedó desactivado? Puedo reactivar las filas con `is_active = false` de ese mes y tipo `expense` si no hay un set nuevo creado después.

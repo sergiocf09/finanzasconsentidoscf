@@ -155,7 +155,7 @@ export default function Transactions() {
           .from("budgets")
           .select("amount, month, year")
           .eq("category_id", categoryFilter)
-          .eq("budget_type", "expense")
+          .eq("budget_type", selectedCategoryType)
           .eq("is_active", true)
           .in("year", [...new Set(months.map(m => m.year))]);
         if (error) throw error;
@@ -170,7 +170,7 @@ export default function Transactions() {
           .from("budgets")
           .select("amount")
           .eq("category_id", categoryFilter)
-          .eq("budget_type", "expense")
+          .eq("budget_type", selectedCategoryType)
           .eq("is_active", true)
           .eq("year", targetYear)
           .eq("month", targetMonth)

@@ -88,6 +88,7 @@ export default function Transactions() {
   const [selectedTx, setSelectedTx] = useState<any>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Period selector state
   const [period, setPeriod] = useState<PeriodKey>("current");
@@ -118,6 +119,7 @@ export default function Transactions() {
     typeFilter: typeFilter === "transfer" ? "all" : typeFilter,
     searchQuery,
     sortAsc,
+    categoryId: categoryFilter !== "all" ? categoryFilter : "",
     categories: categories.map(c => ({ id: c.id, name: c.name })),
     accounts: accounts.map(a => ({ id: a.id, name: a.name })),
   });
@@ -163,7 +165,7 @@ export default function Transactions() {
     };
   });
 
-  const transferItems: UnifiedItem[] = transfers.map((t) => ({
+  const transferItems: UnifiedItem[] = categoryFilter !== "all" ? [] : transfers.map((t) => ({
     id: t.id,
     date: t.transfer_date,
     type: "transfer",
@@ -252,13 +254,28 @@ export default function Transactions() {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={handlePeriodChange}>
-            <SelectTrigger className="h-8 text-xs w-1/2">
+            <SelectTrigger className="h-8 text-xs flex-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {Object.entries(periodLabels).map(([k, label]) => (
                 <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-8 text-xs flex-1">
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">Todas las categorías</SelectItem>
+              {categories
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(c => (
+                  <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>

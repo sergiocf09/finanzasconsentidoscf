@@ -216,6 +216,7 @@ export function useTransactionsPaginated(options?: {
   typeFilter?: string;
   searchQuery?: string;
   sortAsc?: boolean;
+  categoryId?: string;
   categories?: { id: string; name: string }[];
   accounts?: { id: string; name: string }[];
 }) {
@@ -225,6 +226,7 @@ export function useTransactionsPaginated(options?: {
   const typeFilter = options?.typeFilter ?? "all";
   const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
   const sortAsc = options?.sortAsc ?? false;
+  const categoryId = options?.categoryId ?? "";
   const categories = options?.categories ?? [];
   const accounts = options?.accounts ?? [];
 
@@ -238,6 +240,7 @@ export function useTransactionsPaginated(options?: {
       typeFilter,
       sortAsc,
       searchQuery,
+      categoryId,
       accounts.map(a => a.id).join(','),
     ],
     queryFn: async () => {
@@ -262,6 +265,8 @@ export function useTransactionsPaginated(options?: {
 
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
+
+      if (categoryId) query = query.eq('category_id', categoryId);
 
       // Use OR filter: description, notes, matching category_id, or matching account_id
       const orFilters = [
@@ -292,6 +297,7 @@ export function useTransactionsPaginated(options?: {
       format(endDate, 'yyyy-MM-dd'),
       typeFilter,
       sortAsc,
+      categoryId,
     ],
     queryFn: async ({ pageParam }) => {
       let query = supabase
@@ -306,6 +312,8 @@ export function useTransactionsPaginated(options?: {
       // Type filter at DB level
       if (typeFilter === 'income') query = query.eq('type', 'income');
       else if (typeFilter === 'expense') query = query.eq('type', 'expense');
+
+      if (categoryId) query = query.eq('category_id', categoryId);
 
       // Cursor-based pagination: use offset from pageParam
       if (pageParam > 0) {

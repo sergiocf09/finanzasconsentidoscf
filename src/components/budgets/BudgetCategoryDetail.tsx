@@ -169,7 +169,7 @@ export function BudgetCategoryDetail({
               )}
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Gastado</span>
+              <span className="text-sm text-muted-foreground">{budget?.budget_type === "income" ? "Recibido" : "Gastado"}</span>
               <span className={cn("text-sm font-semibold", textColorClass)}>
                 {fmt(spent)}
               </span>

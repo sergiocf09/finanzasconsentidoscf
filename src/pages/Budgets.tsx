@@ -292,7 +292,12 @@ export default function Budgets() {
       {isLoading ? (
         <Skeleton className="h-28 rounded-2xl" />
       ) : (
-        <BudgetSummary totalBudgeted={totalBudgeted} totalSpent={adjustedTotalSpent} />
+        <BudgetSummary
+          totalBudgeted={totalBudgeted}
+          totalSpent={adjustedTotalSpent}
+          incomeExpected={totalIncomeExpected}
+          incomeReceived={totalIncomeReceived}
+        />
       )}
 
       {/* Comparativa vs mes anterior */}

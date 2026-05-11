@@ -1182,6 +1182,38 @@ export type Database = {
           },
         ]
       }
+      user_category_preferences: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          id: string
+          is_hidden: boolean
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          id?: string
+          is_hidden?: boolean
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          is_hidden?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_category_preferences_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       voice_logs: {
         Row: {
           confidence: number | null

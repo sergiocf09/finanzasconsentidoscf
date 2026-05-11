@@ -227,12 +227,6 @@ export function useTransactionsPaginated(options?: {
   const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
   const sortAsc = options?.sortAsc ?? false;
   const categoryId = options?.categoryId ?? "";
-  const { user } = useAuth();
-  const startDate = options?.startDate ?? startOfMonth(new Date());
-  const endDate = options?.endDate ?? endOfMonth(new Date());
-  const typeFilter = options?.typeFilter ?? "all";
-  const searchQuery = options?.searchQuery?.trim().toLowerCase() ?? "";
-  const sortAsc = options?.sortAsc ?? false;
   const categories = options?.categories ?? [];
   const accounts = options?.accounts ?? [];
 

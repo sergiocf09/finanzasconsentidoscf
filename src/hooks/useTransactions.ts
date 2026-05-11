@@ -240,6 +240,7 @@ export function useTransactionsPaginated(options?: {
       typeFilter,
       sortAsc,
       searchQuery,
+      categoryId,
       accounts.map(a => a.id).join(','),
     ],
     queryFn: async () => {

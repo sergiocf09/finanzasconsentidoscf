@@ -108,6 +108,77 @@ export default function Transactions() {
   const { transfers, isLoading: transfersLoading, totalTransferAmount, deleteTransfer } = useTransfers(undefined, { startDate, endDate });
   const { categories } = useCategories();
   const { accounts } = useAccounts();
+  const { user } = useAuth();
+
+  // Total gastado en la categoría seleccionada durante el periodo
+  const { data: categorySpentData } = useQuery({
+    queryKey: ["category_spent", user?.id, categoryFilter, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      if (!categoryFilter || categoryFilter === "all") return { total: 0 };
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("amount, amount_in_base, exchange_rate")
+        .eq("category_id", categoryFilter)
+        .eq("type", "expense")
+        .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
+        .lte("transaction_date", format(endDate, "yyyy-MM-dd"));
+      if (error) throw error;
+      const total = (data ?? []).reduce((sum, tx: any) => sum + (tx.amount_in_base ?? tx.amount), 0);
+      return { total };
+    },
+    enabled: !!user && categoryFilter !== "all",
+  });
+  const categorySpent = categorySpentData?.total ?? 0;
+
+  // Presupuesto de la categoría seleccionada para el periodo
+  const { data: categoryBudgetData } = useQuery({
+    queryKey: ["category_budget", user?.id, categoryFilter, period, format(startDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      if (!categoryFilter || categoryFilter === "all") return { budgetAmount: null as number | null };
+
+      const now = new Date();
+
+      if (period === "last3") {
+        const months = [
+          { year: getYear(subMonths(now, 2)), month: getMonth(subMonths(now, 2)) + 1 },
+          { year: getYear(subMonths(now, 1)), month: getMonth(subMonths(now, 1)) + 1 },
+          { year: getYear(now),               month: getMonth(now) + 1 },
+        ];
+        const { data, error } = await supabase
+          .from("budgets")
+          .select("amount, month, year")
+          .eq("category_id", categoryFilter)
+          .eq("budget_type", "expense")
+          .eq("is_active", true)
+          .in("year", [...new Set(months.map(m => m.year))]);
+        if (error) throw error;
+        const total = (data ?? [])
+          .filter((b: any) => months.some(m => m.year === b.year && m.month === b.month))
+          .reduce((sum: number, b: any) => sum + Number(b.amount), 0);
+        return { budgetAmount: total > 0 ? total : null };
+      } else {
+        const targetYear = getYear(startDate);
+        const targetMonth = getMonth(startDate) + 1;
+        const { data, error } = await supabase
+          .from("budgets")
+          .select("amount")
+          .eq("category_id", categoryFilter)
+          .eq("budget_type", "expense")
+          .eq("is_active", true)
+          .eq("year", targetYear)
+          .eq("month", targetMonth)
+          .maybeSingle();
+        if (error) throw error;
+        return { budgetAmount: data?.amount ?? null };
+      }
+    },
+    enabled: !!user && categoryFilter !== "all",
+  });
+  const categoryBudget: number | null = categoryBudgetData?.budgetAmount ?? null;
+
+  const selectedCategoryName = categoryFilter !== "all"
+    ? categories.find(c => c.id === categoryFilter)?.name ?? ""
+    : "";
 
   // Paginated query for the list
   const {

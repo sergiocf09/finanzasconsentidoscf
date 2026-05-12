@@ -88,7 +88,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "expense" }: BudgetCreationWizardProps) {
   const { user } = useAuth();
   const { expenseCategories, incomeCategories } = useCategories();
-  const { fetchHistoricalSpend, fetchHistoricalIncome, upsertBudgets, deactivateOldBudgets, checkExistingBudgets } = useBudgetWizard();
+  const { fetchHistoricalSpend, fetchHistoricalIncome, upsertBudgets, deactivateOldBudgets, checkExistingBudgets, fetchPreviousBudget, expandMonthRange } = useBudgetWizard();
   const queryClient = useQueryClient();
 
   const currentYear = new Date().getFullYear();

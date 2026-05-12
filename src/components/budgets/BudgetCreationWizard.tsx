@@ -242,13 +242,51 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
     setSaving(true);
     try {
       const validBudgets = categoryBudgets.filter((b) => b.amount > 0);
-      const inserts = validBudgets.map((b) => ({
-        user_id: user.id, category_id: b.category_id, name: b.name, amount: b.amount,
-        period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
-        budget_type: budgetType,
-      }));
-      await upsertBudgets(inserts, year, month);
-      toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
+      if (validBudgets.length === 0) {
+        toast.error("Ingresa al menos un monto");
+        setSaving(false);
+        return;
+      }
+      const range = expandMonthRange(year, month, horizon);
+      // Detect which months in the range still have existing budgets (skipped on save)
+      const skippedMonths: { year: number; month: number }[] = [];
+      const targetMonths: { year: number; month: number }[] = [];
+      for (const ym of range) {
+        // If the month was pre-cleared by handleReplaceExisting, count will be 0 and we proceed.
+        // For multi-month ranges beyond the first month we respect existing budgets unless user chose replace-all.
+        const count = await checkExistingBudgets(ym.year, ym.month, budgetType);
+        if (count > 0 && (ym.year !== year || ym.month !== month)) {
+          // The base month was already handled in the period step; only skip "other" months that still have data
+          skippedMonths.push(ym);
+        } else {
+          targetMonths.push(ym);
+        }
+      }
+
+      for (const ym of targetMonths) {
+        const inserts = validBudgets.map((b) => ({
+          user_id: user.id, category_id: b.category_id, name: b.name, amount: b.amount,
+          period: "monthly" as const, month: ym.month, year: ym.year, spent: 0,
+          created_from: method, is_active: true,
+          budget_type: budgetType,
+        }));
+        await upsertBudgets(inserts, ym.year, ym.month);
+      }
+
+      if (targetMonths.length === 1 && skippedMonths.length === 0) {
+        toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
+      } else {
+        const createdLabel = targetMonths.map(ym => `${monthShort[ym.month - 1]} ${ym.year}`).join(", ");
+        if (skippedMonths.length > 0) {
+          const skippedLabel = skippedMonths.map(ym => `${monthShort[ym.month - 1]} ${ym.year}`).join(", ");
+          toast.success(
+            `Presupuesto creado en ${targetMonths.length} de ${range.length} meses (${createdLabel}). Omitidos por presupuesto existente: ${skippedLabel}.`,
+            { duration: 7000 }
+          );
+        } else {
+          toast.success(`Presupuesto creado en ${targetMonths.length} meses: ${createdLabel}`);
+        }
+      }
       onOpenChange(false);
     } catch (err: any) {
       toast.error("Error: " + err.message);
@@ -262,11 +300,33 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const [existingBudgetDialog, setExistingBudgetDialog] = useState(false);
   const [existingCount, setExistingCount] = useState(0);
 
+  const loadPreviousBudgetAsBase = async () => {
+    if (!user) return;
+    const res = await fetchPreviousBudget(budgetType, year, month);
+    if (res.rows.length > 0) {
+      setPreviousBudgetMeta({ year: res.year, month: res.month });
+      const budgets = res.rows.map((b: any) => {
+        const cat = activeCategories.find((c) => c.id === b.category_id);
+        return {
+          category_id: b.category_id || "",
+          name: b.name,
+          bucket: (cat as any)?.bucket || "lifestyle",
+          amount: b.amount,
+        };
+      });
+      setCategoryBudgets(budgets);
+    } else {
+      // Fallback to manual init if somehow nothing found
+      initManualBudgets();
+    }
+  };
+
   const proceedAfterPeriod = async () => {
     if (method === "manual") { initManualBudgets(); setStep("configure"); }
     else if (method === "historical") { await fetchHistoricalData(); setStep("configure"); }
     else if (method === "template") { setStep("configure"); }
     else if (method === "smart") { await runSmartAnalysis(); setStep("configure"); }
+    else if (method === "copy_previous") { await loadPreviousBudgetAsBase(); setStep("configure"); }
   };
 
   const handlePeriodNext = async () => {
@@ -291,7 +351,11 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const handleReplaceExisting = async () => {
     if (!user) return;
     setExistingBudgetDialog(false);
-    await deactivateOldBudgets(year, month, budgetType);
+    // For multi-month horizons, deactivate every month in the range that has data
+    const range = expandMonthRange(year, month, horizon);
+    for (const ym of range) {
+      await deactivateOldBudgets(ym.year, ym.month, budgetType);
+    }
     await proceedAfterPeriod();
   };
 

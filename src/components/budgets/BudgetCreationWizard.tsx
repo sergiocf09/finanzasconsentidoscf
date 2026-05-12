@@ -56,7 +56,10 @@ const months = [
 ];
 
 type WizardStep = "method" | "period" | "configure" | "review";
-type Method = "manual" | "historical" | "template" | "smart";
+type Method = "manual" | "historical" | "template" | "smart" | "copy_previous";
+type Horizon = "single" | "quarter" | "rest_of_year" | "full_year";
+
+const monthShort = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 interface CategoryBudget {
   category_id: string;

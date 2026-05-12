@@ -198,6 +198,9 @@ export function useBudgetWizard() {
     upsertBudgets,
     deactivateOldBudgets,
     checkExistingBudgets,
+    fetchPreviousBudget,
+    expandMonthRange,
     isPending,
   };
 }
+

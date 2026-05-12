@@ -531,6 +531,16 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
 
     return (
       <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+        {method === "copy_previous" && previousBudgetMeta && (
+          <div className="rounded-lg bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+            Base: {months.find(m => m.value === String(previousBudgetMeta.month))?.label} {previousBudgetMeta.year} · {horizon !== "single" ? "Se aplicará al rango seleccionado" : `Para ${months.find(m => m.value === String(month))?.label} ${year}`}
+          </div>
+        )}
+        {horizon !== "single" && method !== "copy_previous" && (
+          <div className="rounded-lg bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+            Se creará el mismo presupuesto en {expandMonthRange(year, month, horizon).length} meses.
+          </div>
+        )}
         {method === "template" && !categoryBudgets.length && !isIncomeType && (
           <div className="space-y-2 mb-4">
             <p className="text-sm text-muted-foreground">Elige una plantilla:</p>

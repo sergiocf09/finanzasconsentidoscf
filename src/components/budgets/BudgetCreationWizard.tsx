@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, FileText, History, LayoutTemplate, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, History, LayoutTemplate, Sparkles, Check, Copy } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 

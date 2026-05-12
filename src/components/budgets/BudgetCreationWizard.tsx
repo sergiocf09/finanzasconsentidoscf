@@ -668,7 +668,11 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const stepTitle = {
     method: "Nuevo presupuesto",
     period: "Periodo",
-    configure: method === "template" ? "Plantilla" : method === "smart" ? "Presupuesto inteligente" : method === "historical" ? "Basado en histórico" : "Configurar montos",
+    configure: method === "template" ? "Plantilla"
+      : method === "smart" ? "Presupuesto inteligente"
+      : method === "historical" ? "Basado en histórico"
+      : method === "copy_previous" ? "Copiar del mes anterior"
+      : "Configurar montos",
     review: "Revisar",
   };
 

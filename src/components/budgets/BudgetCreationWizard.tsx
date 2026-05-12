@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, FileText, History, LayoutTemplate, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, History, LayoutTemplate, Sparkles, Check, Copy } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -56,7 +56,10 @@ const months = [
 ];
 
 type WizardStep = "method" | "period" | "configure" | "review";
-type Method = "manual" | "historical" | "template" | "smart";
+type Method = "manual" | "historical" | "template" | "smart" | "copy_previous";
+type Horizon = "single" | "quarter" | "rest_of_year" | "full_year";
+
+const monthShort = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 interface CategoryBudget {
   category_id: string;
@@ -85,7 +88,7 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "expense" }: BudgetCreationWizardProps) {
   const { user } = useAuth();
   const { expenseCategories, incomeCategories } = useCategories();
-  const { fetchHistoricalSpend, fetchHistoricalIncome, upsertBudgets, deactivateOldBudgets, checkExistingBudgets } = useBudgetWizard();
+  const { fetchHistoricalSpend, fetchHistoricalIncome, upsertBudgets, deactivateOldBudgets, checkExistingBudgets, fetchPreviousBudget, expandMonthRange } = useBudgetWizard();
   const queryClient = useQueryClient();
 
   const currentYear = new Date().getFullYear();
@@ -104,6 +107,9 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [smartAnalysis, setSmartAnalysis] = useState<{ stabilityPct: number; lifestylePct: number; buildPct: number; message: string } | null>(null);
   const [budgetType, setBudgetType] = useState<"expense" | "income">(initialBudgetType);
+  const [horizon, setHorizon] = useState<Horizon>("single");
+  const [previousBudgetMeta, setPreviousBudgetMeta] = useState<{ year: number; month: number } | null>(null);
+  const [hasPreviousBudget, setHasPreviousBudget] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -113,10 +119,23 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
       setSelectedTemplate(null);
       setSmartAnalysis(null);
       setBudgetType(initialBudgetType);
+      setHorizon("single");
+      setPreviousBudgetMeta(null);
     } else {
       setBudgetType(initialBudgetType);
     }
   }, [open, initialBudgetType]);
+
+  // Check if there's a previous budget for the current type (for "Copy previous" method availability)
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetchPreviousBudget(budgetType, currentYear, currentMonth);
+      if (!cancelled) setHasPreviousBudget(res.rows.length > 0);
+    })();
+    return () => { cancelled = true; };
+  }, [open, user, budgetType, currentYear, currentMonth]);
 
   const activeCategories = budgetType === "income" ? incomeCategories : expenseCategories;
 
@@ -223,13 +242,51 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
     setSaving(true);
     try {
       const validBudgets = categoryBudgets.filter((b) => b.amount > 0);
-      const inserts = validBudgets.map((b) => ({
-        user_id: user.id, category_id: b.category_id, name: b.name, amount: b.amount,
-        period: "monthly" as const, month, year, spent: 0, created_from: method, is_active: true,
-        budget_type: budgetType,
-      }));
-      await upsertBudgets(inserts, year, month);
-      toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
+      if (validBudgets.length === 0) {
+        toast.error("Ingresa al menos un monto");
+        setSaving(false);
+        return;
+      }
+      const range = expandMonthRange(year, month, horizon);
+      // Detect which months in the range still have existing budgets (skipped on save)
+      const skippedMonths: { year: number; month: number }[] = [];
+      const targetMonths: { year: number; month: number }[] = [];
+      for (const ym of range) {
+        // If the month was pre-cleared by handleReplaceExisting, count will be 0 and we proceed.
+        // For multi-month ranges beyond the first month we respect existing budgets unless user chose replace-all.
+        const count = await checkExistingBudgets(ym.year, ym.month, budgetType);
+        if (count > 0 && (ym.year !== year || ym.month !== month)) {
+          // The base month was already handled in the period step; only skip "other" months that still have data
+          skippedMonths.push(ym);
+        } else {
+          targetMonths.push(ym);
+        }
+      }
+
+      for (const ym of targetMonths) {
+        const inserts = validBudgets.map((b) => ({
+          user_id: user.id, category_id: b.category_id, name: b.name, amount: b.amount,
+          period: "monthly" as const, month: ym.month, year: ym.year, spent: 0,
+          created_from: method, is_active: true,
+          budget_type: budgetType,
+        }));
+        await upsertBudgets(inserts, ym.year, ym.month);
+      }
+
+      if (targetMonths.length === 1 && skippedMonths.length === 0) {
+        toast.success(`Presupuesto creado con ${validBudgets.length} categorías`);
+      } else {
+        const createdLabel = targetMonths.map(ym => `${monthShort[ym.month - 1]} ${ym.year}`).join(", ");
+        if (skippedMonths.length > 0) {
+          const skippedLabel = skippedMonths.map(ym => `${monthShort[ym.month - 1]} ${ym.year}`).join(", ");
+          toast.success(
+            `Presupuesto creado en ${targetMonths.length} de ${range.length} meses (${createdLabel}). Omitidos por presupuesto existente: ${skippedLabel}.`,
+            { duration: 7000 }
+          );
+        } else {
+          toast.success(`Presupuesto creado en ${targetMonths.length} meses: ${createdLabel}`);
+        }
+      }
       onOpenChange(false);
     } catch (err: any) {
       toast.error("Error: " + err.message);
@@ -243,11 +300,33 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const [existingBudgetDialog, setExistingBudgetDialog] = useState(false);
   const [existingCount, setExistingCount] = useState(0);
 
+  const loadPreviousBudgetAsBase = async () => {
+    if (!user) return;
+    const res = await fetchPreviousBudget(budgetType, year, month);
+    if (res.rows.length > 0) {
+      setPreviousBudgetMeta({ year: res.year, month: res.month });
+      const budgets = res.rows.map((b: any) => {
+        const cat = activeCategories.find((c) => c.id === b.category_id);
+        return {
+          category_id: b.category_id || "",
+          name: b.name,
+          bucket: (cat as any)?.bucket || "lifestyle",
+          amount: b.amount,
+        };
+      });
+      setCategoryBudgets(budgets);
+    } else {
+      // Fallback to manual init if somehow nothing found
+      initManualBudgets();
+    }
+  };
+
   const proceedAfterPeriod = async () => {
     if (method === "manual") { initManualBudgets(); setStep("configure"); }
     else if (method === "historical") { await fetchHistoricalData(); setStep("configure"); }
     else if (method === "template") { setStep("configure"); }
     else if (method === "smart") { await runSmartAnalysis(); setStep("configure"); }
+    else if (method === "copy_previous") { await loadPreviousBudgetAsBase(); setStep("configure"); }
   };
 
   const handlePeriodNext = async () => {
@@ -272,7 +351,11 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const handleReplaceExisting = async () => {
     if (!user) return;
     setExistingBudgetDialog(false);
-    await deactivateOldBudgets(year, month, budgetType);
+    // For multi-month horizons, deactivate every month in the range that has data
+    const range = expandMonthRange(year, month, horizon);
+    for (const ym of range) {
+      await deactivateOldBudgets(ym.year, ym.month, budgetType);
+    }
     await proceedAfterPeriod();
   };
 
@@ -318,17 +401,30 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
 
       <p className="text-sm text-muted-foreground mb-4">¿Desde dónde quieres construir tu presupuesto?</p>
       {[
-        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría" },
-        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores" },
+        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría", disabled: false },
+        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores", disabled: false },
+        {
+          id: "copy_previous" as Method,
+          icon: Copy,
+          title: "Copiar del mes anterior",
+          desc: hasPreviousBudget
+            ? "Toma tu presupuesto más reciente del mismo tipo como base"
+            : "Sin presupuesto previo del mismo tipo",
+          disabled: !hasPreviousBudget,
+        },
         ...(budgetType === "expense" ? [
-          { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida" },
-          { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada" },
+          { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida", disabled: false },
+          { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada", disabled: false },
         ] : []),
       ].map((m) => (
         <button
           key={m.id}
-          className="w-full flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-colors text-left"
-          onClick={() => handleMethodSelect(m.id)}
+          disabled={m.disabled}
+          className={cn(
+            "w-full flex items-center gap-3 p-4 rounded-xl border border-border bg-card transition-colors text-left",
+            m.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary/50"
+          )}
+          onClick={() => !m.disabled && handleMethodSelect(m.id)}
         >
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <m.icon className="h-5 w-5 text-primary" />
@@ -394,6 +490,32 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
         </FieldRow>
       )}
 
+      {/* Horizon selector */}
+      <FieldRow label="Aplicar a">
+        <Select value={horizon} onValueChange={(v) => setHorizon(v as Horizon)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Sólo este mes</SelectItem>
+            <SelectItem value="quarter">
+              {(() => {
+                const qStart = Math.floor((month - 1) / 3) * 3 + 1;
+                return `Trimestre (${monthShort[qStart - 1]}–${monthShort[qStart + 1]} ${year})`;
+              })()}
+            </SelectItem>
+            <SelectItem value="rest_of_year">
+              Resto del año ({monthShort[month - 1]}–Dic {year})
+            </SelectItem>
+            <SelectItem value="full_year">Año completo {year}</SelectItem>
+          </SelectContent>
+        </Select>
+      </FieldRow>
+
+      {horizon !== "single" && (
+        <p className="text-[10px] text-muted-foreground pl-[40%] leading-tight">
+          Se creará el mismo presupuesto en cada mes del rango. Podrás editar cada mes después de forma independiente.
+        </p>
+      )}
+
       <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={periodLoading}>
         {periodLoading
           ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Verificando...</>
@@ -409,6 +531,16 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
 
     return (
       <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+        {method === "copy_previous" && previousBudgetMeta && (
+          <div className="rounded-lg bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+            Base: {months.find(m => m.value === String(previousBudgetMeta.month))?.label} {previousBudgetMeta.year} · {horizon !== "single" ? "Se aplicará al rango seleccionado" : `Para ${months.find(m => m.value === String(month))?.label} ${year}`}
+          </div>
+        )}
+        {horizon !== "single" && method !== "copy_previous" && (
+          <div className="rounded-lg bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+            Se creará el mismo presupuesto en {expandMonthRange(year, month, horizon).length} meses.
+          </div>
+        )}
         {method === "template" && !categoryBudgets.length && !isIncomeType && (
           <div className="space-y-2 mb-4">
             <p className="text-sm text-muted-foreground">Elige una plantilla:</p>
@@ -546,7 +678,11 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const stepTitle = {
     method: "Nuevo presupuesto",
     period: "Periodo",
-    configure: method === "template" ? "Plantilla" : method === "smart" ? "Presupuesto inteligente" : method === "historical" ? "Basado en histórico" : "Configurar montos",
+    configure: method === "template" ? "Plantilla"
+      : method === "smart" ? "Presupuesto inteligente"
+      : method === "historical" ? "Basado en histórico"
+      : method === "copy_previous" ? "Copiar del mes anterior"
+      : "Configurar montos",
     review: "Revisar",
   };
 
@@ -584,13 +720,27 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Ya tienes un presupuesto de {budgetType === "income" ? "ingresos" : "gastos"} este mes
+              {horizon === "single"
+                ? `Ya tienes un presupuesto de ${budgetType === "income" ? "ingresos" : "gastos"} este mes`
+                : `Ya hay presupuesto de ${budgetType === "income" ? "ingresos" : "gastos"} en el rango`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Sólo afectaremos los presupuestos de {budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.
+              {horizon === "single"
+                ? `Sólo afectaremos los presupuestos de ${budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.`
+                : `Detectamos presupuesto en al menos uno de los meses del rango. Puedes saltarlos (no se sobrescriben), reemplazarlos todos, o usar uno como base.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2">
+            {horizon !== "single" && (
+              <Button
+                onClick={async () => {
+                  setExistingBudgetDialog(false);
+                  await proceedAfterPeriod();
+                }}
+              >
+                Saltar meses con presupuesto
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => { setExistingBudgetDialog(false); onOpenChange(false); }}
@@ -602,7 +752,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
               className="text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={handleReplaceExisting}
             >
-              Reemplazar (desactivar anterior)
+              {horizon === "single" ? "Reemplazar (desactivar anterior)" : "Reemplazar todos los meses"}
             </Button>
             <Button onClick={handleCopyAsBase}>
               Copiar como base y ajustar

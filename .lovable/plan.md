@@ -1,41 +1,106 @@
-# Plan: aislar presupuestos de ingreso y de gasto
 
-## Diagnóstico
+# Plan: unificar y enriquecer la creación de presupuestos (Ingresos y Gastos)
 
-Al crear un presupuesto de ingresos para mayo, el wizard borró el presupuesto de gastos que ya existía. La causa está en `useBudgetWizard.ts` y `BudgetCreationWizard.tsx`:
+## Decisiones acordadas
+1. **Horizonte por defecto:** "Sólo este mes".
+2. **Trimestre:** calendario (Ene-Mar, Abr-Jun, Jul-Sep, Oct-Dic). Se ofrece el trimestre **en curso** según el mes seleccionado.
+3. **Copiar del mes anterior:** búsqueda retroactiva hasta encontrar el presupuesto más reciente del **mismo tipo**.
+4. **Resumen multi-mes:** sí, al finalizar muestra "Se crearon X de Y meses; los meses Z se omitieron".
 
-1. `checkExistingBudgets(year, month)` cuenta TODOS los presupuestos del mes sin filtrar por `budget_type`. Si ya hay gastos cargados y se va a crear un ingreso, dispara el diálogo "Ya hay presupuestos" como si fueran del mismo tipo.
-2. Si el usuario elige "Reemplazar", `deactivateOldBudgets(year, month)` marca `is_active = false` en **todos** los presupuestos del mes, incluyendo los de gasto. Resultado: el presupuesto de gastos de mayo desaparece tras cargar el de ingresos.
-3. La constraint única de la tabla (`user_id, category_id, period, month, year`) tampoco distingue tipo, lo cual deja la puerta abierta a colisiones en upsert si una categoría llegara a usarse en ambos lados.
+---
 
-Esto también explica por qué abril (sin ingreso aún) se ve "completo" y mayo se ve "modificado": en mayo el bloque de gastos fue desactivado, así que el resumen, la comparativa vs mes anterior y los bloques de gasto ya no tienen datos que mostrar.
+## 1. Cambios en el wizard (`BudgetCreationWizard.tsx`)
 
-## Solución (sólo frontend + 1 migración mínima)
+### 1.1 Paridad de métodos por tipo
 
-### 1. `src/hooks/useBudgetWizard.ts`
-- `checkExistingBudgets(year, month, budgetType)` → agregar `.eq("budget_type", budgetType)`.
-- `deactivateOldBudgets(year, month, budgetType)` → agregar `.eq("budget_type", budgetType)`.
-- Ajustar firmas y tipos.
+| Método | Gasto | Ingreso |
+|---|---|---|
+| Manual | ✅ | ✅ |
+| Basado en histórico | ✅ | ✅ |
+| **Copiar del mes anterior** *(nuevo)* | ✅ | ✅ |
+| Plantilla | ✅ | ❌ |
+| Inteligente | ✅ | ❌ |
 
-### 2. `src/components/budgets/BudgetCreationWizard.tsx`
-- Pasar `budgetType` a `checkExistingBudgets` y `deactivateOldBudgets`.
-- En `handleCopyAsBase` el query de "existing" también filtra por `budget_type = budgetType` (sólo copia presupuestos del mismo tipo como base).
-- Los mensajes del `AlertDialog` aclaran el tipo: "Ya existe un presupuesto de **ingresos** para mayo 2026" (o "de **gastos**").
+El nuevo método **"Copiar del mes anterior"** busca hacia atrás (mes inmediato, luego previo, etc.) hasta encontrar el presupuesto activo más reciente del mismo `budget_type` y lo precarga en el paso "configure" para edición. Si no encuentra ninguno, el método aparece deshabilitado con tooltip "Sin presupuesto previo del mismo tipo".
 
-### 3. Migración SQL (recomendada, no destructiva)
-Cambiar el índice único del upsert para incluir `budget_type`:
+### 1.2 Selector de horizonte (paso "period")
+
+Añadir bajo Mes/Año:
 
 ```text
-DROP existing unique index/constraint on (user_id, category_id, period, month, year)
-CREATE UNIQUE INDEX ... ON budgets (user_id, category_id, period, month, year, budget_type) WHERE is_active = true
+Aplicar a:
+  ◉ Sólo este mes
+  ○ Trimestre calendario (Abr-Jun 2026)   ← muestra el trimestre del mes elegido
+  ○ Resto del año (May–Dic 2026)
+  ○ Año completo 2026
 ```
 
-Y actualizar el `onConflict` del upsert en `useBudgetWizard.ts` para incluir `budget_type`. Esto evita que un futuro upsert pise el otro tipo aunque compartan `category_id`.
+El label del trimestre se calcula dinámicamente: `Math.floor((month-1)/3)` → meses 1-3, 4-6, 7-9, 10-12.
 
-## Lo que NO se toca
-- Lógica de `useBudgets`, totales, comparativa vs mes anterior, `BudgetSummary`, `BudgetCategoryDetail`, `PeriodSummaryCards`.
-- UI de la sección de ingresos esperados.
-- Datos ya existentes en mayo: si el presupuesto de gastos ya fue desactivado, se podrá restaurar manualmente (o con un script breve) — lo confirmo antes de tocar nada en BD.
+### 1.3 Detección de conflictos multi-mes
 
-## Pregunta para ti antes de ejecutar
-¿Quieres que, además del fix, intente **restaurar el presupuesto de gastos de mayo 2026** que quedó desactivado? Puedo reactivar las filas con `is_active = false` de ese mes y tipo `expense` si no hay un set nuevo creado después.
+`checkExistingBudgets` se llama por cada mes del rango. Si hay conflictos en uno o más meses, mostrar AlertDialog consolidado:
+
+```text
+Ya existen presupuestos de [tipo] en:
+  • Mayo 2026 (8 categorías)
+  • Julio 2026 (3 categorías)
+
+  ◉ Saltar esos meses (default)
+  ○ Reemplazar todos
+  ○ Cancelar
+```
+
+### 1.4 Guardado multi-mes
+
+`handleSave` genera N batches de inserts (uno por mes del rango, mismo monto). Se ejecuta secuencialmente para que `recalculate_budget_spent` corra por cada mes. Al finalizar, toast resumen:
+
+```text
+✓ Presupuesto creado en 3 meses (May, Jun, Jul 2026).
+✓ Presupuesto creado en 2 de 3 meses.
+  Junio 2026 se omitió por presupuesto existente.
+```
+
+---
+
+## 2. Cambios en `useBudgetWizard.ts`
+
+- `checkExistingBudgets(year, month, budgetType)` ya filtra por tipo (✓ hecho).
+- `deactivateOldBudgets(year, month, budgetType)` ya filtra por tipo (✓ hecho).
+- **Nuevo:** `fetchPreviousBudget(budgetType, fromYear, fromMonth)` — busca hacia atrás hasta 24 meses y devuelve la lista de filas del primer mes con presupuesto activo del mismo tipo.
+- **Nuevo:** `expandMonthRange(year, month, horizon)` — devuelve array `[{year, month}, ...]` según horizonte.
+
+---
+
+## 3. Migración SQL (defensiva)
+
+```sql
+-- Reemplazar unique index para incluir budget_type
+DROP INDEX IF EXISTS budgets_user_id_category_id_period_month_year_key;
+
+CREATE UNIQUE INDEX budgets_unique_active_key
+ON public.budgets (user_id, category_id, period, month, year, budget_type)
+WHERE is_active = true;
+```
+
+Y actualizar `upsertBudgets` con `onConflict: "user_id,category_id,period,month,year,budget_type"`.
+
+---
+
+## 4. Lo que NO se toca
+
+- Triggers de `spent`, `update_income_budget`, `recalculate_budget_spent`.
+- Bloques pedagógicos (Estabilidad / Calidad / Construcción).
+- `BudgetCategoryDetail`, `BudgetSummary`, `PeriodSummaryCards`, comparativa vs mes anterior.
+- Categorías ocultas / sistema.
+- Lógica de edición ya existente desde `Budgets.tsx` (eliminar ítem, abrir detalle).
+
+---
+
+## 5. Archivos a modificar
+
+- `src/components/budgets/BudgetCreationWizard.tsx` — método "Copiar del mes anterior", horizonte, conflict dialog multi-mes, save multi-mes con resumen.
+- `src/hooks/useBudgetWizard.ts` — `fetchPreviousBudget`, `expandMonthRange`, ajuste `onConflict`.
+- Migración SQL — unique index con `budget_type`.
+
+Cambios aditivos; nada se rompe en mes individual.

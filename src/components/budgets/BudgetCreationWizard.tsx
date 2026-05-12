@@ -726,7 +726,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
             </AlertDialogTitle>
             <AlertDialogDescription>
               {horizon === "single"
-                ? `Sólo afectaremos los presupuestos de ${budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.`
+                ? `Sólo afectaremos los presupuestos de ${budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes ajustar el actual o reemplazarlo desde cero.`
                 : `Detectamos presupuesto en al menos uno de los meses del rango. Puedes saltarlos (no se sobrescriben), reemplazarlos todos, o usar uno como base.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -741,11 +741,8 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
                 Saltar meses con presupuesto
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => { setExistingBudgetDialog(false); onOpenChange(false); }}
-            >
-              Editar el actual
+            <Button onClick={handleCopyAsBase}>
+              {horizon === "single" ? "Ajustar el actual" : "Copiar como base y ajustar"}
             </Button>
             <Button
               variant="outline"
@@ -753,9 +750,6 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
               onClick={handleReplaceExisting}
             >
               {horizon === "single" ? "Reemplazar (desactivar anterior)" : "Reemplazar todos los meses"}
-            </Button>
-            <Button onClick={handleCopyAsBase}>
-              Copiar como base y ajustar
             </Button>
           </div>
         </AlertDialogContent>

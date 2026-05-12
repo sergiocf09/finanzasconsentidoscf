@@ -107,6 +107,9 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [smartAnalysis, setSmartAnalysis] = useState<{ stabilityPct: number; lifestylePct: number; buildPct: number; message: string } | null>(null);
   const [budgetType, setBudgetType] = useState<"expense" | "income">(initialBudgetType);
+  const [horizon, setHorizon] = useState<Horizon>("single");
+  const [previousBudgetMeta, setPreviousBudgetMeta] = useState<{ year: number; month: number } | null>(null);
+  const [hasPreviousBudget, setHasPreviousBudget] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -116,10 +119,23 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
       setSelectedTemplate(null);
       setSmartAnalysis(null);
       setBudgetType(initialBudgetType);
+      setHorizon("single");
+      setPreviousBudgetMeta(null);
     } else {
       setBudgetType(initialBudgetType);
     }
   }, [open, initialBudgetType]);
+
+  // Check if there's a previous budget for the current type (for "Copy previous" method availability)
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetchPreviousBudget(budgetType, currentYear, currentMonth);
+      if (!cancelled) setHasPreviousBudget(res.rows.length > 0);
+    })();
+    return () => { cancelled = true; };
+  }, [open, user, budgetType, currentYear, currentMonth]);
 
   const activeCategories = budgetType === "income" ? incomeCategories : expenseCategories;
 

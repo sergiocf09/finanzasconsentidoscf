@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check } from "lucide-react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -80,6 +80,7 @@ export default function Budgets() {
   const adjustedTotalSpent = totalSpent + unbudgetedTotal;
   const [wizardOpen, setWizardOpen] = useState(false);
   const [initialBudgetType, setInitialBudgetType] = useState<"expense" | "income">("expense");
+  const [incomeExpanded, setIncomeExpanded] = useState(false);
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
     name: string;
@@ -214,79 +215,116 @@ export default function Budgets() {
       </div>
 
       {/* Income budgets section */}
-      {!isLoading && (
-        <div className="rounded-2xl border border-income/25 bg-income/5 p-4 space-y-3 animate-fade-in-up">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-income shrink-0" />
-              <h3 className="text-sm font-heading font-semibold text-foreground">Ingresos esperados</h3>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs text-income hover:text-income gap-1 px-2"
-              onClick={() => { setInitialBudgetType("income"); setWizardOpen(true); }}
-            >
-              <Plus className="h-3 w-3" />
-              Agregar
-            </Button>
-          </div>
+      {!isLoading && (incomeBudgets.length > 0 ? (
+        <div className="rounded-2xl border border-income/25 bg-income/5 transition-all duration-200 animate-fade-in-up">
+          {(() => {
+            const pct = totalIncomeExpected > 0 ? (totalIncomeReceived / totalIncomeExpected) * 100 : 0;
+            const remaining = totalIncomeExpected - totalIncomeReceived;
+            return (
+              <>
+                <button
+                  className="w-full p-4 flex items-center gap-3 text-left"
+                  onClick={() => setIncomeExpanded(!incomeExpanded)}
+                >
+                  <TrendingUp className="h-5 w-5 text-income shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="font-heading font-bold text-foreground text-sm">Ingresos esperados</h3>
+                      <span className="text-sm font-bold shrink-0 text-foreground">{pct.toFixed(0)}%</span>
+                    </div>
+                    <Progress value={Math.min(pct, 100)} className="h-1.5 bg-income/10 [&>div]:bg-income" />
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs font-bold text-foreground tabular-nums">
+                        {formatCurrency(totalIncomeReceived)} / {formatCurrency(totalIncomeExpected)}
+                      </span>
+                      <span className="text-xs font-bold text-foreground tabular-nums">
+                        {remaining > 0 ? `Faltan ${formatCurrency(remaining)}` : remaining < 0 ? `Superado ${formatCurrency(Math.abs(remaining))}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200", incomeExpanded && "rotate-180")} />
+                </button>
 
-          {incomeBudgets.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-2">
-              Sin presupuesto de ingresos. Agregar uno te permite saber si tus ingresos reales van según lo planeado.
-            </p>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {incomeBudgets.map((b) => {
-                  const pct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
-                  const isComplete = pct >= 100;
-                  return (
-                    <div
-                      key={b.id}
-                      className="space-y-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-income/10 transition-colors"
-                      onClick={() => setDetailBudget({ id: b.id, name: b.name, amount: b.amount, spent: b.spent, category_id: b.category_id, budget_type: "income" })}
-                    >
-                      <div className="flex items-center justify-between text-xs gap-2">
-                        <span className="font-medium text-foreground truncate">{b.name}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="tabular-nums text-muted-foreground">{formatCurrency(b.spent)}</span>
-                          <span className="text-muted-foreground/50">/</span>
-                          <span className="tabular-nums font-medium">{formatCurrency(b.amount)}</span>
-                          {isComplete && <Check className="h-3.5 w-3.5 text-income" />}
+                {incomeExpanded && (
+                  <div className="px-4 pb-4 space-y-2 animate-fade-in-up">
+                    <div className="border-t border-border/50 pt-3 flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-income hover:text-income gap-1 px-2"
+                        onClick={(e) => { e.stopPropagation(); setInitialBudgetType("income"); setWizardOpen(true); }}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Agregar
+                      </Button>
+                    </div>
+                    {incomeBudgets.map((b) => {
+                      const itemPct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
+                      const itemRemaining = b.amount - b.spent;
+                      const isComplete = itemPct >= 100;
+                      return (
+                        <div
+                          key={b.id}
+                          className="flex items-center gap-2 rounded-xl bg-card border border-border p-3 cursor-pointer hover:bg-secondary/50 transition-colors"
+                          onClick={() => setDetailBudget({ id: b.id, name: b.name, amount: b.amount, spent: b.spent, category_id: b.category_id, budget_type: "income" })}
+                        >
+                          <div className="w-1.5 h-8 rounded-full shrink-0 bg-income" />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium text-foreground truncate">{b.name}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-xs tabular-nums font-medium text-foreground">
+                                  {formatCurrency(b.spent)} / {formatCurrency(b.amount)}
+                                </span>
+                                {isComplete && <Check className="h-3.5 w-3.5 text-income" />}
+                              </div>
+                            </div>
+                            <Progress value={Math.min(itemPct, 100)} className="h-1.5 bg-income/10 [&>div]:bg-income" />
+                            <div className="flex items-center justify-between">
+                              <span className={cn("text-[10px] font-medium tabular-nums", isComplete ? "text-income" : "text-muted-foreground")}>
+                                {itemPct}% recibido
+                              </span>
+                              <span className="text-[10px] tabular-nums text-muted-foreground">
+                                {itemRemaining > 0 ? `Faltan ${formatCurrency(itemRemaining)}` : itemRemaining < 0 ? `Superado ${formatCurrency(Math.abs(itemRemaining))}` : ""}
+                              </span>
+                            </div>
+                          </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                            className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={(e) => { e.stopPropagation(); deleteBudget.mutate(b.id); }}
                           >
-                            <span className="text-xs">✕</span>
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      </div>
-                      <Progress value={Math.min(pct, 100)} className="h-1.5 bg-income/10 [&>div]:bg-income" />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-income/20 text-xs">
-                <span className="font-semibold text-foreground">Total</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Esperado</span>
-                  <span className="tabular-nums font-bold text-foreground">{formatCurrency(totalIncomeExpected)}</span>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="text-muted-foreground">Recibido</span>
-                  <span className={cn("tabular-nums font-bold", totalIncomeReceived >= totalIncomeExpected ? "text-income" : "text-foreground")}>
-                    {formatCurrency(totalIncomeReceived)}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
-      )}
+      ) : (
+        <div className="rounded-2xl border border-income/25 bg-income/5 p-4 flex items-center justify-between gap-3 animate-fade-in-up">
+          <div className="flex items-center gap-2 min-w-0">
+            <TrendingUp className="h-4 w-4 text-income shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Sin presupuesto de ingresos. Agregar uno te permite saber si tus ingresos reales van según lo planeado.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs text-income hover:text-income gap-1 px-2 shrink-0"
+            onClick={() => { setInitialBudgetType("income"); setWizardOpen(true); }}
+          >
+            <Plus className="h-3 w-3" />
+            Agregar
+          </Button>
+        </div>
+      ))}
 
       {/* Summary */}
       {isLoading ? (

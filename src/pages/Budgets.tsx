@@ -169,7 +169,25 @@ export default function Budgets() {
 
   const handleUpdateAmount = (id: string, amount: number) => {
     updateBudget.mutate({ id, amount });
+    setDetailBudget((prev) => (prev && prev.id === id ? { ...prev, amount } : prev));
   };
+
+  // Keep detailBudget synced with refreshed budgets data after mutations
+  useEffect(() => {
+    if (!detailBudget) return;
+    const fresh = [...budgets, ...incomeBudgets].find((b) => b.id === detailBudget.id);
+    if (!fresh) return;
+    if (fresh.amount !== detailBudget.amount || (fresh.spent ?? 0) !== detailBudget.spent) {
+      setDetailBudget({
+        id: fresh.id,
+        name: fresh.name,
+        amount: fresh.amount,
+        spent: fresh.spent ?? 0,
+        category_id: fresh.category_id,
+        budget_type: fresh.budget_type,
+      });
+    }
+  }, [budgets, incomeBudgets, detailBudget]);
 
   return (
     <div className="space-y-5 overflow-x-hidden">

@@ -265,17 +265,7 @@ export default function Budgets() {
 
                 {incomeExpanded && (
                   <div className="px-4 pb-4 space-y-2 animate-fade-in-up">
-                    <div className="border-t border-border/50 pt-3 flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-income hover:text-income gap-1 px-2"
-                        onClick={(e) => { e.stopPropagation(); setInitialBudgetType("income"); setWizardOpen(true); }}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Agregar
-                      </Button>
-                    </div>
+                    <div className="border-t border-border/50 pt-3" />
                     {[...incomeBudgets].sort((a, b) => b.amount - a.amount).map((b) => {
                       const itemPct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
                       const itemRemaining = b.amount - b.spent;

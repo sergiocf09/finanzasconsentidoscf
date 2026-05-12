@@ -490,6 +490,32 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
         </FieldRow>
       )}
 
+      {/* Horizon selector */}
+      <FieldRow label="Aplicar a">
+        <Select value={horizon} onValueChange={(v) => setHorizon(v as Horizon)}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single">Sólo este mes</SelectItem>
+            <SelectItem value="quarter">
+              {(() => {
+                const qStart = Math.floor((month - 1) / 3) * 3 + 1;
+                return `Trimestre (${monthShort[qStart - 1]}–${monthShort[qStart + 1]} ${year})`;
+              })()}
+            </SelectItem>
+            <SelectItem value="rest_of_year">
+              Resto del año ({monthShort[month - 1]}–Dic {year})
+            </SelectItem>
+            <SelectItem value="full_year">Año completo {year}</SelectItem>
+          </SelectContent>
+        </Select>
+      </FieldRow>
+
+      {horizon !== "single" && (
+        <p className="text-[10px] text-muted-foreground pl-[40%] leading-tight">
+          Se creará el mismo presupuesto en cada mes del rango. Podrás editar cada mes después de forma independiente.
+        </p>
+      )}
+
       <Button className="w-full mt-3" onClick={handlePeriodNext} disabled={periodLoading}>
         {periodLoading
           ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Verificando...</>

@@ -276,7 +276,7 @@ export default function Budgets() {
                         Agregar
                       </Button>
                     </div>
-                    {incomeBudgets.map((b) => {
+                    {[...incomeBudgets].sort((a, b) => b.amount - a.amount).map((b) => {
                       const itemPct = b.amount > 0 ? Math.min(Math.round((b.spent / b.amount) * 100), 150) : 0;
                       const itemRemaining = b.amount - b.spent;
                       const isComplete = itemPct >= 100;

@@ -61,7 +61,7 @@ export function useBudgetWizard() {
     setIsPending(true);
     try {
       const { error } = await supabase.from("budgets").upsert(inserts as any, {
-        onConflict: "user_id,category_id,period,month,year",
+        onConflict: "user_id,category_id,period,month,year,budget_type",
         ignoreDuplicates: false,
       });
       if (error) throw error;
@@ -76,6 +76,63 @@ export function useBudgetWizard() {
     } finally {
       setIsPending(false);
     }
+  };
+
+  /**
+   * Searches backward up to 24 months for the most recent active budget
+   * of the given type. Returns the rows of that month or [] if none found.
+   */
+  const fetchPreviousBudget = async (
+    budgetType: "expense" | "income",
+    fromYear: number,
+    fromMonth: number
+  ): Promise<{ year: number; month: number; rows: any[] }> => {
+    if (!user) return { year: fromYear, month: fromMonth, rows: [] };
+    let y = fromYear;
+    let m = fromMonth;
+    for (let i = 0; i < 24; i++) {
+      m -= 1;
+      if (m < 1) { m = 12; y -= 1; }
+      const { data, error } = await supabase
+        .from("budgets")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("year", y)
+        .eq("month", m)
+        .eq("budget_type", budgetType)
+        .eq("is_active", true);
+      if (error) continue;
+      if (data && data.length > 0) {
+        return { year: y, month: m, rows: data };
+      }
+    }
+    return { year: fromYear, month: fromMonth, rows: [] };
+  };
+
+  /**
+   * Expands a start (year, month) plus horizon into an array of {year, month}.
+   * - "single": just the month
+   * - "quarter": the calendar quarter the month belongs to (3 months)
+   * - "rest_of_year": from this month to December of the same year
+   * - "full_year": months 1..12 of the year
+   */
+  const expandMonthRange = (
+    year: number,
+    month: number,
+    horizon: "single" | "quarter" | "rest_of_year" | "full_year"
+  ): { year: number; month: number }[] => {
+    if (horizon === "single") return [{ year, month }];
+    if (horizon === "quarter") {
+      const qStart = Math.floor((month - 1) / 3) * 3 + 1;
+      return [0, 1, 2].map((i) => ({ year, month: qStart + i }));
+    }
+    if (horizon === "rest_of_year") {
+      const out: { year: number; month: number }[] = [];
+      for (let m = month; m <= 12; m++) out.push({ year, month: m });
+      return out;
+    }
+    // full_year
+    return Array.from({ length: 12 }, (_, i) => ({ year, month: i + 1 }));
   };
 
   /**

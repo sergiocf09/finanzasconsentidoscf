@@ -401,17 +401,30 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
 
       <p className="text-sm text-muted-foreground mb-4">¿Desde dónde quieres construir tu presupuesto?</p>
       {[
-        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría" },
-        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores" },
+        { id: "manual" as Method, icon: FileText, title: "Manual", desc: "Tú decides el monto de cada categoría", disabled: false },
+        { id: "historical" as Method, icon: History, title: "Basado en histórico", desc: "Parte de lo que ya has gastado en meses anteriores", disabled: false },
+        {
+          id: "copy_previous" as Method,
+          icon: Copy,
+          title: "Copiar del mes anterior",
+          desc: hasPreviousBudget
+            ? "Toma tu presupuesto más reciente del mismo tipo como base"
+            : "Sin presupuesto previo del mismo tipo",
+          disabled: !hasPreviousBudget,
+        },
         ...(budgetType === "expense" ? [
-          { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida" },
-          { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada" },
+          { id: "template" as Method, icon: LayoutTemplate, title: "Plantilla", desc: "Elige una estructura predefinida como punto de partida", disabled: false },
+          { id: "smart" as Method, icon: Sparkles, title: "Inteligente", desc: "Analiza tus patrones y sugiere una distribución optimizada", disabled: false },
         ] : []),
       ].map((m) => (
         <button
           key={m.id}
-          className="w-full flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-colors text-left"
-          onClick={() => handleMethodSelect(m.id)}
+          disabled={m.disabled}
+          className={cn(
+            "w-full flex items-center gap-3 p-4 rounded-xl border border-border bg-card transition-colors text-left",
+            m.disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary/50"
+          )}
+          onClick={() => !m.disabled && handleMethodSelect(m.id)}
         >
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <m.icon className="h-5 w-5 text-primary" />

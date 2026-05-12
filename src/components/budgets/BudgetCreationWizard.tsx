@@ -720,13 +720,27 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Ya tienes un presupuesto de {budgetType === "income" ? "ingresos" : "gastos"} este mes
+              {horizon === "single"
+                ? `Ya tienes un presupuesto de ${budgetType === "income" ? "ingresos" : "gastos"} este mes`
+                : `Ya hay presupuesto de ${budgetType === "income" ? "ingresos" : "gastos"} en el rango`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Sólo afectaremos los presupuestos de {budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.
+              {horizon === "single"
+                ? `Sólo afectaremos los presupuestos de ${budgetType === "income" ? "ingresos" : "gastos"}; los del otro tipo se conservan intactos. Puedes editarlo, reemplazarlo o usarlo como base.`
+                : `Detectamos presupuesto en al menos uno de los meses del rango. Puedes saltarlos (no se sobrescriben), reemplazarlos todos, o usar uno como base.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2">
+            {horizon !== "single" && (
+              <Button
+                onClick={async () => {
+                  setExistingBudgetDialog(false);
+                  await proceedAfterPeriod();
+                }}
+              >
+                Saltar meses con presupuesto
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => { setExistingBudgetDialog(false); onOpenChange(false); }}
@@ -738,7 +752,7 @@ export function BudgetCreationWizard({ open, onOpenChange, initialBudgetType = "
               className="text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={handleReplaceExisting}
             >
-              Reemplazar (desactivar anterior)
+              {horizon === "single" ? "Reemplazar (desactivar anterior)" : "Reemplazar todos los meses"}
             </Button>
             <Button onClick={handleCopyAsBase}>
               Copiar como base y ajustar

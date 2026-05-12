@@ -80,6 +80,7 @@ export default function Budgets() {
   const adjustedTotalSpent = totalSpent + unbudgetedTotal;
   const [wizardOpen, setWizardOpen] = useState(false);
   const [initialBudgetType, setInitialBudgetType] = useState<"expense" | "income">("expense");
+  const [incomeExpanded, setIncomeExpanded] = useState(false);
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
     name: string;

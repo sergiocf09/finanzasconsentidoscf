@@ -459,10 +459,19 @@ export function useUpcomingDueDates({
       const followingDue = new Date(followingMonth.getFullYear(), followingMonth.getMonth(), Math.min(item.day, daysInFollowing));
       followingDue.setHours(0, 0, 0, 0);
 
-      const paidThisCycle = dates.some(d => {
-        if (!d || isNaN(d.getTime())) return false;
-        return d.getTime() > prev.getTime() && d.getTime() <= followingDue.getTime();
+      // Distinguir ciclos: pagos en (prev, next] cuentan para el ciclo previo;
+      // pagos en (next, followingDue] cuentan claramente para el ciclo actual (pago tardío).
+      // El ciclo actual está pagado si hay pago tardío, o si hay 2+ pagos en (prev, next]
+      // (uno para el ciclo previo y otro adelantado para el actual).
+      let countPrevWindow = 0;
+      let countLateWindow = 0;
+      dates.forEach(d => {
+        if (!d || isNaN(d.getTime())) return;
+        const t = d.getTime();
+        if (t > prev.getTime() && t <= next.getTime()) countPrevWindow++;
+        else if (t > next.getTime() && t <= followingDue.getTime()) countLateWindow++;
       });
+      const paidThisCycle = countLateWindow >= 1 || countPrevWindow >= 2;
 
       if (!paidThisCycle) {
         result.push(item);

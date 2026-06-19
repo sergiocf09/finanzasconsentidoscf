@@ -12,6 +12,7 @@ interface BudgetRow {
   spent: number;
   alert_threshold: number;
   alert_sent: boolean;
+  budget_type?: "expense" | "income";
   currency?: string;
 }
 
@@ -36,7 +37,7 @@ export function useBudgetAlerts() {
     // Fetch active budgets for the current period that haven't sent an alert yet
     const { data: budgets, error } = await supabase
       .from("budgets")
-      .select("id, name, amount, spent, alert_threshold, alert_sent")
+      .select("id, name, amount, spent, alert_threshold, alert_sent, budget_type")
       .eq("is_active", true)
       .eq("year", currentYear)
       .or(`month.eq.${currentMonth},period.eq.yearly`);
@@ -67,8 +68,22 @@ export function useBudgetAlerts() {
     // Show toasts
     for (const b of triggered) {
       const pct = Math.round(((b.spent ?? 0) / b.amount) * 100);
-      const isOver = pct >= 100;
+      const isIncome = b.budget_type === "income";
 
+      if (isIncome) {
+        // Income: getting close to or above the expected amount is GOOD news.
+        const reached = pct >= 100;
+        toast({
+          title: reached ? `🎉 ${b.name} cumplido` : `📈 ${b.name} al ${pct}%`,
+          description: reached
+            ? `Ya cubriste ${formatCurrency(b.spent)} de ${formatCurrency(b.amount)} esperados. Revisa tu expectativa para cubrir tus tres bloques financieros.`
+            : `Llevas ${formatCurrency(b.spent)} de ${formatCurrency(b.amount)} esperados (${pct}%). Vas en buen camino para cubrir tus responsabilidades.`,
+          duration: 6000,
+        });
+        continue;
+      }
+
+      const isOver = pct >= 100;
       toast({
         title: isOver ? `⚠️ ${b.name} excedido` : `⚡ ${b.name} al ${pct}%`,
         description: isOver

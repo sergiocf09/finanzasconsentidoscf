@@ -12,6 +12,7 @@ interface BudgetRow {
   spent: number;
   alert_threshold: number;
   alert_sent: boolean;
+  budget_type?: "expense" | "income";
   currency?: string;
 }
 

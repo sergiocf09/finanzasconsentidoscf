@@ -38,6 +38,8 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
     setConfirmingRecurring,
     recurringSourceAccountId,
     setRecurringSourceAccountId,
+    recurringAmount,
+    setRecurringAmount,
     handleConfirmRecurring,
   } = useUpcomingDueDates(props);
 

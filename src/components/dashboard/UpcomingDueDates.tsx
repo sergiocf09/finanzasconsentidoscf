@@ -393,9 +393,21 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                   <div className="space-y-2 mt-2 pt-2 border-t border-border">
                     <p className="text-xs text-muted-foreground">
                       {isManual
-                        ? "Confirma la cuenta donde se aplicó este cargo:"
-                        : "Este cargo es automático. Confirma que ya se realizó:"}
+                        ? "Confirma el importe y la cuenta donde se aplicó este cargo:"
+                        : "Este cargo es automático. Ajusta el importe si cambió y confirma:"}
                     </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground shrink-0">Importe:</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={recurringAmount}
+                        onChange={(e) => setRecurringAmount(e.target.value)}
+                        placeholder="0"
+                        className="h-8 text-xs text-right tabular-nums"
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">{r.currency}</span>
+                    </div>
                     <Select value={recurringSourceAccountId} onValueChange={setRecurringSourceAccountId}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Cuenta afectada" />

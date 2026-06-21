@@ -207,6 +207,7 @@ export function useUpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Pago confirmado y registrado");
       setRecurringSourceAccountId("");
+      setRecurringAmount("");
     } catch (err: any) {
       toast.error(err.message || "Error al confirmar");
     } finally {

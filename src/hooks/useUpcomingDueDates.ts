@@ -142,7 +142,7 @@ export function useUpcomingDueDates({
           account_id: accountToUse,
           category_id: recurringItem.category_id || null,
           type: recurringItem.type || "expense",
-          amount: recurringItem.amount,
+          amount: amountToUse,
           currency: recurringItem.currency,
           exchange_rate: exchangeRate,
           amount_in_base: amountInBase,

@@ -117,13 +117,14 @@ export function useUpcomingDueDates({
     });
   }, [upcomingRecurring, today]);
 
-  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem, overrideAccountId?: string) => {
+  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem, overrideAccountId?: string, overrideAmount?: number) => {
     if (!user) return;
     const accountToUse = overrideAccountId || recurringItem.account_id;
     if (!accountToUse) {
       toast.error("Selecciona una cuenta");
       return;
     }
+    const amountToUse = overrideAmount != null && overrideAmount > 0 ? overrideAmount : recurringItem.amount;
     setConfirmingRecurring(recurringItem.id);
     try {
       const allAccs = summaryAccounts ?? hookAccounts ?? [];
@@ -132,7 +133,7 @@ export function useUpcomingDueDates({
       const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
 
       const usdRateForCurrency = recurringItem.currency === "MXN" ? 1 : (fxRates[recurringItem.currency] || 1);
-      const amountInBase = recurringItem.amount * usdRateForCurrency;
+      const amountInBase = amountToUse * usdRateForCurrency;
       const exchangeRate = usdRateForCurrency;
 
       if (isLiability) {

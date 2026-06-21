@@ -78,6 +78,7 @@ export function useUpcomingDueDates({
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
   const [recurringSourceAccountId, setRecurringSourceAccountId] = useState<string>("");
+  const [recurringAmount, setRecurringAmount] = useState<string>("");
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
@@ -116,13 +117,14 @@ export function useUpcomingDueDates({
     });
   }, [upcomingRecurring, today]);
 
-  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem, overrideAccountId?: string) => {
+  const handleConfirmRecurring = useCallback(async (recurringItem: RecurringDueItem, overrideAccountId?: string, overrideAmount?: number) => {
     if (!user) return;
     const accountToUse = overrideAccountId || recurringItem.account_id;
     if (!accountToUse) {
       toast.error("Selecciona una cuenta");
       return;
     }
+    const amountToUse = overrideAmount != null && overrideAmount > 0 ? overrideAmount : recurringItem.amount;
     setConfirmingRecurring(recurringItem.id);
     try {
       const allAccs = summaryAccounts ?? hookAccounts ?? [];
@@ -131,7 +133,7 @@ export function useUpcomingDueDates({
       const isLiability = sourceAcc && liabilityTypes.includes(sourceAcc.type);
 
       const usdRateForCurrency = recurringItem.currency === "MXN" ? 1 : (fxRates[recurringItem.currency] || 1);
-      const amountInBase = recurringItem.amount * usdRateForCurrency;
+      const amountInBase = amountToUse * usdRateForCurrency;
       const exchangeRate = usdRateForCurrency;
 
       if (isLiability) {
@@ -140,7 +142,7 @@ export function useUpcomingDueDates({
           account_id: accountToUse,
           category_id: recurringItem.category_id || null,
           type: recurringItem.type || "expense",
-          amount: recurringItem.amount,
+          amount: amountToUse,
           currency: recurringItem.currency,
           exchange_rate: exchangeRate,
           amount_in_base: amountInBase,
@@ -156,7 +158,7 @@ export function useUpcomingDueDates({
           account_id: accountToUse,
           category_id: recurringItem.category_id || null,
           type: recurringItem.type || "expense",
-          amount: recurringItem.amount,
+          amount: amountToUse,
           currency: recurringItem.currency,
           exchange_rate: exchangeRate,
           amount_in_base: amountInBase,
@@ -205,6 +207,7 @@ export function useUpcomingDueDates({
       queryClient.invalidateQueries({ queryKey: ["dashboard_summary"] });
       toast.success("Pago confirmado y registrado");
       setRecurringSourceAccountId("");
+      setRecurringAmount("");
     } catch (err: any) {
       toast.error(err.message || "Error al confirmar");
     } finally {
@@ -673,6 +676,8 @@ export function useUpcomingDueDates({
     setConfirmingRecurring,
     recurringSourceAccountId,
     setRecurringSourceAccountId,
+    recurringAmount,
+    setRecurringAmount,
     handleConfirmRecurring,
   };
 }

@@ -38,6 +38,8 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
     setConfirmingRecurring,
     recurringSourceAccountId,
     setRecurringSourceAccountId,
+    recurringAmount,
+    setRecurringAmount,
     handleConfirmRecurring,
   } = useUpcomingDueDates(props);
 
@@ -372,6 +374,7 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                       onClick={() => {
                         setConfirmingRecurring(r.id);
                         setRecurringSourceAccountId(r.account_id || "");
+                        setRecurringAmount(String(r.amount ?? ""));
                       }}
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-md transition-colors shrink-0",
@@ -390,9 +393,21 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                   <div className="space-y-2 mt-2 pt-2 border-t border-border">
                     <p className="text-xs text-muted-foreground">
                       {isManual
-                        ? "Confirma la cuenta donde se aplicó este cargo:"
-                        : "Este cargo es automático. Confirma que ya se realizó:"}
+                        ? "Confirma el importe y la cuenta donde se aplicó este cargo:"
+                        : "Este cargo es automático. Ajusta el importe si cambió y confirma:"}
                     </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground shrink-0">Importe:</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={recurringAmount}
+                        onChange={(e) => setRecurringAmount(e.target.value)}
+                        placeholder="0"
+                        className="h-8 text-xs text-right tabular-nums"
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">{r.currency}</span>
+                    </div>
                     <Select value={recurringSourceAccountId} onValueChange={setRecurringSourceAccountId}>
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Cuenta afectada" />
@@ -421,6 +436,7 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                         onClick={() => {
                           setConfirmingRecurring(null);
                           setRecurringSourceAccountId("");
+                          setRecurringAmount("");
                         }}
                       >
                         <X className="h-3.5 w-3.5 mr-1" />
@@ -429,8 +445,8 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                       <Button
                         size="sm"
                         className="h-7 gap-1 px-3 text-xs"
-                        onClick={() => handleConfirmRecurring(r, recurringSourceAccountId)}
-                        disabled={!recurringSourceAccountId}
+                        onClick={() => handleConfirmRecurring(r, recurringSourceAccountId, parseFloat(recurringAmount) || 0)}
+                        disabled={!recurringSourceAccountId || !(parseFloat(recurringAmount) > 0)}
                       >
                         <Check className="h-3.5 w-3.5" />
                         Confirmar cargo

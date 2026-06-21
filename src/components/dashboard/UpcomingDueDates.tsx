@@ -374,6 +374,7 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                       onClick={() => {
                         setConfirmingRecurring(r.id);
                         setRecurringSourceAccountId(r.account_id || "");
+                        setRecurringAmount(String(r.amount ?? ""));
                       }}
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-md transition-colors shrink-0",

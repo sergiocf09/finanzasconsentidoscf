@@ -676,6 +676,8 @@ export function useUpcomingDueDates({
     setConfirmingRecurring,
     recurringSourceAccountId,
     setRecurringSourceAccountId,
+    recurringAmount,
+    setRecurringAmount,
     handleConfirmRecurring,
   };
 }

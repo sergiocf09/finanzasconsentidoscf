@@ -78,6 +78,7 @@ export function useUpcomingDueDates({
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [confirmingRecurring, setConfirmingRecurring] = useState<string | null>(null);
   const [recurringSourceAccountId, setRecurringSourceAccountId] = useState<string>("");
+  const [recurringAmount, setRecurringAmount] = useState<string>("");
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const todayStr = useMemo(() => format(today, "yyyy-MM-dd"), [today]);

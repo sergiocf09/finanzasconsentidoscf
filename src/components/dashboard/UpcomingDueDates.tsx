@@ -436,6 +436,7 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                         onClick={() => {
                           setConfirmingRecurring(null);
                           setRecurringSourceAccountId("");
+                          setRecurringAmount("");
                         }}
                       >
                         <X className="h-3.5 w-3.5 mr-1" />
@@ -444,8 +445,8 @@ export function UpcomingDueDates(props: UpcomingDueDatesProps) {
                       <Button
                         size="sm"
                         className="h-7 gap-1 px-3 text-xs"
-                        onClick={() => handleConfirmRecurring(r, recurringSourceAccountId)}
-                        disabled={!recurringSourceAccountId}
+                        onClick={() => handleConfirmRecurring(r, recurringSourceAccountId, parseFloat(recurringAmount) || 0)}
+                        disabled={!recurringSourceAccountId || !(parseFloat(recurringAmount) > 0)}
                       >
                         <Check className="h-3.5 w-3.5" />
                         Confirmar cargo

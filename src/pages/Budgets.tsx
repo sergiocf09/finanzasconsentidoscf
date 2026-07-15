@@ -82,6 +82,8 @@ export default function Budgets() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [initialBudgetType, setInitialBudgetType] = useState<"expense" | "income">("expense");
   const [incomeExpanded, setIncomeExpanded] = useState(false);
+  const [monthEditorOpen, setMonthEditorOpen] = useState(false);
+  const hasAnyBudget = budgets.length > 0 || incomeBudgets.length > 0;
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
     name: string;

@@ -196,27 +196,27 @@ export default function Budgets() {
     <div className="space-y-5 overflow-x-hidden">
       {/* Header with Period Selector */}
       <div className="pb-1">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
             <h1 className="text-lg font-heading font-semibold text-foreground shrink-0">
               Presupuestos
             </h1>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1 shrink-0">
             {hasAnyBudget && (
               <Button
-                size="sm"
+                size="icon"
                 variant="outline"
-                className="gap-1 h-8 text-xs px-2.5"
+                className="h-8 w-8 shrink-0"
                 onClick={() => setMonthEditorOpen(true)}
                 aria-label="Editar presupuesto"
+                title="Editar presupuesto"
               >
                 <Pencil className="h-3.5 w-3.5" />
-                Editar
               </Button>
             )}
             <Button
               size="sm"
               variant="outline"
-              className="gap-1 h-8 text-xs px-3"
+              className="gap-1 h-8 text-xs px-2"
               onClick={() => { setInitialBudgetType("income"); setWizardOpen(true); }}
             >
               <Plus className="h-3.5 w-3.5" />
@@ -224,7 +224,7 @@ export default function Budgets() {
             </Button>
             <Button
               size="sm"
-              className="gap-1 h-8 text-xs px-3"
+              className="gap-1 h-8 text-xs px-2"
               onClick={() => { setInitialBudgetType("expense"); setWizardOpen(true); }}
             >
               <Plus className="h-3.5 w-3.5" />

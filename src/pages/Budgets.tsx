@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check, Trash2 } from "lucide-react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check, Trash2, Pencil } from "lucide-react";
+import { BudgetMonthEditor } from "@/components/budgets/BudgetMonthEditor";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
@@ -81,6 +82,8 @@ export default function Budgets() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [initialBudgetType, setInitialBudgetType] = useState<"expense" | "income">("expense");
   const [incomeExpanded, setIncomeExpanded] = useState(false);
+  const [monthEditorOpen, setMonthEditorOpen] = useState(false);
+  const hasAnyBudget = budgets.length > 0 || incomeBudgets.length > 0;
   const [detailBudget, setDetailBudget] = useState<{
     id: string;
     name: string;
@@ -198,6 +201,18 @@ export default function Budgets() {
               Presupuestos
             </h1>
           <div className="flex gap-1.5">
+            {hasAnyBudget && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 h-8 text-xs px-2.5"
+                onClick={() => setMonthEditorOpen(true)}
+                aria-label="Editar presupuesto"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Editar
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -598,6 +613,19 @@ export default function Budgets() {
         year={currentYear}
         month={currentMonth}
         onUpdateAmount={handleUpdateAmount}
+      />
+
+      {/* Month Editor */}
+      <BudgetMonthEditor
+        open={monthEditorOpen}
+        onOpenChange={setMonthEditorOpen}
+        year={currentYear}
+        month={currentMonth}
+        expenseBudgets={budgets}
+        incomeBudgets={incomeBudgets}
+        onUpdateAmount={handleUpdateAmount}
+        onDelete={(id) => deleteBudget.mutate(id)}
+        monthLabel={`${monthNames[currentMonth]} ${currentYear}`}
       />
     </div>
   );

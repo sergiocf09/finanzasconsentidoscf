@@ -201,6 +201,18 @@ export default function Budgets() {
               Presupuestos
             </h1>
           <div className="flex gap-1.5">
+            {hasAnyBudget && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 h-8 text-xs px-2.5"
+                onClick={() => setMonthEditorOpen(true)}
+                aria-label="Editar presupuesto"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Editar
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"

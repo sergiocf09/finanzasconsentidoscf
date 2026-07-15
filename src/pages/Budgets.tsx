@@ -614,6 +614,19 @@ export default function Budgets() {
         month={currentMonth}
         onUpdateAmount={handleUpdateAmount}
       />
+
+      {/* Month Editor */}
+      <BudgetMonthEditor
+        open={monthEditorOpen}
+        onOpenChange={setMonthEditorOpen}
+        year={currentYear}
+        month={currentMonth}
+        expenseBudgets={budgets}
+        incomeBudgets={incomeBudgets}
+        onUpdateAmount={handleUpdateAmount}
+        onDelete={(id) => deleteBudget.mutate(id)}
+        monthLabel={`${monthNames[currentMonth]} ${currentYear}`}
+      />
     </div>
   );
 }

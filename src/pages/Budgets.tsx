@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check, Trash2 } from "lucide-react";
+import { Plus, Activity, Loader2, ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, Copy, Eye, BarChart2, TrendingUp, Check, Trash2, Pencil } from "lucide-react";
+import { BudgetMonthEditor } from "@/components/budgets/BudgetMonthEditor";
 import { Button } from "@/components/ui/button";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";

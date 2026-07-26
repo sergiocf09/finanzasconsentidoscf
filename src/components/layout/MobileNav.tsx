@@ -231,6 +231,28 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
   const helpContent = getHelpForPath(location.pathname);
   const isAuthPage = location.pathname.startsWith("/auth") || location.pathname.startsWith("/reset-password");
 
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: [] });
+      toast({
+        title: "Datos actualizados",
+        description: "La información se ha refrescado con los datos más recientes.",
+        duration: 2000,
+      });
+    } catch {
+      toast({
+        title: "No se pudo actualizar",
+        description: "Intenta de nuevo en un momento.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <>
       {/* Mobile Header */}

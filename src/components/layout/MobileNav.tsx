@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -10,6 +11,7 @@ import {
   CircleHelp,
   Leaf,
   Settings,
+  RefreshCw,
 } from "lucide-react";
 import {
   Sheet,
@@ -19,6 +21,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
+import { useToast } from "@/hooks/use-toast";
 
 const mobileNavItems = [
   { name: "Inicio", href: "/", icon: LayoutDashboard },
@@ -220,10 +223,35 @@ interface MobileNavProps {
 
 export function MobileNav({ open, onOpenChange }: MobileNavProps) {
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const helpContent = getHelpForPath(location.pathname);
   const isAuthPage = location.pathname.startsWith("/auth") || location.pathname.startsWith("/reset-password");
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: [] });
+      toast({
+        title: "Datos actualizados",
+        description: "La información se ha refrescado con los datos más recientes.",
+        duration: 2000,
+      });
+    } catch {
+      toast({
+        title: "No se pudo actualizar",
+        description: "Intenta de nuevo en un momento.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <>
@@ -239,7 +267,16 @@ export function MobileNav({ open, onOpenChange }: MobileNavProps) {
             </span>
           </div>
           {!isAuthPage && helpContent && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-header-foreground/70 hover:text-header-foreground hover:bg-white/10 transition-colors disabled:opacity-60"
+                aria-label="Actualizar datos"
+                title="Actualizar datos"
+              >
+                <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+              </button>
               <Link to="/settings" onClick={() => {}}>
                 <Settings className="h-5 w-5 text-header-foreground/70 hover:text-header-foreground transition-colors" />
               </Link>

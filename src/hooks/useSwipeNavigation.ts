@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { isPinchGestureActive, isViewportZoomed } from "@/lib/pinchGuard";
 
 const NAV_ROUTES = ["/", "/transactions", "/accounts", "/budgets", "/debts"];
 
@@ -12,6 +13,11 @@ export function useSwipeNavigation() {
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Ignorar gestos multi-touch (zoom) o cuando hay un modal abierto
+    if (e.touches.length > 1 || isPinchGestureActive() || isViewportZoomed() || document.querySelector("[data-radix-dialog-content],[role='dialog']")) {
+      touchStart.current = null;
+      return;
+    }
     const touch = e.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY };
   }, []);
@@ -19,6 +25,10 @@ export function useSwipeNavigation() {
   const handleTouchEnd = useCallback(
     (e: TouchEvent) => {
       if (!touchStart.current) return;
+      if (e.touches.length > 0 || isPinchGestureActive() || isViewportZoomed()) {
+        touchStart.current = null;
+        return;
+      }
       const touch = e.changedTouches[0];
       const dx = touch.clientX - touchStart.current.x;
       const dy = Math.abs(touch.clientY - touchStart.current.y);

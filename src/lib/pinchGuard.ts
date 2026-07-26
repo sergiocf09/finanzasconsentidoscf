@@ -58,8 +58,8 @@ if (typeof window !== "undefined") {
   };
   window.addEventListener("popstate", () => {
     if (isViewportZoomed() || isPinchGestureActive()) {
+      // Reinsertamos la entrada para que el usuario permanezca en la vista
       seedHistoryGuard();
-      window.history.go(1);
     }
   });
 }

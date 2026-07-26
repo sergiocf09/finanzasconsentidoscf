@@ -223,7 +223,10 @@ interface MobileNavProps {
 
 export function MobileNav({ open, onOpenChange }: MobileNavProps) {
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const helpContent = getHelpForPath(location.pathname);
   const isAuthPage = location.pathname.startsWith("/auth") || location.pathname.startsWith("/reset-password");

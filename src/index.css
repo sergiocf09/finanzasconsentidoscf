@@ -162,6 +162,11 @@ body {
     @apply border-border;
   }
 
+  html,
+  body {
+    overscroll-behavior-x: none;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;

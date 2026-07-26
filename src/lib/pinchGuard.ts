@@ -36,14 +36,32 @@ if (typeof window !== "undefined") {
   const vv = window.visualViewport;
   if (vv) {
     const syncZoom = () => {
-      const zoomed = vv.scale > 1.01;
+      const widthRatio = window.innerWidth / (vv.width || window.innerWidth);
+      const zoomed = vv.scale > 1.01 || widthRatio > 1.02;
       if (zoomed !== visualZoomActive) lastZoomChange = Date.now();
       visualZoomActive = zoomed;
       lastZoomChange = Date.now();
     };
     vv.addEventListener("resize", syncZoom);
     vv.addEventListener("scroll", syncZoom);
+    syncZoom();
   }
+
+  // Bloquea el "swipe back" del navegador mientras el zoom esté activo:
+  // si llega un popstate con zoom aplicado, revertimos la navegación.
+  const seedHistoryGuard = () => {
+    try {
+      window.history.pushState({ __zoomGuard: true }, "");
+    } catch {
+      /* noop */
+    }
+  };
+  window.addEventListener("popstate", () => {
+    if (isViewportZoomed() || isPinchGestureActive()) {
+      seedHistoryGuard();
+      window.history.go(1);
+    }
+  });
 }
 
 /** true si hay un gesto de zoom en curso o terminó hace muy poco. */

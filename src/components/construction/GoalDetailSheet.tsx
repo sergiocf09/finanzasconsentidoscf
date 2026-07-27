@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { CalendarDays, RefreshCw, Loader2 } from "lucide-react";
+import { CalendarDays, RefreshCw, Loader2, Trash2 } from "lucide-react";
 
 const goalConfig: Record<string, { emoji: string; phrase: string }> = {
   emergency: { emoji: "🛡️", phrase: "Tu red de seguridad" },

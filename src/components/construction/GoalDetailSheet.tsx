@@ -399,9 +399,23 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
                           {format(new Date(c.contribution_date + "T12:00:00"), "d MMM yyyy", { locale: es })}
                           {c.notes ? ` · ${c.notes}` : ""}
                         </p>
-                        <span className="text-[11px] font-medium tabular-nums text-foreground shrink-0">
-                          +{formatCurrencyAbs(Number(c.amount))}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] font-medium tabular-nums text-foreground">
+                            +{formatCurrencyAbs(Number(c.amount))}
+                          </span>
+                          {c.transfer_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              disabled={deleteTransfer.isPending}
+                              onClick={() => deleteTransfer.mutate(c.transfer_id!)}
+                              aria-label="Eliminar aportación"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

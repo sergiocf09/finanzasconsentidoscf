@@ -654,6 +654,50 @@ export type Database = {
         }
         Relationships: []
       }
+      goal_contributions: {
+        Row: {
+          amount: number
+          contribution_date: string
+          created_at: string
+          goal_id: string
+          id: string
+          notes: string | null
+          source: string
+          transfer_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          contribution_date?: string
+          created_at?: string
+          goal_id: string
+          id?: string
+          notes?: string | null
+          source?: string
+          transfer_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          contribution_date?: string
+          created_at?: string
+          goal_id?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          transfer_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_contributions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "savings_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       non_financial_assets: {
         Row: {
           acquisition_date: string | null
@@ -1310,6 +1354,10 @@ export type Database = {
       }
       link_account_to_debt: {
         Args: { p_account_id: string; p_debt_id: string }
+        Returns: undefined
+      }
+      link_account_to_goal: {
+        Args: { p_account_id: string; p_goal_id: string }
         Returns: undefined
       }
       recalculate_budget_spent: {

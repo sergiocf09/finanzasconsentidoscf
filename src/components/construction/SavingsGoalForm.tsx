@@ -192,9 +192,12 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
             <p className="text-xs text-destructive pl-[40%]">{form.formState.errors.target_amount.message}</p>
           )}
 
-          <FieldRow label="Saldo inicial">
-            <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("initial_amount")} />
-          </FieldRow>
+          {watchMode === "new" && (
+            <FieldRow label="Saldo inicial">
+              <Input className="h-8 text-sm text-right" type="number" step="0.01" placeholder="0.00" {...form.register("initial_amount")} />
+            </FieldRow>
+          )}
+
 
           <FieldRow label="Descripción" hint="Opcional">
             <Textarea

@@ -253,30 +253,91 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
               <span className="text-base mt-0.5">🏦</span>
               <div>
                 <p className="text-xs font-medium text-foreground">
-                  Se creará una cuenta dedicada a esta meta
+                  ¿Dónde vive el dinero de esta meta?
                 </p>
                 <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-                  Cada meta de construcción tiene su propia cuenta. Así el saldo 
-                  que ves aquí siempre coincide exactamente con lo que tienes ahorrado 
-                  o invertido para este fin. Mezclar fondos de distintos objetivos en 
-                  una misma cuenta complica el seguimiento y la disciplina de ahorro.
+                  Lo ideal es que cada meta tenga su propia cuenta: así el saldo que ves
+                  aquí siempre coincide con lo que realmente tienes destinado a este fin.
                 </p>
               </div>
             </div>
 
-            <FieldRow label="Tipo de cuenta">
+            <FieldRow label="Cuenta">
               <Select
-                value={form.watch("account_type")}
-                onValueChange={(v) => form.setValue("account_type", v as "savings" | "investment")}
+                value={watchMode}
+                onValueChange={(v) => {
+                  form.setValue("account_mode", v as GoalAccountMode);
+                  if (v !== "existing") form.setValue("existing_account_id", undefined);
+                }}
               >
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="savings">Ahorro — para metas de corto y mediano plazo</SelectItem>
-                  <SelectItem value="investment">Inversión — para metas de largo plazo o que generan rendimiento</SelectItem>
+                  <SelectItem value="new">Crear cuenta dedicada (recomendado)</SelectItem>
+                  <SelectItem value="existing">Vincular una cuenta existente</SelectItem>
+                  <SelectItem value="none">Sin cuenta — seguimiento manual</SelectItem>
                 </SelectContent>
               </Select>
             </FieldRow>
+
+            {watchMode === "new" && (
+              <FieldRow label="Tipo de cuenta">
+                <Select
+                  value={form.watch("account_type")}
+                  onValueChange={(v) => form.setValue("account_type", v as "savings" | "investment")}
+                >
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="savings">Ahorro — para metas de corto y mediano plazo</SelectItem>
+                    <SelectItem value="investment">Inversión — para metas de largo plazo o que generan rendimiento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldRow>
+            )}
+
+            {watchMode === "existing" && (
+              <>
+                <FieldRow label="Cuenta a vincular">
+                  <Select
+                    value={form.watch("existing_account_id") ?? ""}
+                    onValueChange={(v) => form.setValue("existing_account_id", v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Selecciona una cuenta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableAccounts.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                          No hay cuentas de ahorro o inversión disponibles
+                        </div>
+                      ) : (
+                        availableAccounts.map((acc) => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.name} · {formatCurrencyAbs(acc.current_balance ?? 0, acc.currency)}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </FieldRow>
+                {form.formState.errors.existing_account_id && (
+                  <p className="text-xs text-destructive pl-[40%]">
+                    {form.formState.errors.existing_account_id.message}
+                  </p>
+                )}
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  El saldo actual de la cuenta se tomará como avance inicial de la meta.
+                </p>
+              </>
+            )}
+
+            {watchMode === "none" && (
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                La meta no tendrá saldo automático. Podrás vincular una cuenta después
+                desde la edición de la meta.
+              </p>
+            )}
           </div>
+
 
           <div className="flex gap-3 pt-3 border-t border-border mt-3">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>

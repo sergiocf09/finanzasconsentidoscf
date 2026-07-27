@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Account, isLiability } from "@/hooks/useAccounts";
 import { formatCurrency } from "@/lib/formatters";
+import { useSavingsGoals } from "@/hooks/useSavingsGoals";
 
 interface SortableAccountRowProps {
   account: Account;
@@ -27,6 +28,9 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
     zIndex: isDragging ? 50 : undefined,
     opacity: isDragging ? 0.8 : 1,
   };
+
+  const { goals } = useSavingsGoals();
+  const linkedGoal = goals.find((g) => g.account_id === account.id);
 
   const debt = isLiability(account.type);
   const fmt = (value: number, currency: string) => formatCurrency(value, currency);
@@ -61,7 +65,14 @@ export function SortableAccountRow({ account, icon: Icon, typeLabel, mask, onEdi
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-center gap-1">
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
+            <div className="flex items-center gap-1 min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">{account.name}</p>
+              {linkedGoal && (
+                <span className="shrink-0 rounded px-1 py-[1px] text-[9px] font-semibold bg-[hsl(var(--block-build))]/15 text-[hsl(var(--block-build))]">
+                  Meta
+                </span>
+              )}
+            </div>
             {!hasDebtMeta && (
               <p className="text-[10px] text-muted-foreground truncate">{typeLabel}</p>
             )}

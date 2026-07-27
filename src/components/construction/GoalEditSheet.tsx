@@ -72,11 +72,19 @@ interface GoalEditSheetProps {
 }
 
 export function GoalEditSheet({ goal, open, onOpenChange }: GoalEditSheetProps) {
-  const { updateGoal } = useSavingsGoals();
+  const { updateGoal, goals } = useSavingsGoals();
   const { accounts } = useAccounts();
-  const availableAccounts = accounts.filter(
-    (a) => a.is_active && isAssetType(a.type) && ["savings", "investment"].includes(a.type)
+  const takenAccountIds = new Set(
+    goals.filter((g) => g.id !== goal?.id).map((g) => g.account_id).filter(Boolean) as string[]
   );
+  const availableAccounts = accounts.filter(
+    (a) =>
+      a.is_active &&
+      isAssetType(a.type) &&
+      ["savings", "investment"].includes(a.type) &&
+      !takenAccountIds.has(a.id)
+  );
+
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const linkedAccount = goal?.account_id

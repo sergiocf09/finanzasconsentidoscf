@@ -5,7 +5,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
-import { useSavingsGoals, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, useGoalContributions, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
 import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
@@ -85,6 +85,8 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { reconcileGoalBalance } = useSavingsGoals();
+  const { contributions, totalContributed } = useGoalContributions(goal?.id, { enabled: open });
+
 
   if (!goal) return null;
 
@@ -378,6 +380,39 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
                   Objetivo: {format(new Date(goal.target_date), "MMMM yyyy", { locale: es })}
                 </div>
               )}
+
+              {/* Aportaciones registradas */}
+              {contributions.length > 0 && (
+                <div className="rounded-lg border border-border bg-muted/20 p-2.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Aportaciones registradas
+                    </p>
+                    <span className="text-xs font-bold tabular-nums text-[hsl(var(--block-build))]">
+                      {formatCurrencyAbs(totalContributed)}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {contributions.slice(0, 5).map((c) => (
+                      <div key={c.id} className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {format(new Date(c.contribution_date + "T12:00:00"), "d MMM yyyy", { locale: es })}
+                          {c.notes ? ` · ${c.notes}` : ""}
+                        </p>
+                        <span className="text-[11px] font-medium tabular-nums text-foreground shrink-0">
+                          +{formatCurrencyAbs(Number(c.amount))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {contributions.length > 5 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      y {contributions.length - 5} aportación(es) más
+                    </p>
+                  )}
+                </div>
+              )}
+
 
               {/* Milestones */}
               <div className="space-y-1">

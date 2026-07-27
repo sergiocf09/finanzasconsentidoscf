@@ -5,7 +5,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { TransactionDetailSheet } from "@/components/transactions/TransactionDetailSheet";
 import { TransferDetailSheet } from "@/components/transfers/TransferDetailSheet";
-import { useSavingsGoals, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, useGoalContributions, SavingsGoal, getGoalProjection } from "@/hooks/useSavingsGoals";
 import { formatCurrency, formatCurrencyAbs } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";

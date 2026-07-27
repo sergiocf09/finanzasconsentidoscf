@@ -88,8 +88,18 @@ const FieldRow = ({ label, children, hint }: { label: string; children: React.Re
 );
 
 export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
-  const { createGoal } = useSavingsGoals();
+  const { createGoal, goals } = useSavingsGoals();
+  const { accounts } = useAccounts();
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+
+  const linkedAccountIds = new Set(goals.map((g) => g.account_id).filter(Boolean) as string[]);
+  const availableAccounts = accounts.filter(
+    (a) =>
+      a.is_active &&
+      isAssetType(a.type) &&
+      ["savings", "investment"].includes(a.type) &&
+      !linkedAccountIds.has(a.id)
+  );
 
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalSchema),
@@ -104,10 +114,13 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       contribution_day: undefined,
       monthly_contribution: 0,
       account_type: "savings",
+      account_mode: "new",
+      existing_account_id: undefined,
     },
   });
 
   const watchType = form.watch("goal_type");
+  const watchMode = form.watch("account_mode") as GoalAccountMode;
   const selectedGoalType = goalTypes.find(t => t.value === watchType);
 
   const onSubmit = async (data: GoalFormValues) => {
@@ -121,13 +134,14 @@ export function SavingsGoalForm({ open, onOpenChange }: SavingsGoalFormProps) {
       monthly_contribution: data.monthly_contribution,
       currency: data.currency,
       initial_amount: data.initial_amount,
-      account_id: undefined,
-      create_account: true,
+      account_mode: data.account_mode as GoalAccountMode,
+      account_id: data.account_mode === "existing" ? data.existing_account_id : undefined,
       account_type: data.account_type,
     });
     form.reset();
     onOpenChange(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

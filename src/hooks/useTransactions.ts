@@ -155,6 +155,10 @@ export function useTransactions(options?: { startDate?: Date; endDate?: Date; en
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });
+      queryClient.invalidateQueries({ queryKey: ['transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['savings_goals'] });
+      queryClient.invalidateQueries({ queryKey: ['goal_contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: "Movimiento actualizado" });
     },
     onError: (error) => {

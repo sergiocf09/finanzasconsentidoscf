@@ -85,6 +85,8 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { reconcileGoalBalance } = useSavingsGoals();
+  const { contributions, totalContributed } = useGoalContributions(goal?.id, { enabled: open });
+
 
   if (!goal) return null;
 

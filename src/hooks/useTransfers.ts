@@ -82,6 +82,9 @@ export function useTransfers(accountId?: string, options?: { startDate?: Date; e
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['savings_goals'] });
+      queryClient.invalidateQueries({ queryKey: ['goal_contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast({ title: "Transferencia registrada" });
     },
     onError: (error) => {
@@ -115,6 +118,9 @@ export function useTransfers(accountId?: string, options?: { startDate?: Date; e
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['savings_goals'] });
+      queryClient.invalidateQueries({ queryKey: ['goal_contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       toast({ title: "Transferencia actualizada" });
     },
     onError: (error) => {
@@ -131,6 +137,9 @@ export function useTransfers(accountId?: string, options?: { startDate?: Date; e
       queryClient.invalidateQueries({ queryKey: ['transfers'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['savings_goals'] });
+      queryClient.invalidateQueries({ queryKey: ['goal_contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_summary'] });
       queryClient.invalidateQueries({ queryKey: ['due_date_transfers'] });
       toast({ title: "Transferencia eliminada" });

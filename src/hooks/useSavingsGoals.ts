@@ -288,3 +288,26 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
     reconcileGoalBalance,
   };
 }
+
+export function useGoalContributions(goalId?: string | null, options?: { enabled?: boolean }) {
+  const { user } = useAuth();
+
+  const query = useQuery({
+    queryKey: ["goal_contributions", goalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("goal_contributions")
+        .select("*")
+        .eq("goal_id", goalId!)
+        .order("contribution_date", { ascending: false });
+      if (error) throw error;
+      return (data || []) as GoalContribution[];
+    },
+    enabled: !!user && !!goalId && options?.enabled !== false,
+  });
+
+  const contributions = query.data ?? [];
+  const totalContributed = contributions.reduce((sum, c) => sum + Number(c.amount), 0);
+
+  return { contributions, totalContributed, isLoading: query.isLoading };
+}

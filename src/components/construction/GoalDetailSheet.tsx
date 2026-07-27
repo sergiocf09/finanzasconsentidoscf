@@ -381,6 +381,39 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
                 </div>
               )}
 
+              {/* Aportaciones registradas */}
+              {contributions.length > 0 && (
+                <div className="rounded-lg border border-border bg-muted/20 p-2.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Aportaciones registradas
+                    </p>
+                    <span className="text-xs font-bold tabular-nums text-[hsl(var(--block-build))]">
+                      {formatCurrencyAbs(totalContributed)}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {contributions.slice(0, 5).map((c) => (
+                      <div key={c.id} className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {format(new Date(c.contribution_date + "T12:00:00"), "d MMM yyyy", { locale: es })}
+                          {c.notes ? ` · ${c.notes}` : ""}
+                        </p>
+                        <span className="text-[11px] font-medium tabular-nums text-foreground shrink-0">
+                          +{formatCurrencyAbs(Number(c.amount))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {contributions.length > 5 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      y {contributions.length - 5} aportación(es) más
+                    </p>
+                  )}
+                </div>
+              )}
+
+
               {/* Milestones */}
               <div className="space-y-1">
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Hitos</p>

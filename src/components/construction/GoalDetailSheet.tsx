@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { CalendarDays, RefreshCw, Loader2 } from "lucide-react";
+import { CalendarDays, RefreshCw, Loader2, Trash2 } from "lucide-react";
 
 const goalConfig: Record<string, { emoji: string; phrase: string }> = {
   emergency: { emoji: "🛡️", phrase: "Tu red de seguridad" },
@@ -81,7 +81,7 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
 
   const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
   const { transactions } = useTransactions({ startDate, endDate, enabled: open && !!goal?.account_id });
-  const { transfers } = useTransfers(goal?.account_id ?? undefined, { startDate, endDate, enabled: open && !!goal?.account_id });
+  const { transfers, deleteTransfer } = useTransfers(goal?.account_id ?? undefined, { startDate, endDate, enabled: open && !!goal?.account_id });
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { reconcileGoalBalance } = useSavingsGoals();
@@ -399,9 +399,23 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
                           {format(new Date(c.contribution_date + "T12:00:00"), "d MMM yyyy", { locale: es })}
                           {c.notes ? ` · ${c.notes}` : ""}
                         </p>
-                        <span className="text-[11px] font-medium tabular-nums text-foreground shrink-0">
-                          +{formatCurrencyAbs(Number(c.amount))}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] font-medium tabular-nums text-foreground">
+                            +{formatCurrencyAbs(Number(c.amount))}
+                          </span>
+                          {c.transfer_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              disabled={deleteTransfer.isPending}
+                              onClick={() => deleteTransfer.mutate(c.transfer_id!)}
+                              aria-label="Eliminar aportación"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -45,7 +45,14 @@ const goalSchema = z.object({
     message: "Define un monto objetivo, una fecha de llegada, o ambos",
     path: ["target_amount"],
   }
+).refine(
+  (data) => data.account_mode !== "existing" || !!data.existing_account_id,
+  {
+    message: "Selecciona la cuenta que quieres vincular",
+    path: ["existing_account_id"],
+  }
 );
+
 
 type GoalFormValues = z.infer<typeof goalSchema>;
 

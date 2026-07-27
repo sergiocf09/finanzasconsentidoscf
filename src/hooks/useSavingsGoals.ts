@@ -27,6 +27,20 @@ export interface SavingsGoal {
   milestone_100_notified: boolean;
 }
 
+export interface GoalContribution {
+  id: string;
+  goal_id: string;
+  user_id: string;
+  amount: number;
+  contribution_date: string;
+  source: string;
+  transfer_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export type GoalAccountMode = "new" | "existing" | "none";
+
 export interface CreateSavingsGoalData {
   name: string;
   goal_type: GoalType;
@@ -36,11 +50,12 @@ export interface CreateSavingsGoalData {
   contribution_day?: number;
   monthly_contribution?: number;
   account_id?: string;
-  create_account?: boolean;
+  account_mode?: GoalAccountMode;
   account_type?: "savings" | "investment";
   initial_amount?: number;
   currency?: string;
 }
+
 
 export function getGoalProjection(goal: SavingsGoal): {
   monthsRemaining: number | null;

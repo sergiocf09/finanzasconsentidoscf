@@ -21,7 +21,9 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useSavingsGoals, GoalType } from "@/hooks/useSavingsGoals";
+import { useSavingsGoals, GoalType, GoalAccountMode } from "@/hooks/useSavingsGoals";
+import { useAccounts, isAssetType } from "@/hooks/useAccounts";
+import { formatCurrencyAbs } from "@/lib/formatters";
 
 const goalSchema = z.object({
   name: z.string().min(1, "Ingresa un nombre para tu meta"),
@@ -34,6 +36,9 @@ const goalSchema = z.object({
   currency: z.string().default("MXN"),
   initial_amount: z.coerce.number().optional().default(0),
   account_type: z.enum(["savings", "investment"]).default("savings"),
+  account_mode: z.enum(["new", "existing", "none"]).default("new"),
+  existing_account_id: z.string().optional(),
+
 }).refine(
   (data) => (data.target_amount && data.target_amount > 0) || !!data.target_date,
   {

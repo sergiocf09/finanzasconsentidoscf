@@ -97,9 +97,10 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
 
   const createGoal = useMutation({
     mutationFn: async (data: CreateSavingsGoalData) => {
-      let accountId = data.account_id || null;
+      const mode: GoalAccountMode = data.account_mode ?? (data.account_id ? "existing" : "new");
+      let accountId: string | null = mode === "existing" ? data.account_id ?? null : null;
 
-      if (data.create_account && !accountId) {
+      if (mode === "new") {
         const { data: newAccount, error: accError } = await supabase
           .from("accounts")
           .insert({
@@ -116,29 +117,45 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
         accountId = newAccount.id;
       }
 
-      let currentAmount = data.initial_amount || 0;
-      if (accountId && !data.create_account) {
+      let currentAmount = mode === "new" ? data.initial_amount || 0 : 0;
+      if (mode === "existing" && accountId) {
         const { data: acc } = await supabase
           .from("accounts")
           .select("current_balance")
           .eq("id", accountId)
           .single();
-        if (acc) currentAmount = acc.current_balance || 0;
+        if (acc) currentAmount = Math.max(0, acc.current_balance || 0);
       }
 
-      const { error } = await supabase.from("savings_goals").insert({
-        user_id: user!.id,
-        name: data.name,
-        goal_type: data.goal_type,
-        target_amount: data.target_amount,
-        current_amount: currentAmount,
-        target_date: data.target_date || null,
-        description: data.description || null,
-        account_id: accountId,
-        contribution_day: data.contribution_day || null,
-        monthly_contribution: data.monthly_contribution || 0,
-      } as any);
+      const { data: created, error } = await supabase
+        .from("savings_goals")
+        .insert({
+          user_id: user!.id,
+          name: data.name,
+          goal_type: data.goal_type,
+          target_amount: data.target_amount,
+          current_amount: currentAmount,
+          target_date: data.target_date || null,
+          description: data.description || null,
+          account_id: mode === "new" ? accountId : null,
+          contribution_day: data.contribution_day || null,
+          monthly_contribution: data.monthly_contribution || 0,
+        } as any)
+        .select("id")
+        .single();
       if (error) throw error;
+
+      // Vinculación segura de cuenta existente (valida propiedad y exclusividad)
+      if (mode === "existing" && accountId) {
+        const { error: linkError } = await supabase.rpc("link_account_to_goal", {
+          p_goal_id: created.id,
+          p_account_id: accountId,
+        });
+        if (linkError) {
+          await supabase.from("savings_goals").delete().eq("id", created.id);
+          throw linkError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
@@ -152,20 +169,33 @@ export function useSavingsGoals(options?: { enabled?: boolean }) {
 
   const updateGoal = useMutation({
     mutationFn: async ({ id, ...data }: Partial<SavingsGoal> & { id: string }) => {
+      const { account_id: nextAccountId, ...rest } = data as any;
+      const hasAccountChange = "account_id" in data;
+
       const { error } = await supabase
         .from("savings_goals")
-        .update(data)
+        .update(hasAccountChange && !nextAccountId ? { ...rest, account_id: null } : rest)
         .eq("id", id);
       if (error) throw error;
+
+      if (hasAccountChange && nextAccountId) {
+        const { error: linkError } = await supabase.rpc("link_account_to_goal", {
+          p_goal_id: id,
+          p_account_id: nextAccountId,
+        });
+        if (linkError) throw linkError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["savings_goals"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast({ title: "Meta actualizada" });
     },
     onError: (error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
 
   const reconcileGoalBalance = useMutation({
     mutationFn: async ({ goalId, accountId, newBalance, note }: {

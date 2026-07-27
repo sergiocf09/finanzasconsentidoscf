@@ -81,7 +81,7 @@ export function GoalDetailSheet({ goal, open, onOpenChange }: GoalDetailSheetPro
 
   const { startDate, endDate } = getDateRange(period, customStartDate, customEndDate);
   const { transactions } = useTransactions({ startDate, endDate, enabled: open && !!goal?.account_id });
-  const { transfers } = useTransfers(goal?.account_id ?? undefined, { startDate, endDate, enabled: open && !!goal?.account_id });
+  const { transfers, deleteTransfer } = useTransfers(goal?.account_id ?? undefined, { startDate, endDate, enabled: open && !!goal?.account_id });
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { reconcileGoalBalance } = useSavingsGoals();
